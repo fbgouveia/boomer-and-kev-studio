@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  /* Director's Palette */
+  --background: #050505;
+  --foreground: #ffffff;
+  --studio-black: #0a0a0b;
+  --studio-obsidian: #111111;
+  --signal-orange: #FF5F1F;
+  --signal-orange-low: rgba(255, 95, 31, 0.1);
+  --error-red: #ff3b30;
+
+  /* Geometry Settings: Masterpiece Brutalist */
+  --corner-sharp: 0px;
+  --corner-soft: 2px;
+  --corner-organic: 100px;
+
+  /* Glass Effects */
+  --glass-bg: rgba(5, 5, 5, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.05);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Cinematic Typography */
+.font-technical {
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.font-narrative {
+  font-family: var(--font-inter);
+  /* Using Inter but with Serif-like styling in page.tsx */
+  letter-spacing: -0.02em;
+}
+
+/* Brutalist Panels */
+.studio-panel {
+  background-color: var(--studio-black);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--corner-sharp);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.studio-panel:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--studio-obsidian);
+}
+
+/* High-Vis Buttons */
+.btn-signal {
+  background-color: var(--signal-orange);
+  color: white;
+  border-radius: var(--corner-organic);
+  padding: 0.75rem 2rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  box-shadow: 0 0 0 0 rgba(255, 95, 31, 0);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-signal:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 30px -5px rgba(255, 95, 31, 0.4);
+}
+
+/* Z-Axis Transitions */
+.push-entry {
+  animation: pushEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pushEntry {
+  from {
+    transform: perspective(1000px) translateZ(-50px);
+    opacity: 0;
+  }
+
+  to {
+    transform: perspective(1000px) translateZ(0);
+    opacity: 1;
+  }
+}
+
+/* Physical Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--studio-obsidian);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--signal-orange);
+}
+
+/* Utility Animations */
+.accent-glow {
+  box-shadow: 0 0 50px -10px var(--signal-orange-low);
+}
+
+* {
+  transition-property: color, background-color, border-color, transform, opacity;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-duration: 400ms;
+}
