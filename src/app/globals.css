@@ -107,6 +107,22 @@ body {
   background: var(--signal-orange);
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--signal-orange);
+}
+
 /* Utility Animations */
 .accent-glow {
   box-shadow: 0 0 50px -10px var(--signal-orange-low);
@@ -116,4 +132,32 @@ body {
   transition-property: color, background-color, border-color, transform, opacity;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   transition-duration: 400ms;
+}
+
+/* Cinematic Grain Overlay */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.04;
+  z-index: 9999;
+  mix-blend-mode: overlay;
+}
+
+.depth-layer {
+  position: relative;
+  isolation: isolate;
+}
+
+.depth-layer::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  z-index: -1;
 }

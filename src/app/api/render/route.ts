@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Replicate from "replicate";
+import { renderSchema } from '@/lib/validations';
 
 // NEUROMARKETING_PRODUCTION_PIPELINE_V2
 // Integration: Official Replicate SDK / Kling-v2.6
@@ -22,7 +23,17 @@ const resolveGDriveLink = (url: string | undefined) => {
 // Helper: Resolve G-Drive Link and inject into prompt if it's a studio reference
 export async function POST(req: Request) {
   try {
-    const { script } = await req.json();
+    const rawBody = await req.json();
+    const validation = renderSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json({
+        error: "INVALID_INPUT_SIGNAL",
+        details: validation.error.format()
+      }, { status: 400 });
+    }
+
+    const { script } = validation.data;
 
     if (!process.env.REPLICATE_API_TOKEN) {
       console.warn("PRODUCTION_HALTED: Missing REPLICATE_API_TOKEN. Switching to SANDBOX_SIMULATION_MODE.");
@@ -78,6 +89,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       status: "PRODUCTION_ACTIVE",
+      mode: process.env.REPLICATE_API_TOKEN ? "REAL" : "SANDBOX",
       total_scenes: script.length,
       pipeline: "KLING_V2.6_SDK",
       results

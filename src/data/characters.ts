@@ -13,6 +13,7 @@ export type Character = {
     voiceStyle: string;
     imagePromptContext: string;
     lightingKey: string;
+    voiceId: string;
 };
 
 export const CHARACTERS: Character[] = [
@@ -41,7 +42,8 @@ export const CHARACTERS: Character[] = [
         defaultOutfit: 'Wearing red boxing gloves (often), sometimes a black singlet or just shirtless showing muscles. Always wears large professional studio headphones.',
         voiceStyle: 'Deep, booming Australian accent. Fast-paced, high energy.',
         imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, professional studio headphones, detailed fur texture, strong studio lighting',
-        lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature'
+        lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
+        voiceId: 'exT9S2zWNo7lSxSrsD73' // Example Aussie Alpha Voice
     },
     {
         id: 'kev',
@@ -69,7 +71,8 @@ export const CHARACTERS: Character[] = [
         defaultOutfit: 'No shirt, just natural fur. Always wears large professional studio headphones. Sometimes holds a tablet.',
         voiceStyle: 'Slow, nasally, relaxed, deadpan Australian accent.',
         imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, detailed fur texture, soft studio lighting',
-        lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness'
+        lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
+        voiceId: 'pqHFr7yk3tS6H7G4Umlf' // Example Aussie Deadpan Voice
     }
 ];
 

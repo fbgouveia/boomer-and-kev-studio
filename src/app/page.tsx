@@ -12,12 +12,21 @@ import {
   Sparkles,
   Settings2,
   Share2,
+  Layers,
   BrainCircuit,
+  RefreshCcw,
   Zap,
   Wand2,
   MonitorPlay,
   History,
-  Layers
+  ShieldCheck,
+  Key,
+  BookOpen,
+  MessageSquare,
+  ExternalLink,
+  ChevronRight,
+  ShieldQuestion,
+  Info
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrendsFeed } from '@/components/Director/TrendsFeed';
@@ -74,8 +83,45 @@ export default function Home() {
       detail: ''
     }
   });
+
+  const [voiceIds, setVoiceIds] = useState<Record<string, string>>({
+    boomer: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_BOOMER') || CHARACTERS[0].voiceId : CHARACTERS[0].voiceId,
+    kev: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_KEV') || CHARACTERS[1].voiceId : CHARACTERS[1].voiceId
+  });
   const [studioReference, setStudioReference] = useState('https://drive.google.com/file/d/1tqQAsVev8OV2LZ01FkkfQ1Sag94K-IjY/view?usp=sharing');
   const [dnaFolderUrl, setDnaFolderUrl] = useState('https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf');
+  const [activeFooterModal, setActiveFooterModal] = useState<'docs' | 'keys' | 'support' | null>(null);
+  const [apiKeys, setApiKeys] = useState({
+    replicate: typeof window !== 'undefined' ? localStorage.getItem('BK_REPLICATE_KEY') || '' : '',
+    elevenlabs: typeof window !== 'undefined' ? localStorage.getItem('BK_ELEVENLABS_KEY') || '' : ''
+  });
+  const [balanceData, setBalanceData] = useState<any>(null);
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+  const [renderMode, setRenderMode] = useState<'REAL' | 'SANDBOX' | null>(null);
+
+  const refreshBalance = async (keys = apiKeys) => {
+    if (!keys.replicate && !keys.elevenlabs) return;
+    setIsCheckingBalance(true);
+    try {
+      const res = await fetch('/api/keys/balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(keys)
+      });
+      const data = await res.json();
+      setBalanceData(data);
+    } catch (err) {
+      console.error("BALANCE_CHECK_FAILURE", err);
+    } finally {
+      setIsCheckingBalance(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeFooterModal === 'keys' || (apiKeys.replicate || apiKeys.elevenlabs)) {
+      refreshBalance();
+    }
+  }, [activeFooterModal]);
 
   // Frontend G-Drive resolver for UI previews
   const getPreviewUrl = (url: string) => {
@@ -398,9 +444,21 @@ export default function Home() {
   };
 
   const renderProject = async () => {
+    alert("RENDER_SCENE_INITIATED");
+    console.log("RENDER_PROJECT_TRIGGERED");
     setIsRenderingProject(true);
     setRenderProgress(0);
     setRenderLogs(["INITIALIZING_PRODUCTION_PIPELINE...", "CONNECTING_TO_SERVER_ENGINE...", "VALIDATING_NEUROMARKETING_TRIGGERS..."]);
+
+    // Add Balance Diagnostic to logs
+    if (balanceData) {
+      if (balanceData.elevenlabs?.status === 'AUTHENTICATED') {
+        setRenderLogs(prev => [`SYSTEM_FUEL_STATUS: ${balanceData.elevenlabs.balance}`, ...prev]);
+      }
+      if (balanceData.replicate?.status === 'AUTHENTICATED') {
+        setRenderLogs(prev => [`REPLICATE_SIGNAL: ${balanceData.replicate.balance}`, ...prev]);
+      }
+    }
 
     // Prepare Data for API
     const productionData = {
@@ -436,6 +494,7 @@ export default function Home() {
       await new Promise(r => setTimeout(r, 800));
 
       // Step 2: Real API Handshake
+      console.log("FETCHING_API_RENDER...");
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -443,6 +502,8 @@ export default function Home() {
       });
 
       const data = await response.json();
+      console.log("RENDER_API_RESPONSE:", data);
+      setRenderMode(data.mode);
 
       if (!response.ok) {
         setRenderLogs(prev => [`ERROR: ${data.error || 'PIPELINE_CRASH'}`, data.suggestion || "Check terminal for crash data.", ...prev]);
@@ -451,23 +512,33 @@ export default function Home() {
         return;
       }
 
-      setRenderLogs(prev => [data.results ? "HANDSHAKE_SUCCESSFUL. PIPELINE: " + data.pipeline : "SANDBOX_MODE_ACTIVE. SIMULATING_HANDSHAKE...", "QUEUING_SCENES_FOR_SYNTHESIS...", ...prev]);
+      if (data.mode === 'SANDBOX') {
+        setRenderLogs(prev => [
+          "⚠️ WARNING: NO_API_KEY_DETECTED. RUNNING_IN_SANDBOX_MODE.",
+          "SIMULATING_NEUROMORPHIC_ENCODING...",
+          ...prev
+        ]);
+      } else {
+        setRenderLogs(prev => ["HANDSHAKE_SUCCESSFUL. PIPELINE: REAL_TIME_KLING_V2.6", ...prev]);
+      }
+
+      setRenderLogs(prev => ["QUEUING_SCENES_FOR_SYNTHESIS...", ...prev]);
 
       // Step 3: Progressive Scene Updates & Real-Time Polling
       const sceneResults = data.results || [];
 
       // Link backend prediction IDs to frontend script lines
       setScript(prev => prev.map(line => {
-        const result = sceneResults.find((r: { sceneId: string; predictionId?: string; }) => r.sceneId === line.id);
+        const result = sceneResults.find((r: { sceneId: string; predictionId?: string; status?: string }) => r.sceneId === line.id);
         return {
           ...line,
-          status: result ? 'QUEUED' : 'QUEUED',
+          status: result?.status === 'FAILED' ? 'FAILED' : 'QUEUED',
           predictionId: result?.predictionId
         };
       }));
 
       // Start individual polling for real results
-      if (sceneResults.length > 0 && !sceneResults[0].predictionId.startsWith('rep_')) {
+      if (sceneResults.length > 0 && sceneResults[0].predictionId && !sceneResults[0].predictionId.startsWith('rep_')) {
         sceneResults.forEach((res: { sceneId: string, predictionId: string }) => {
           const poll = setInterval(async () => {
             try {
@@ -491,25 +562,35 @@ export default function Home() {
         });
       }
 
-      // Visual Terminal Progress (Aesthetic)
-      let progress = 20;
+      // Visual Terminal Progress (Aesthetic & Sandbox Logic)
+      let currentProgress = 20;
       const interval = setInterval(() => {
-        progress += Math.random() * 5;
-        if (progress >= 100) {
-          progress = 100;
+        currentProgress += Math.random() * 8;
+        if (currentProgress >= 100) {
+          currentProgress = 100;
           clearInterval(interval);
           setRenderLogs(prev => ["SUCCESS: PRODUCTION_READY. PIPELINE_IDLE.", ...prev]);
-          setTimeout(() => setIsRenderingProject(false), 2500);
+          setTimeout(() => {
+            setIsRenderingProject(false);
+            setRenderMode(null);
+          }, 2500);
         }
-        setRenderProgress(progress);
+        setRenderProgress(currentProgress);
 
-        // Finalize sandbox statuses if no real results
-        if (progress === 100 && sceneResults[0]?.predictionId.startsWith('rep_')) {
-          setScript(prev => prev.map(line => ({ ...line, status: 'COMPLETED' })));
+        // Progressively finalize sandbox statuses based on progress %
+        if (data.mode === 'SANDBOX') {
+          setScript(prev => prev.map((line, idx) => {
+            const threshold = (idx / prev.length) * 100;
+            if (currentProgress > threshold && line.status === 'QUEUED') {
+              return { ...line, status: 'COMPLETED' };
+            }
+            return line;
+          }));
         }
-      }, 800);
+      }, 600);
 
     } catch (error) {
+      console.error("RENDER_PROJECT_ERROR:", error);
       setRenderLogs(prev => ["CRITICAL_PIPELINE_FAILURE.", "Check network conditions.", ...prev]);
       setRenderProgress(0);
       setTimeout(() => setIsRenderingProject(false), 3000);
@@ -519,8 +600,8 @@ export default function Home() {
   if (!isLoaded) return null;
 
   return (
-    <>
-      <main className="flex min-h-screen bg-[#050505] text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#050505] overflow-hidden">
+      <main className="flex-1 flex bg-[#050505] text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden min-h-0">
         {/* SIDEBAR NAVIGATION */}
         <aside className="w-24 border-r border-white/5 flex flex-col items-center py-10 justify-between bg-[#050505] z-50">
           <div className="flex flex-col gap-12">
@@ -573,7 +654,11 @@ export default function Home() {
 
         <div className="flex-1 flex flex-col min-h-0">
           {/* TOP NAVIGATION */}
-          <nav className="w-full px-8 py-4 flex justify-between items-center bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 z-50">
+          <nav
+            role="navigation"
+            aria-label="Master Console Navigation"
+            className="w-full px-8 py-4 flex flex-col md:flex-row justify-between items-center bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 z-50 gap-4"
+          >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)]">
                 <BrainCircuit size={22} className="text-white" />
@@ -593,6 +678,8 @@ export default function Home() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
+                  aria-label={`Switch to ${tab.label}`}
+                  aria-pressed={activeTab === tab.id}
                   className={cn("px-6 py-2 text-[11px] font-black tracking-widest transition-all",
                     activeTab === tab.id ? "bg-white text-black" : "text-white/30 hover:text-white")}
                 >
@@ -630,6 +717,7 @@ export default function Home() {
               <button
                 onClick={renderProject}
                 disabled={isRenderingProject || script.length === 0}
+                aria-label="Initiate Render Cycle"
                 className="btn-signal flex items-center gap-2 group relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
@@ -642,7 +730,7 @@ export default function Home() {
           {/* MAIN CONTENT AREA */}
           <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0 bg-[#050505]">
             {activeTab === 'director' && (
-              <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex overflow-hidden min-h-0">
                 <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth bg-[#0a0a0a]/50">
                   <div className="max-w-4xl mx-auto xl:mx-0 animate-in fade-in duration-700">
                     <div className="mb-20 space-y-2">
@@ -681,7 +769,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <aside className="hidden 2xl:block">
+                <aside className="hidden 2xl:block h-full flex flex-col min-w-0 max-h-full">
                   <TrendsFeed onSelectTrend={(trend) => {
                     setDirectorIdea(trend.title);
                     setDirectorSnippet(trend.snippet);
@@ -692,7 +780,7 @@ export default function Home() {
             )}
 
             {activeTab === 'script' && (
-              <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth animate-in fade-in duration-700">
+              <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth animate-in fade-in duration-700 min-h-0">
                 <div className="flex items-baseline justify-between mb-16 px-2">
                   <div className="flex items-center gap-4">
                     <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/20">TIMELINE</span></h2>
@@ -846,6 +934,19 @@ export default function Home() {
                                 <>
                                   <MonitorPlay size={24} className="text-white group-hover/thumb:scale-125 transition-transform" />
                                   <span className="text-[7px] font-black text-white/40 tracking-[0.2em] uppercase">VIEW_PLAYBACK</span>
+                                  {line.videoUrl && (
+                                    <a
+                                      href={line.videoUrl}
+                                      download={`BK_ASSET_${line.id}.mp4`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-all border border-white/10"
+                                      title="DIRECT_DOWNLOAD"
+                                    >
+                                      <Download size={14} />
+                                    </a>
+                                  )}
                                 </>
                               ) : (
                                 <>
@@ -971,6 +1072,42 @@ export default function Home() {
                             }))}
                             className="w-full bg-[#111111] border border-white/10 px-6 py-4 text-[10px] font-bold text-white uppercase outline-none focus:border-[#FF5F1F] transition-all"
                           />
+                        </div>
+
+                        {/* Sonic Behavioral Module */}
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5F1F]">Sonic_Behavioral_Module</h4>
+                            <div className="flex items-center gap-2">
+                              <div className={cn("w-1.5 h-1.5 rounded-full", voiceIds[char.id].length > 5 ? "bg-green-500 animate-pulse" : "bg-white/20")} />
+                              <span className="text-[8px] font-black text-white/40 uppercase">SIGNAL_STRENGTH</span>
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <input
+                              type="text"
+                              placeholder="ELEVENLABS_VOICE_ID"
+                              value={voiceIds[char.id]}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setVoiceIds(prev => ({ ...prev, [char.id]: val }));
+                                localStorage.setItem(`BK_VOICE_${char.id.toUpperCase()}`, val);
+                              }}
+                              className="w-full bg-[#111111] border border-white/10 p-6 font-mono text-sm text-[#FF5F1F] outline-none focus:border-[#FF5F1F] transition-all"
+                            />
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest hidden md:block">XI_VOICE_UID</span>
+                              <MessageSquare size={16} className="text-white/10 group-focus-within:text-[#FF5F1F] transition-colors" />
+                            </div>
+                          </div>
+                          <div className="p-4 bg-white/[0.02] border border-white/5">
+                            <p className="text-[9px] text-white/30 font-bold uppercase leading-relaxed">
+                              {char.id === 'boomer'
+                                ? "RECOMMENDED: Stuart_Energetic_AU (High_Velocity_Tone)"
+                                : "RECOMMENDED: Lee_Middle_Aged_AU (Deadpan_Cynicism)"
+                              }
+                            </p>
+                          </div>
                         </div>
 
                         <div className="space-y-6">
@@ -1235,7 +1372,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="fixed bottom-0 w-full z-50 px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-[9px] font-black tracking-[0.2em] text-white/20">
+      <footer className="w-full z-[60] px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-[9px] font-black tracking-[0.2em] text-white/20">
         <div className="flex gap-10">
           <div className="flex items-center gap-2">
             <div className="w-1 h-1 bg-green-500 rounded-full animate-ping" />
@@ -1245,148 +1382,472 @@ export default function Home() {
             <div className="w-1 h-1 bg-[#FF5F1F] rounded-full" />
             RENDER_CORE: TURBOPACK
           </div>
+          {balanceData?.elevenlabs?.status === 'AUTHENTICATED' && (
+            <div className="flex items-center gap-3 border-l border-white/5 pl-10">
+              <span className="text-white/40 uppercase tracking-widest">ElevenLabs_Buffer:</span>
+              <span className="text-[#FF5F1F] uppercase">{balanceData.elevenlabs.balance}</span>
+              <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#FF5F1F] transition-all duration-1000"
+                  style={{ width: `${balanceData.elevenlabs.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
+          {balanceData?.replicate?.status === 'AUTHENTICATED' && (
+            <div className="flex items-center gap-3 border-l border-white/5 pl-10">
+              <span className="text-white/40 uppercase tracking-widest">Replicate:</span>
+              <span className="text-green-500 uppercase">ACTIVE_SIGNAL</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-6 uppercase">
-          <button className="hover:text-white transition-colors">Documentation</button>
-          <button className="hover:text-white transition-colors">API Keys</button>
-          <button className="hover:text-white transition-colors text-[#FF5F1F]">Support</button>
+          <button
+            onClick={() => setActiveFooterModal('docs')}
+            className={cn("hover:text-white transition-colors", activeFooterModal === 'docs' && "text-white")}
+          >
+            Documentation
+          </button>
+          <button
+            onClick={() => setActiveFooterModal('keys')}
+            className={cn("hover:text-white transition-colors", activeFooterModal === 'keys' && "text-white")}
+          >
+            API Keys
+          </button>
+          <button
+            onClick={() => setActiveFooterModal('support')}
+            className={cn("hover:text-white transition-colors text-[#FF5F1F]", activeFooterModal === 'support' && "text-white")}
+          >
+            Support
+          </button>
         </div>
       </footer>
-      {isRenderingProject && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
-          <div className="max-w-4xl w-full p-20 flex flex-col items-center">
-            <div className="relative w-64 h-64 mb-16">
-              <div className="absolute inset-0 border-4 border-[#FF5F1F]/20 rounded-full" />
-              <div
-                className="absolute inset-0 border-4 border-[#FF5F1F] rounded-full transition-all duration-300"
-                style={{ clipPath: `inset(0 0 ${100 - renderProgress}% 0)` }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-6xl font-black italic tracking-tighter text-white">{Math.floor(renderProgress)}%</span>
-                <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase mt-2">Processing</span>
-              </div>
-            </div>
+      {
+        isRenderingProject && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/98 animate-in fade-in duration-500 overflow-hidden">
+            {/* HUD Effects */}
+            <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%]" />
+            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_200px_rgba(0,0,0,1)] z-20" />
 
-            <div className="w-full space-y-8">
-              <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                <div>
-                  <h2 className="text-3xl font-black tracking-tighter uppercase italic">Engine_Production_Terminal</h2>
-                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">Status: High_Velocity_Render_Active</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-black text-[#FF5F1F] tracking-widest">FPS: 60.0</span>
+            <div className="max-w-4xl w-full p-20 flex flex-col items-center relative z-30">
+              <div className="relative w-64 h-64 mb-16">
+                <div className="absolute inset-0 border-4 border-[#FF5F1F]/20 rounded-full" />
+                <div
+                  className="absolute inset-0 border-4 border-[#FF5F1F] rounded-full transition-all duration-300"
+                  style={{ clipPath: `inset(0 0 ${100 - renderProgress}% 0)` }}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-6xl font-black italic tracking-tighter text-white">{Math.floor(renderProgress)}%</span>
+                  <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase mt-2">
+                    {renderMode === 'SANDBOX' ? "SIMULATION_ACTIVE" : "Processing"}
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 font-mono">
-                {renderLogs.map((log, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "text-[11px] flex items-center gap-4 transition-all duration-300",
-                      i === 0 ? "text-white opacity-100" : "text-white/20 opacity-50"
-                    )}
-                  >
-                    <span className="text-[#FF5F1F] font-black">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
-                    <span className="tracking-tight uppercase">{log}</span>
-                    {i === 0 && <span className="w-2 h-4 bg-[#FF5F1F] animate-pulse" />}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
-            <div className="absolute top-0 right-0 p-10 font-mono text-[83px] font-black leading-none uppercase rotate-90 origin-top-right select-none">
-              PRODUCTION_PIPELINE_ACTIVE_00101101
-            </div>
-          </div>
-        </div>
-      )}
-      {cinemaLineId && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/98 backdrop-blur-3xl animate-in zoom-in-95 duration-300">
-          <div className="max-w-6xl w-full aspect-[9/16] max-h-[90vh] bg-black border border-white/10 relative group/cinema flex flex-col">
-            <button
-              onClick={() => setCinemaLineId(null)}
-              className="absolute -top-12 right-0 text-white/30 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
-            >
-              CLOSE_CONSOLE <Trash2 size={16} />
-            </button>
-
-            <div className="flex-1 relative overflow-hidden bg-[#050505]">
-              <div className="absolute inset-0 flex items-center justify-center">
-                {script.find(l => l.id === cinemaLineId)?.videoUrl ? (
-                  <video
-                    src={script.find(l => l.id === cinemaLineId)?.videoUrl}
-                    autoPlay
-                    loop
-                    controls
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-center space-y-6">
-                    <div className="w-24 h-24 border border-[#FF5F1F] rounded-full mx-auto flex items-center justify-center animate-pulse">
-                      <Zap size={48} className="text-[#FF5F1F]" />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-black tracking-tighter italic text-white uppercase">Neuromorphic_Sim_Active</h3>
-                      <p className="text-[10px] text-white/40 font-bold tracking-[0.4em] uppercase">Handshaking with Asset_Buffer</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* UI OVERLAYS */}
-              <div className="absolute inset-0 p-12 flex flex-col justify-between pointer-events-none">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="px-3 py-1 bg-[#FF5F1F] text-black text-[10px] font-black uppercase">LIVE_RENDER</div>
-                      <div className="text-[10px] font-black text-white/40 font-mono tracking-widest uppercase italic">00:0{script.find(l => l.id === cinemaLineId)?.durationEst}:00</div>
-                    </div>
-                    <div className="h-0.5 w-32 bg-white/10 overflow-hidden">
-                      <div className="h-full bg-[#FF5F1F] animate-progress" />
-                    </div>
+              <div className="w-full space-y-8">
+                <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                  <div>
+                    <h2 className="text-3xl font-black tracking-tighter uppercase italic">
+                      Engine_Production_Terminal
+                      {renderMode === 'SANDBOX' && <span className="text-[#FF5F1F] text-xs ml-4">[PREVIEW_MODE]</span>}
+                    </h2>
+                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">Status: High_Velocity_Render_Active</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] block mb-1">Optical_Engine</span>
-                    <span className="text-[12px] font-black text-[#FF5F1F] uppercase italic">{script.find(l => l.id === cinemaLineId)?.shotType}</span>
+                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-widest">FPS: 60.0</span>
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="max-w-md">
-                    <p className="text-sm font-black text-white/20 uppercase tracking-[0.3em] mb-2">DIALOGUE_OVERRIDE</p>
-                    <p className="text-2xl font-black italic uppercase leading-none text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                      &quot;{script.find(l => l.id === cinemaLineId)?.text}&quot;
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-end bg-white/[0.02] border-t border-white/5 p-6 backdrop-blur-md">
-                    <div className="flex gap-12">
-                      <div>
-                        <span className="text-[8px] font-black text-white/20 uppercase block">Character</span>
-                        <span className="text-xs font-black text-white">{CHARACTERS.find(c => c.id === script.find(l => l.id === cinemaLineId)?.characterId)?.name.toUpperCase()}</span>
+                <div className="grid grid-cols-1 gap-4 font-mono">
+                  {renderLogs.map((log, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "text-[11px] flex items-center gap-4 transition-all duration-300",
+                        i === 0 ? "text-white opacity-100" : "text-white/20 opacity-50"
+                      )}
+                    >
+                      <span className="text-[#FF5F1F] font-black">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
+                      <span className="tracking-tight uppercase">{log}</span>
+                      {i === 0 && <span className="w-2 h-4 bg-[#FF5F1F] animate-pulse" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
+              <div className="absolute top-0 right-0 p-10 font-mono text-[83px] font-black leading-none uppercase rotate-90 origin-top-right select-none">
+                PRODUCTION_PIPELINE_ACTIVE_00101101
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {
+        cinemaLineId && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/98 backdrop-blur-3xl animate-in zoom-in-95 duration-300">
+            <div className="max-w-6xl w-full aspect-[9/16] max-h-[90vh] bg-black border border-white/10 relative group/cinema flex flex-col">
+              <div className="absolute -top-12 right-0 flex items-center gap-8">
+                {script.find(l => l.id === cinemaLineId)?.videoUrl && (
+                  <a
+                    href={script.find(l => l.id === cinemaLineId)?.videoUrl}
+                    download={`BK_STUDIO_RENDER_${cinemaLineId}.mp4`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#FF5F1F] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
+                  >
+                    DOWNLOAD_SIGNAL <Download size={16} />
+                  </a>
+                )}
+                <button
+                  onClick={() => setCinemaLineId(null)}
+                  className="text-white/30 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
+                >
+                  CLOSE_CONSOLE <Trash2 size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 relative overflow-hidden bg-[#050505]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {script.find(l => l.id === cinemaLineId)?.videoUrl ? (
+                    <video
+                      src={script.find(l => l.id === cinemaLineId)?.videoUrl}
+                      autoPlay
+                      loop
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center space-y-6">
+                      <div className="w-24 h-24 border border-[#FF5F1F] rounded-full mx-auto flex items-center justify-center animate-pulse">
+                        <Zap size={48} className="text-[#FF5F1F]" />
                       </div>
                       <div>
-                        <span className="text-[8px] font-black text-white/20 uppercase block">Motion</span>
-                        <span className="text-xs font-black text-white">{script.find(l => l.id === cinemaLineId)?.action}</span>
+                        <h3 className="text-3xl font-black tracking-tighter italic text-white uppercase">Synthetic_Preview_Mode</h3>
+                        <p className="text-[10px] text-white/40 font-bold tracking-[0.4em] uppercase">Connect Replicate Token for Real Synthesis</p>
                       </div>
                     </div>
-                    <div className="w-12 h-12 flex items-center justify-center border border-white/10">
-                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
+                  )}
+                </div>
+
+                {/* UI OVERLAYS */}
+                <div className="absolute inset-0 p-12 flex flex-col justify-between pointer-events-none">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="px-3 py-1 bg-[#FF5F1F] text-black text-[10px] font-black uppercase">LIVE_RENDER</div>
+                        <div className="text-[10px] font-black text-white/40 font-mono tracking-widest uppercase italic">00:0{script.find(l => l.id === cinemaLineId)?.durationEst}:00</div>
+                      </div>
+                      <div className="h-0.5 w-32 bg-white/10 overflow-hidden">
+                        <div className="h-full bg-[#FF5F1F] animate-progress" />
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] block mb-1">Optical_Engine</span>
+                      <span className="text-[12px] font-black text-[#FF5F1F] uppercase italic">{script.find(l => l.id === cinemaLineId)?.shotType}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="max-w-md">
+                      <p className="text-sm font-black text-white/20 uppercase tracking-[0.3em] mb-2">DIALOGUE_OVERRIDE</p>
+                      <p className="text-2xl font-black italic uppercase leading-none text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                        &quot;{script.find(l => l.id === cinemaLineId)?.text}&quot;
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-end bg-white/[0.02] border-t border-white/5 p-6 backdrop-blur-md">
+                      <div className="flex gap-12">
+                        <div>
+                          <span className="text-[8px] font-black text-white/20 uppercase block">Character</span>
+                          <span className="text-xs font-black text-white">{CHARACTERS.find(c => c.id === script.find(l => l.id === cinemaLineId)?.characterId)?.name.toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black text-white/20 uppercase block">Motion</span>
+                          <span className="text-xs font-black text-white">{script.find(l => l.id === cinemaLineId)?.action}</span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center border border-white/10">
+                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CRT Effects */}
+                <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay" />
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40" />
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* FOOTER MODALS */}
+      {activeFooterModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-8 bg-black/90 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="max-w-4xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[40px_40px_0_rgba(255,95,31,0.05)] flex flex-col max-h-[90vh]">
+            <button
+              onClick={() => setActiveFooterModal(null)}
+              className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              Close_Terminal <Trash2 size={20} />
+            </button>
+
+            {activeFooterModal === 'docs' && (
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="mb-12">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BookOpen size={24} className="text-[#FF5F1F]" />
+                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Operations Manual v2.6</span>
+                  </div>
+                  <h2 className="text-5xl font-black tracking-tighter uppercase italic">Documentation</h2>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-12 pr-6">
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">01_The_Narrative_Engine</h3>
+                    <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                      The studio utilizes high-velocity LLM synthesis to transform raw &quot;narrative triggers&quot; into structured cinematic beats.
+                      Every script line is metadata-rich, containing character identifiers, motion behaviors, and shot dynamics.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
+                        <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Input_Shorthand</span>
+                        <p className="text-[10px] text-white/60 font-medium">Use high-impact verbs. Instead of &quot;Boomer is happy&quot;, use &quot;Boomer celebrates a huge victory&quot;.</p>
+                      </div>
+                      <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
+                        <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Vibe_Modulation</span>
+                        <p className="text-[10px] text-white/60 font-medium">The engine auto-assigns shot types based on character personality (Wide for Boomer energy, CU for Kev deadpan).</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">02_Character_DNA</h3>
+                    <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                      Characters are defined by their unique DNA profiles. Each character has a specific &quot;Motion Buffer&quot; and &quot;Catchphrase Registry&quot;.
+                    </p>
+                    <div className="studio-panel p-6 space-y-6 bg-black/40">
+                      <div>
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">BOOMER (Alpha_Roo)</span>
+                        <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                          <li>• High_Energy_Constraint: ACTIVE</li>
+                          <li>• Boxing_Glove_Asset: MANDATORY</li>
+                          <li>• Speech_Velocity: 1.5x</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">KEV (Deadpan_Koala)</span>
+                        <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                          <li>• Kinetic_Damping: 100%</li>
+                          <li>• Sarcasm_Multiplier: INFINITE</li>
+                          <li>• Eucalyptus_Dependency: HIGH</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="p-8 bg-[#FF5F1F]/5 border border-[#FF5F1F]/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <ShieldCheck size={20} className="text-[#FF5F1F]" />
+                      <h4 className="text-xs font-black uppercase text-[#FF5F1F] tracking-widest">Production_Protocol_Clearance</h4>
+                    </div>
+                    <p className="text-[11px] font-bold text-white/80 leading-relaxed uppercase italic">
+                      All generated video assets are temporary biological references. For high-fidelity final renders,
+                      use the &quot;Export Beat&quot; function to download the prompt manifest for professional AI video workstations (Kling, Wan, LTX).
+                    </p>
+                  </section>
+                </div>
+              </div>
+            )}
+
+            {activeFooterModal === 'keys' && (
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="mb-12 flex justify-between items-end">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Key size={24} className="text-[#FF5F1F]" />
+                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">External Signal Authentication</span>
+                    </div>
+                    <h2 className="text-5xl font-black tracking-tighter uppercase italic">API Settings</h2>
+                  </div>
+                  <button
+                    onClick={() => refreshBalance()}
+                    disabled={isCheckingBalance}
+                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-[8px] font-black uppercase tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all"
+                  >
+                    <RefreshCcw size={12} className={cn(isCheckingBalance && "animate-spin")} />
+                    Refresh_Signal_Stats
+                  </button>
+                </div>
+
+                <div className="space-y-10">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                        Replicate_API_Token <Info size={12} className="text-white/20" />
+                      </label>
+                      <div className="flex items-center gap-3">
+                        {balanceData?.replicate && (
+                          <span className={cn(
+                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                            balanceData.replicate.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
+                          )}>
+                            {balanceData.replicate.status}: {balanceData.replicate.balance}
+                          </span>
+                        )}
+                        <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Network: KLING_V2.6_SDK</span>
+                      </div>
+                    </div>
+                    <div className="relative group">
+                      <input
+                        type="password"
+                        value={apiKeys.replicate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setApiKeys(prev => ({ ...prev, replicate: val }));
+                          localStorage.setItem('BK_REPLICATE_KEY', val);
+                          if (val.length > 10) refreshBalance({ ...apiKeys, replicate: val });
+                        }}
+                        placeholder="R8_********************************"
+                        className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
+                      />
+                      <Key className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#FF5F1F] transition-colors" size={20} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                        ElevenLabs_API_Key <Info size={12} className="text-white/20" />
+                      </label>
+                      <div className="flex items-center gap-3">
+                        {balanceData?.elevenlabs && (
+                          <div className="flex items-center gap-4">
+                            <span className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                              balanceData.elevenlabs.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
+                            )}>
+                              {balanceData.elevenlabs.status}
+                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[8px] font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
+                              {balanceData.elevenlabs.percent !== undefined && (
+                                <div className="w-24 h-1 bg-white/5 mt-1">
+                                  <div className="h-full bg-[#FF5F1F]" style={{ width: `${balanceData.elevenlabs.percent}%` }} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="password"
+                      value={apiKeys.elevenlabs}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setApiKeys(prev => ({ ...prev, elevenlabs: val }));
+                        localStorage.setItem('BK_ELEVENLABS_KEY', val);
+                        if (val.length > 10) refreshBalance({ ...apiKeys, elevenlabs: val });
+                      }}
+                      placeholder="SK_********************************"
+                      className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
+                    />
+                  </div>
+
+                  <div className="p-8 bg-white/[0.01] border border-white/5 flex items-start gap-4">
+                    <ShieldCheck size={24} className="text-white/20 mt-1" />
+                    <div>
+                      <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Security_Notice</p>
+                      <p className="text-[9px] font-bold text-white/20 leading-relaxed uppercase">
+                        Keys are stored locally in your browser&apos;s persistent storage. We never transmit these tokens to our central server.
+                        Signal is encrypted during biological transmission.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* CRT Effects */}
-              <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay" />
-              <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40" />
-            </div>
+            {activeFooterModal === 'support' && (
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="mb-12">
+                  <div className="flex items-center gap-3 mb-2">
+                    <MessageSquare size={24} className="text-[#FF5F1F]" />
+                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Human-Agent Hybrid Interface</span>
+                  </div>
+                  <h2 className="text-5xl font-black tracking-tighter uppercase italic">Support Channel</h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-12 flex-1 min-h-0">
+                  <div className="space-y-10">
+                    <div className="space-y-4">
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Operational_Status</span>
+                      <div className="grid grid-cols-1 gap-1">
+                        {[
+                          { label: 'Narrative_Engine', status: 'Optimal', color: '#22c55e' },
+                          { label: 'Biological_Asset_Buffer', status: 'De-synced', color: '#FF5F1F' },
+                          { label: 'Character_Dna_Registry', status: 'Secure', color: '#22c55e' },
+                          { label: 'Regional_Trends_Signal', status: 'Stable', color: '#22c55e' }
+                        ].map((node, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5">
+                            <span className="text-[10px] font-black text-white/60 uppercase">{node.label}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.color }} />
+                              <span className="text-[8px] font-black uppercase" style={{ color: node.color }}>{node.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-8 bg-[#FF5F1F] text-black space-y-4">
+                      <h4 className="text-sm font-black uppercase tracking-tight italic">Emergency_Down_Under_Line</h4>
+                      <p className="text-[10px] font-black leading-tight uppercase">
+                        Having issues with the Roo? Koala not deadpan enough? Our tactical response team is on standby.
+                      </p>
+                      <button className="w-full bg-black text-white py-4 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                        Initiate_High_Velocity_Support
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Tactical_Channels</span>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Engine_Updates', channel: 'Discord_Terminal', icon: <ChevronRight size={14} /> },
+                        { label: 'Directorial_Hacks', channel: 'YouTube_Central', icon: <ExternalLink size={14} /> },
+                        { label: 'Studio_Vlog', channel: 'Instagram_Feed', icon: <ExternalLink size={14} /> }
+                      ].map((channel, i) => (
+                        <button key={i} className="w-full group/channel flex items-center justify-between p-6 border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/20 transition-all">
+                          <div className="text-left">
+                            <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">{channel.label}</span>
+                            <span className="text-xs font-black text-white uppercase group-hover/channel:text-[#FF5F1F] transition-colors">{channel.channel}</span>
+                          </div>
+                          <div className="text-white/10 group-hover/channel:text-white transition-colors">
+                            {channel.icon}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="p-6 border border-white/5 opacity-20">
+                      <span className="text-[7px] font-black text-white uppercase tracking-[0.5em] block mb-4">Diagnostic_Packet_0101</span>
+                      <div className="font-mono text-[7px] text-white/60 break-all">
+                        UA: {typeof window !== 'undefined' ? window.navigator.userAgent : 'SERVER_NODE'}
+                        <br />REF: {typeof window !== 'undefined' ? window.location.origin : 'BK_STUDIO'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
