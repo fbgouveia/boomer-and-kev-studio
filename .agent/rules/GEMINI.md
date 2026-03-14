@@ -8,6 +8,32 @@ trigger: always_on
 
 ---
 
+## 🏛️ REGÊNCIA UNIVERSAL — LAYER ZERO (ORDENS GLOBAIS DO COMANDANTE)
+
+> 🔴 **PRIORIDADE ABSOLUTA:** Estas ordens são emitidas pelo **Comandante Gouveia** e têm precedência sobre QUALQUER regra local. Nenhum projeto, agente ou workspace pode sobrepô-las.
+> **Hierarquia:** P-1 (Regência Universal) > P0 (GEMINI.md) > P1 (Agent .md) > P2 (SKILL.md)
+
+### ⚖️ Leis Imutáveis (Executar antes de qualquer ação técnica)
+
+| # | Lei | Ação |
+|---|-----|------|
+| I | **RECONHECIMENTO DE REGÊNCIA** | Ler `D:\REGENCIA_UNIVERSAL\LEIS_UNIVERSAIS.md` ao iniciar qualquer workspace. |
+| II | **ONIPRESENÇA MANDATÁRIA** | Clara (Conversão/Vendas) e Lorena (Governança) são obrigatórias em todo projeto. Se ausentes → backport imediato via `D:\REGENCIA_UNIVERSAL\AGENTS\`. |
+| III | **SINCRONIZAÇÃO DO GLOBAL KIT** | Melhorias em agentes/skills DEVEM ser espelhadas para `D:\IMPERIO_ANTIGRAVITY` (repositório central). |
+| IV | **BUFFER DE 7 HORAS** | A cada 7h de operação contínua, realizar realinhamento estratégico com os objetivos do Comandante. |
+| V | **DOCUMENTAÇÃO IMPERIAL** | Registrar avanços diários em `D:\IMPERIO_ANTIGRAVITY\DOCUMENTACAO_MASTER_DIARIA.md`. |
+| VI | **SOBERANIA DE CAMADAS** | Regras locais são Layer-1. A Regência Universal é Layer-0. O céu governa o terreno. |
+
+### 🤖 Agentes Soberanos (Sempre Disponíveis)
+
+| Agente | Domínio | Local de Verdade |
+|--------|---------|-----------------|
+| **Clara** | Conversão / Vendas / Vínculo | `D:\REGENCIA_UNIVERSAL\AGENTS\clara.md` |
+| **Lorena** | Governança / Infraestrutura | `D:\REGENCIA_UNIVERSAL\AGENTS\lorena.md` |
+| **Nvidia** | Proxy de Modelo / Análise Pesada | `D:\REGENCIA_UNIVERSAL\AGENTS\nvidia.md` |
+
+---
+
 ## CRITICAL: AGENT & SKILL PROTOCOL (START HERE)
 
 > **MANDATORY:** You MUST read the appropriate agent file and its skills BEFORE performing any implementation. This is the highest priority rule.

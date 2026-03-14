@@ -3,7 +3,7 @@ import Parser from 'rss-parser';
 
 const parser = new Parser();
 
-const getCharacterTake = (title: string) => {
+const getCharacterTake = (_title: string) => {
     const isBoomer = Math.random() > 0.5;
     const character = isBoomer ? 'BOOMER' : 'KEV';
 

@@ -1,3 +1,216 @@
+# 🎬 Boomer & Kev Studio — Project Architecture
+
+> AI-Powered Podcast Script Production Engine
+
+---
+
+## 🏗️ Application Architecture
+
+### Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | Next.js 16 (App Router, Turbopack) |
+| **Language** | TypeScript (strict, 0 errors) |
+| **Styling** | Tailwind CSS (Brutalist Neural Glass design system) |
+| **AI Engine** | Google Gemini 2.5 Flash (`v1beta`) |
+| **Video Render** | Replicate API (Kling v2) |
+| **Voice Synth** | ElevenLabs API |
+| **PDF Export** | jsPDF v2.7 |
+| **Icons** | Lucide React |
+
+---
+
+### 📡 AI Routes
+
+All routes live under `src/app/api/` and call **Google Gemini 2.5 Flash**:
+
+```
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+```
+
+> ⚠️ **Critical:** Use `v1beta` endpoint. Older models (`gemini-1.5-flash`, `gemini-2.0-flash-lite`) may return 404 depending on API key tier. Run `node find-model.js` to discover the working model for your key.
+
+| Route | File | Purpose |
+|---|---|---|
+| `POST /api/ai/brainstorm` | `brainstorm/route.ts` | Generates script section options (Hooks, Bridges, Reactions, Closings) |
+| `POST /api/ai/script` | `script/route.ts` | Generates a full 6-scene script from topic + directorial notes |
+| `POST /api/ai/interview` | `interview/route.ts` | Directorial Q&A → synthesizes master blueprint |
+| `POST /api/ai/voice` | `voice/route.ts` | ElevenLabs voice synthesis per character |
+| `POST /api/ai/sync` | `sync/route.ts` | Replicate LipSync orchestration |
+| `POST /api/render` | `render/route.ts` | Kling v2 video render pipeline initiation |
+| `GET /api/render/status` | `render/status/route.ts` | Polls Replicate prediction status |
+| `GET /api/trends` | `trends/route.ts` | Google Trends RSS → Australian trending topics |
+| `POST /api/keys/balance` | `keys/balance/route.ts` | Validates API keys & ElevenLabs character balance |
+
+---
+
+### 🧩 Component Map
+
+```
+src/
+├── app/
+│   ├── page.tsx                 # Main Studio UI (3 tabs: Director, Production, Engine DNA)
+│   ├── layout.tsx               # Root layout + SEO metadata (metadataBase set)
+│   ├── globals.css              # Design system tokens & animations
+│   └── api/
+│       ├── ai/
+│       │   ├── brainstorm/      # Drafting Table AI
+│       │   ├── script/          # Full Script Generator
+│       │   ├── interview/       # Directorial Q&A
+│       │   ├── voice/           # ElevenLabs voice synthesis
+│       │   └── sync/            # LipSync orchestration
+│       ├── render/              # Replicate video render
+│       ├── trends/              # Google Trends RSS
+│       └── keys/balance/        # API key validation
+├── components/
+│   └── Director/
+│       ├── DraftingTable.tsx    # Script drafting HUD (Brutalist Neural Glass)
+│       └── TrendsFeed.tsx       # Trending topics sidebar
+└── data/
+    └── characters.ts            # Boomer & Kev DNA (personas, shot types, angle specs)
+└── lib/
+    ├── script-engine.ts         # ScriptEngine + DirectorialIntelligence types
+    └── validations.ts           # Zod schemas (balanceSchema)
+```
+
+---
+
+### 🛡️ Resilience: Neural Link Hardening
+
+Implemented across all AI routes:
+
+```typescript
+// Pattern: fetchWithRetry with exponential backoff
+async function fetchWithRetry(url, options, retries = 3) {
+    // 3 auto-retries on 429 (rate limit)
+    // Exponential backoff: 1s → 2s → 3s
+    // Returns { response, retryAfter? } for frontend countdown
+}
+```
+
+**Frontend (DraftingTable.tsx):**
+- Extracts `retryAfter` from 429 response
+- Shows live countdown timer
+- Disables retry button until cooldown expires
+
+---
+
+### 🎨 Design System: Brutalist Neural Glass
+
+| Token | Value |
+|---|---|
+| Primary | `#FF5F1F` (Signal Orange) |
+| Background | `#000000` / `#0d0d0d` |
+| HUD Overlay | `bg-black/40 backdrop-blur-xl` |
+| Borders | Solid 4px (`border-[4px] border-[#FF5F1F]`) |
+| Typography | All-caps, `tracking-widest`, italic, `font-black` |
+| Forbidden | 🚫 Purple — ever |
+
+**Drafting Table HUD** = Semi-transparent "Brutalist Neural Glass" — the Director's Terminal and Nav Bar remain visible behind the active drafting layer. Grain texture overlay reduces noise.
+
+---
+
+### 👕 Outfit Consistency System
+
+The `getDetailedPrompt()` function (in `page.tsx`) guarantees outfit appears in **every scene prompt** using a two-layer approach:
+
+```typescript
+// Layer 1: Always present — character's default outfit
+const outfitBase = `Wearing ${char.defaultOutfit}.`;
+
+// Layer 2: Directorial override layers ON TOP (jersey text, colour, etc.)
+const directorialOverride = explicitNotes
+  ? ` CRITICAL_DIRECTORIAL_OVERRIDE: ${explicitNotes}. Ensure all visual details like jerseys and text are prioritized.`
+  : '';
+
+const characterAnchor = `${char.imagePromptContext}. ${outfitBase}${directorialOverride} ...`;
+```
+
+**Call sites that pass director context** (all fixed):
+- `onAssemble` in DraftingTable → `getDetailedPrompt(line, directorIdea, directorSnippet)` ✅
+- `renderProject` pipeline → passes `directorIdea, directorSnippet` ✅
+- `addLine` → passes `mainSubject, directorSnippet` ✅
+- `updateLine` → passes `directorIdea, directorSnippet` ✅
+- Share panel → passes `directorIdea, directorSnippet` ✅
+- Both PDF exports → pass `directorIdea, directorSnippet` ✅
+
+---
+
+### 🖨️ PDF Export System (v2.7)
+
+#### Scene Prompt Card (`downloadScenePromptPDF`)
+
+```
+┌─────────────────────────────────────────┐
+│ BOOMER & KEV STUDIO          SHOT 1 v2.7│  ← Header
+├────────────────────┬────────────────────┤
+│ CHARACTER          │ SHOT TYPE          │  ← 2-col label row
+│ BOOMER             │ MCU_BOOMER         │  ← splitTextToSize per column
+├────────────────────┼────────────────────┤
+│ MOTION / ACTION    │ EMOTION            │
+│ SHADOW BOXING...   │ EXPLOSIVE          │
+├─────────────────────────────────────────┤
+│ "DIALOGUE LINE HERE IN UPPERCASE"       │  ← Dark box, dynamic height
+├─────────────────────────────────────────┤
+│ ENGINE_PROMPT_CONSTRUCTION_STREAM:      │  ← Font size 6, lineHeight 3.8
+│ CINEMATIC MASTERPIECE. Wearing...       │  ← Auto page-break if overflow
+├─────────────────────────────────────────┤
+│ REFERENCE_ASSET: [url wrapped]          │
+├─────────────────────────────────────────┤
+│ PROPERTY OF BOOMER & KEV STUDIO    v2.7 │  ← Footer
+└─────────────────────────────────────────┘
+```
+
+Key fixes in v2.7:
+- All metadata fields use `splitTextToSize` — no overflow possible
+- Tech prompt box height = `lines × 3.8 + 18` (not a fixed estimate)
+- Auto `doc.addPage()` if content exceeds 275px
+- Reference URLs wrapped, never clip edge
+- Added dialogue box (was missing in v2.6)
+
+#### Master Manifest (`exportToPDF`)
+- All 6 scenes in one document, per-scene AI prompt stream
+- Dynamic card heights prevent content cutoff
+- Auto page-break with header repeat
+
+---
+
+### 🔧 Debug Utilities
+
+Scripts in project root — excluded from ESLint (`eslint.config.mjs` ignore list):
+
+| Script | Purpose |
+|---|---|
+| `find-model.js` | Exhaustively probes all models × API versions for a working endpoint |
+| `test-brainstorm.js` | End-to-end brainstorm API integration test |
+| `test-rivalry.js` | Full script generation test (NRL vs AFL topic) |
+| `check-model.js` | Checks metadata for a specific Gemini model |
+| `list-models.js` | Lists all Gemini models accessible to your API key |
+| `test-direct.js` | Direct Gemini API call for raw endpoint testing |
+
+---
+
+### ✅ Code Quality Audit — 2026-02-24
+
+```
+TypeScript (tsc --noEmit)  → 0 errors
+ESLint                     → 0 errors, 18 warnings (intentional <img> tags)
+Production Build           → Exit 0, compiled in 7.1s
+11 routes generated cleanly
+```
+
+**Fixes applied this session:**
+- Removed unused imports (`Terminal`, `CHARACTERS`, `ScriptState` interface)
+- Fixed `useEffect` missing deps array
+- Renamed all unused catch variables to `_e` / `_error`
+- Removed unused `driveLink` variable
+- Added all debug `.js` scripts to ESLint ignore list
+- Added `metadataBase` + Twitter card to `layout.tsx` (fixes OG build warning)
+
+---
+
+
 # Antigravity Kit Architecture
 
 > Comprehensive AI Agent Capability Expansion Toolkit
@@ -54,6 +267,7 @@ Specialist AI personas for different domains.
 | `qa-automation-engineer` | E2E testing, CI pipelines  | webapp-testing, testing-patterns                         |
 | `code-archaeologist`     | Legacy code, refactoring   | clean-code, code-review-checklist                        |
 | `explorer-agent`         | Codebase analysis          | -                                                        |
+| `neuromarketing-agent`   | Persuasion & Conversion    | neuromarketing-strategy, frontend-design                 |
 
 ---
 

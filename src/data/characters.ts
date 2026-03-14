@@ -14,6 +14,7 @@ export type Character = {
     imagePromptContext: string;
     lightingKey: string;
     voiceId: string;
+    referenceImage?: string; // URL to the master reference image for I2V
 };
 
 export const CHARACTERS: Character[] = [
@@ -34,16 +35,17 @@ export const CHARACTERS: Character[] = [
             { emotion: 'Explosive', action: "Shadow boxing intensely towards the camera" },
             { emotion: 'Enthusiastic', action: "Flexing biceps while talking" },
             { emotion: 'Aggressive', action: "Leaning in aggressively into the microphone" },
-            { emotion: 'Power', action: "Pounding the desk with a boxing glove" },
-            { emotion: 'Attentive', action: "Doing quick ear twitches" },
-            { emotion: 'Vibe', action: "Wide-eyed enthusiastic nodding" },
+            { emotion: 'Power', action: "Pointing two fingers directly at the lens (The 'Listen Here' point)" },
+            { emotion: 'Attentive', action: "Rubbing chin thoughtfully with a boxing glove" },
+            { emotion: 'Vibe', action: "Throwing a 'Shaka' sign with a gloved hand" },
             { emotion: 'Sweaty', action: "Wiping sweat from brow with a boxing glove" }
         ],
-        defaultOutfit: 'Wearing red boxing gloves (often), sometimes a black singlet or just shirtless showing muscles. Always wears large professional studio headphones.',
-        voiceStyle: 'Deep, booming Australian accent. Fast-paced, high energy.',
-        imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, professional studio headphones, detailed fur texture, strong studio lighting',
+        defaultOutfit: "Wearing red boxing gloves (often), gold chain, black 'Bonds style' singlet or just shirtless showing muscles. Always wears large professional studio headphones.",
+        voiceStyle: 'Deep, booming Queensland accent. Fast-paced, high energy.',
+        imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, gold chain necklace, black singlet option, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
-        voiceId: 'exT9S2zWNo7lSxSrsD73' // Example Aussie Alpha Voice
+        voiceId: 'exT9S2zWNo7lSxSrsD73', // Example Aussie Alpha Voice
+        referenceImage: 'https://drive.google.com/file/d/160ZOQOxYsAzk6-ftW6rRVccQbBVR8jn1/view?usp=sharing'
     },
     {
         id: 'kev',
@@ -62,17 +64,19 @@ export const CHARACTERS: Character[] = [
         motionBehaviors: [
             { emotion: 'Bored', action: "Slowly chewing on a gum leaf" },
             { emotion: 'Deadpan', action: "Slowly blinks with heavy eyelids" },
-            { emotion: 'Cynical', action: "Rubbing his face with a small paw" },
-            { emotion: 'Disbelief', action: "Looking away from Boomer with complete boredom" },
+            { emotion: 'Cynical', action: "Taking a sip from a stubby holder labeled 'WATER'" },
+            { emotion: 'Disbelief', action: "Rolling eyes dramatically upwards" },
             { emotion: 'Passive', action: "Adjusting headphones with one hand" },
-            { emotion: 'Exhausted', action: "Slight nasally sighing" },
-            { emotion: 'Sleepy', action: "Yawning wide and showing small teeth" }
+            { emotion: 'Exhausted', action: "Slumping forward onto the desk" },
+            { emotion: 'Sleepy', action: "Yawning wide and showing small teeth" },
+            { emotion: 'Annoyed', action: "Lazily swatting a fly away from his nose" }
         ],
-        defaultOutfit: 'No shirt, just natural fur. Always wears large professional studio headphones. Sometimes holds a tablet.',
-        voiceStyle: 'Slow, nasally, relaxed, deadpan Australian accent.',
-        imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, detailed fur texture, soft studio lighting',
+        defaultOutfit: 'No shirt, just natural fur. Always wears large professional studio headphones. Sometimes holds a tablet or a stubby holder.',
+        voiceStyle: 'Slow, nasally, relaxed, deadpan Queensland accent.',
+        imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
-        voiceId: 'pqHFr7yk3tS6H7G4Umlf' // Example Aussie Deadpan Voice
+        voiceId: 'pqHFr7yk3tS6H7G4Umlf', // Example Aussie Deadpan Voice
+        referenceImage: 'https://drive.google.com/file/d/1Msb2xa_rbAeMlzvuKh9Hi8zCdzw15bQh/view?usp=sharing'
     }
 ];
 
@@ -111,13 +115,16 @@ export const STUDIO_SETTING = {
     promptContext: "professional podcast studio, orange and black acoustic foam, SPONSORS led screens, Down Under Discourse neon, cinematic lighting, 8k, highly detailed fur"
 };
 
+export const DEFAULT_STUDIO_REFERENCE = 'https://drive.google.com/file/d/1tqQAsVev8OV2LZ01FkkfQ1Sag94K-IjY/view?usp=sharing';
+export const DEFAULT_DNA_FOLDER_URL = 'https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf';
+
 export const GUIDE_IMAGES: Record<string, string> = {
-    main: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800',
-    wide: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800',
-    side: 'https://images.unsplash.com/photo-1544333346-64e4fe18274b?auto=format&fit=crop&q=80&w=800',
-    close: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&q=80&w=800',
-    profile: 'https://images.unsplash.com/photo-1550684847-75bdda21cc95?auto=format&fit=crop&q=80&w=800',
-    detail: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=800'
+    WIDE: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800', // Wide Studio
+    BOOMER_MCU: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800', // Mid shot
+    KEV_CU: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800', // Close up
+    OTS_BOOMER: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800', // OTS
+    LOW_ANGLE_BOOMER: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800', // Low angle
+    GOPRO_FISHEYE: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800' // Fisheye
 };
 
 export const ANGLE_SPECS: Record<string, { label: string, desc: string, requirements: string[] }> = {

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, Character, GUIDE_IMAGES, ANGLE_SPECS } from '@/data/characters';
+import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, GUIDE_IMAGES, ANGLE_SPECS, DEFAULT_STUDIO_REFERENCE, DEFAULT_DNA_FOLDER_URL } from '@/data/characters';
+import { ScriptEngine, DirectorialIntelligence } from '@/lib/script-engine';
 import {
   Camera,
   Clapperboard,
@@ -18,6 +19,7 @@ import {
   Zap,
   Wand2,
   MonitorPlay,
+  Volume2,
   History,
   ShieldCheck,
   Key,
@@ -25,12 +27,16 @@ import {
   MessageSquare,
   ExternalLink,
   ChevronRight,
-  ShieldQuestion,
-  Info
+  Info,
+  Upload,
+  X,
+  FileText,
+  Dna
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrendsFeed } from '@/components/Director/TrendsFeed';
 import { jsPDF } from 'jspdf';
+import { DraftingTable } from '@/components/Director/DraftingTable';
 
 type ScriptLine = {
   id: string;
@@ -43,8 +49,14 @@ type ScriptLine = {
   status: 'IDLE' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   predictionId?: string;
   videoUrl?: string;
+  audioUrl?: string;
+  audioDataUri?: string;
+  syncPredictionId?: string;
+  syncStatus?: 'IDLE' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  technicalPrompt?: string;
+  characterReference?: string;
+  studioReference?: string; // Shot Composition Guide
 };
-
 
 
 export default function Home() {
@@ -57,6 +69,7 @@ export default function Home() {
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDrafting, setIsDrafting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [previewLineId, setPreviewLineId] = useState<string | null>(null);
   const [sharingLineId, setSharingLineId] = useState<string | null>(null);
@@ -65,39 +78,83 @@ export default function Home() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
   const [cinemaLineId, setCinemaLineId] = useState<string | null>(null);
-  const [charReferences, setCharReferences] = useState<Record<string, { main: string, wide: string, side: string, close: string, profile: string, detail: string }>>({
-    boomer: {
-      main: 'https://drive.google.com/file/d/160ZOQOxYsAzk6-ftW6rRVccQbBVR8jn1/view?usp=sharing',
-      wide: '',
-      side: '',
-      close: '',
-      profile: '',
-      detail: ''
-    },
-    kev: {
-      main: 'https://drive.google.com/file/d/1Msb2xa_rbAeMlzvuKh9Hi8zCdzw15bQh/view?usp=sharing',
-      wide: '',
-      side: '',
-      close: '',
-      profile: '',
-      detail: ''
+  const [charReferences, setCharReferences] = useState<Record<string, { main: string, wide: string, side: string, close: string, profile: string, detail: string }>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('BK_CHAR_REFERENCES');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) { console.error("DNA_LOAD_FAIL", e); }
+      }
     }
+    const refs: Record<string, { main: string, wide: string, side: string, close: string, profile: string, detail: string }> = {};
+    CHARACTERS.forEach(char => {
+      refs[char.id] = {
+        main: char.referenceImage || '',
+        wide: '', side: '', close: '', profile: '', detail: ''
+      };
+    });
+    return refs;
   });
+
+  useEffect(() => {
+    if (isLoaded && typeof window !== 'undefined') {
+      localStorage.setItem('BK_CHAR_REFERENCES', JSON.stringify(charReferences));
+    }
+  }, [charReferences, isLoaded]);
+
+  // Dynamic Character Config (Behaviors, Personality, Lighting)
+  const [characterConfig, setCharacterConfig] = useState<Record<string, { personality: string, lightingKey: string, behaviors: { action: string, emotion: string }[] }>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('BK_CHAR_CONFIG');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) { console.error("DNA_CONFIG_LOAD_FAIL", e); }
+      }
+    }
+    const config: Record<string, { personality: string, lightingKey: string, behaviors: { action: string, emotion: string }[] }> = {};
+    CHARACTERS.forEach(char => {
+      config[char.id] = {
+        personality: char.personality,
+        lightingKey: char.lightingKey,
+        behaviors: [...char.motionBehaviors]
+      };
+    });
+    return config;
+  });
+
+  useEffect(() => {
+    if (isLoaded && typeof window !== 'undefined') {
+      localStorage.setItem('BK_CHAR_CONFIG', JSON.stringify(characterConfig));
+    }
+  }, [characterConfig, isLoaded]);
 
   const [voiceIds, setVoiceIds] = useState<Record<string, string>>({
     boomer: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_BOOMER') || CHARACTERS[0].voiceId : CHARACTERS[0].voiceId,
     kev: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_KEV') || CHARACTERS[1].voiceId : CHARACTERS[1].voiceId
   });
-  const [studioReference, setStudioReference] = useState('https://drive.google.com/file/d/1tqQAsVev8OV2LZ01FkkfQ1Sag94K-IjY/view?usp=sharing');
-  const [dnaFolderUrl, setDnaFolderUrl] = useState('https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf');
+  const [studioReference, setStudioReference] = useState(DEFAULT_STUDIO_REFERENCE);
+  const [dnaFolderUrl, setDnaFolderUrl] = useState(DEFAULT_DNA_FOLDER_URL);
   const [activeFooterModal, setActiveFooterModal] = useState<'docs' | 'keys' | 'support' | null>(null);
   const [apiKeys, setApiKeys] = useState({
     replicate: typeof window !== 'undefined' ? localStorage.getItem('BK_REPLICATE_KEY') || '' : '',
-    elevenlabs: typeof window !== 'undefined' ? localStorage.getItem('BK_ELEVENLABS_KEY') || '' : ''
+    elevenlabs: typeof window !== 'undefined' ? localStorage.getItem('BK_ELEVENLABS_KEY') || '' : '',
+    gemini: typeof window !== 'undefined' ? localStorage.getItem('BK_GEMINI_KEY') || '' : ''
   });
-  const [balanceData, setBalanceData] = useState<any>(null);
+  const [balanceData, setBalanceData] = useState<{
+    replicate?: { status: string, balance: string },
+    elevenlabs?: { status: string, balance: string, percent?: number }
+  } | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
   const [renderMode, setRenderMode] = useState<'REAL' | 'SANDBOX' | null>(null);
+
+  // Instructor Bot States
+  const [isInterviewing, setIsInterviewing] = useState(false);
+  const [interviewQuestions, setInterviewQuestions] = useState<string[]>([]);
+  const [currentAnswers, setCurrentAnswers] = useState<string[]>(["", "", ""]);
+  const [isRefiningBlueprint, setIsRefiningBlueprint] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   const refreshBalance = async (keys = apiKeys) => {
     if (!keys.replicate && !keys.elevenlabs) return;
@@ -108,7 +165,10 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(keys)
       });
-      const data = await res.json();
+      const data = await res.json() as {
+        replicate?: { status: string, balance: string },
+        elevenlabs?: { status: string, balance: string, percent?: number }
+      };
       setBalanceData(data);
     } catch (err) {
       console.error("BALANCE_CHECK_FAILURE", err);
@@ -121,7 +181,7 @@ export default function Home() {
     if (activeFooterModal === 'keys' || (apiKeys.replicate || apiKeys.elevenlabs)) {
       refreshBalance();
     }
-  }, [activeFooterModal]);
+  }, [activeFooterModal, apiKeys.elevenlabs, apiKeys.replicate, refreshBalance]);
 
   // Frontend G-Drive resolver for UI previews
   const getPreviewUrl = (url: string) => {
@@ -130,9 +190,8 @@ export default function Home() {
     if (cleanUrl.includes('drive.google.com')) {
       const gMatch = cleanUrl.match(/\/d\/(.+?)(?:\/|$|\?)/) || cleanUrl.match(/id=(.+?)(?:&|$|#)/);
       const fileId = gMatch ? gMatch[1] : null;
-      // Using thumbnail restricted to larger size for better UI preview reliability
-      if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-      // If it's a Google Drive URL but no fileId is found, return null
+      // Using thumbnail with specific size often bypasses virus scan/download interstitials
+      if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
       return null;
     }
     // If it's not a Google Drive URL, return the clean URL as is
@@ -143,115 +202,100 @@ export default function Home() {
     setIsLoaded(true);
   }, []);
 
-  const generateAIScript = (contextOverride?: { title: string, snippet: string }) => {
-    const title = contextOverride?.title || directorIdea;
-    const snippet = contextOverride?.snippet || directorSnippet;
-
-    if (!title) return;
+  const generateAIScript = async (contextOverride?: { title: string, snippet: string, intelligence?: DirectorialIntelligence }) => {
     setIsGenerating(true);
+    console.log("🚀 [Neural_Link] Initiating Production Sequence...");
 
-    setTimeout(() => {
-      const boomer = CHARACTERS[0];
-      const kev = CHARACTERS[1];
+    await new Promise(r => setTimeout(r, 300));
 
-      const getMotion = (char: Character, emotion: string) => {
-        const behavior = char.motionBehaviors.find(b => b.emotion === emotion) || char.motionBehaviors[0];
-        return behavior.action;
-      };
+    let finalTitle = contextOverride?.title || directorIdea;
+    let finalSnippet = contextOverride?.snippet || directorSnippet;
 
-      const topicKeywords = title.split(' ').filter(w => w.length > 3);
-      const mainSubject = topicKeywords[0] || title;
+    if (!contextOverride && directorIdea.includes('\n')) {
+      const lines = directorIdea.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length > 1) {
+        finalTitle = lines[0];
+        finalSnippet = lines.slice(1).join(' ');
+        setDirectorIdea(finalTitle);
+        setDirectorSnippet(finalSnippet);
+      }
+    }
 
-      // 2026 NEUROMARKETING ARCHITECTURE: Hook -> Dopamine Loop -> Cognitive Contrast -> Loss Aversion
-      const newScript: ScriptLine[] = [
-        // PHASE 1: THE PATTERN INTERRUPT (0-6s) - Triggering the Amygdala
-        {
-          id: Math.random().toString(36).substr(2, 9),
-          characterId: 'boomer',
-          text: `EYES ON ME! 🔴 You're currently ignoring a ${title.toUpperCase()} loophole that is literally siphoning your attention! Your brain is lying to you!`,
-          shotType: 'LOW_ANGLE_BOOMER',
-          action: getMotion(boomer, 'Explosive'),
-          durationEst: 6,
-          emotion: 'Explosive',
-          status: 'IDLE'
-        },
-        // PHASE 2: THE DOPAMINE SPIKE (6-15s) - Information Arbitrage as Reward
-        {
-          id: Math.random().toString(36).substr(2, 9),
-          characterId: 'boomer',
-          text: `Decode the pattern: ${snippet ? snippet.split('.')[0] : `This ${mainSubject} shift is 100% asymmetric`}! The 1% are using this as a weaponized advantage while you're stuck in the legacy loop!`,
-          shotType: 'BOOMER_MCU',
-          action: getMotion(boomer, 'Power'),
-          durationEst: 9,
-          emotion: 'Power',
-          status: 'IDLE'
-        },
-        // PHASE 3: COGNITIVE CONTRAST (15-22s) - Mirror Neuron Conflict (The Skeptic)
-        {
-          id: Math.random().toString(36).substr(2, 9),
-          characterId: 'kev',
-          text: `Weaponized advantage? Give it a rest, Boomer. You're just stimming on ${mainSubject} hype. It's a standard noise-floor event. I'm choosing biological stasis.`,
-          shotType: 'KEV_CU',
-          action: getMotion(kev, 'Disbelief'),
-          durationEst: 7,
-          emotion: 'Disbelief',
-          status: 'IDLE'
-        },
-        // PHASE 4: LOSS AVERSION & BINARY CLOSURE (22-30s) - The "Survivor" Play
-        {
-          id: Math.random().toString(36).substr(2, 9),
-          characterId: 'boomer',
-          text: `Biological stasis is just a fancy word for OBSOLESCENCE, mate! ${mainSubject} is the leverage point. Adapt in the next 24 hours or accept the liquidation. ARE YOU IN OR OUT?`,
-          shotType: 'GOPRO_FISHEYE',
-          action: getMotion(boomer, 'Vibe'),
-          durationEst: 8,
-          emotion: 'Vibe',
-          status: 'IDLE'
-        }
-      ];
-
-      setScript(newScript);
+    if (!finalTitle) {
+      alert("⚠️ PRODUCTION_ERROR: No topic detected in the machine. Please type something first!");
+      console.warn("⚠️ [Neural_Link] Aborted: Empty Title.");
       setIsGenerating(false);
-      setActiveTab('script');
-    }, 1500);
+      return;
+    }
+
+    console.log("✨ [Neural_Link] Signal Confirmed. Opening Drafting Table for:", finalTitle);
+
+    setIsDrafting(true);
+    setIsGenerating(false);
+    console.log("✨ [Neural_Link] Drafting HUD Active for:", finalTitle);
+  };
+
+  const triggerInstructor = async () => {
+    if (!directorIdea) return;
+    setIsGeneratingQuestions(true);
+    setIsInterviewing(true);
+    try {
+      const res = await fetch('/api/ai/interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: directorIdea.split('\n')[0], apiKey: apiKeys.gemini })
+      });
+      const data = await res.json();
+      if (data.questions) {
+        setInterviewQuestions(data.questions);
+      }
+    } catch (e) {
+      console.error("INSTRUCTOR_FAIL", e);
+      setIsInterviewing(false);
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
+  };
+
+  const finalizeInterview = async () => {
+    setIsRefiningBlueprint(true);
+    try {
+      const res = await fetch('/api/ai/interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: directorIdea.split('\n')[0],
+          answers: currentAnswers,
+          apiKey: apiKeys.gemini
+        })
+      });
+      const data = await res.json();
+      if (data.blueprint) {
+        setDirectorSnippet(data.blueprint);
+        setIsInterviewing(false);
+        setInterviewQuestions([]);
+        setCurrentAnswers(["", "", ""]);
+      }
+    } catch (e) {
+      console.error("BLUEPRINT_FAIL", e);
+    } finally {
+      setIsRefiningBlueprint(false);
+    }
   };
 
   const addLine = () => {
-    const lastCharId = script[script.length - 1]?.characterId;
-    const nextCharId = lastCharId === 'boomer' ? 'kev' : 'boomer';
-    const char = CHARACTERS.find(c => c.id === nextCharId)!;
-
-    const behavior = char.motionBehaviors[Math.floor(Math.random() * char.motionBehaviors.length)];
-    const catchphrase = char.catchphrases[Math.floor(Math.random() * char.catchphrases.length)];
-
     const mainSubject = directorIdea || "this massive trend";
 
-    const transitions = char.id === 'boomer'
-      ? [
-        `And the absolute high-stakes kicker about ${mainSubject} is the sheer biological scale—this is industrial-grade domination!`,
-        `But wait, analyze the ${mainSubject} metrics with your own eyes—the wealth gap is closing or widening based on this logic!`,
-        `This ${mainSubject} shift is a total elite power move, we're talking legacy-level arbitrage!`,
-        `Nobody is prepared for how ${mainSubject} is going to liquidate every traditional player in this space!`
-      ]
-      : [
-        `Right, because ${mainSubject} is the 'answer'... sounds like a sales pitch to me.`,
-        `I'm still waiting for a single shred of evidence that ${mainSubject} isn't just hype.`,
-        `You're dreaming about ${mainSubject} 'leverage', mate. It's just more work.`,
-        `Ground control to Boomer, you're drowning in the ${mainSubject} Kool-Aid.`
-      ];
+    // Use ScriptEngine to generate the next line based on context
+    const nextLineRaw = ScriptEngine.generateNextLine(script, mainSubject) as ScriptLine;
+    const nextLine = {
+      ...nextLineRaw,
+      technicalPrompt: getDetailedPrompt(nextLineRaw, mainSubject, directorSnippet),
+      characterReference: charReferences[nextLineRaw.characterId]?.main || CHARACTERS.find(c => c.id === nextLineRaw.characterId)?.referenceImage,
+      studioReference: GUIDE_IMAGES[nextLineRaw.shotType]
+    };
 
-    const suggestedText = `${catchphrase} ${transitions[Math.floor(Math.random() * transitions.length)]}`;
-
-    setScript([...script, {
-      id: Math.random().toString(36).substr(2, 9),
-      characterId: nextCharId,
-      text: suggestedText,
-      shotType: char.id === 'boomer' ? 'BOOMER_MCU' : 'KEV_CU',
-      action: behavior.action,
-      durationEst: 5,
-      emotion: behavior.emotion,
-      status: 'IDLE'
-    }]);
+    setScript([...script, nextLine]);
   };
 
   const removeLine = (id: string) => {
@@ -263,33 +307,43 @@ export default function Home() {
       if (line.id !== id) return line;
       const updatedLine = { ...line, [field]: value };
 
+      if (field === 'shotType') {
+        updatedLine.studioReference = GUIDE_IMAGES[value as string];
+      }
+
       if (field === 'durationEst') {
-        const char = CHARACTERS.find(c => c.id === line.characterId);
+        const baseChar = CHARACTERS.find(c => c.id === line.characterId);
+        const charConfig = characterConfig[line.characterId];
+        const behaviors = charConfig?.behaviors || baseChar?.motionBehaviors || [];
+
         const isIncreasing = (value as number) > line.durationEst;
-        if (char) {
+        if (baseChar) {
           if (isIncreasing) {
-            const fillers = char.id === 'boomer'
+            const fillers = baseChar.id === 'boomer'
               ? ["This is the asymmetric intelligence they're trying to hide from you!", "Capture the definition of this play!", "This is absolute tactical madness!"]
               : ["Does anyone actually care?", "I could be napping right now.", "It's all one big circus."];
 
-            const newText = ` ${fillers[Math.floor(Math.random() * fillers.length)]} ${char.catchphrases[Math.floor(Math.random() * char.catchphrases.length)]}`;
+            const newText = ` ${fillers[Math.floor(Math.random() * fillers.length)]} ${baseChar.catchphrases[Math.floor(Math.random() * baseChar.catchphrases.length)]}`;
             updatedLine.text = line.text + newText;
 
-            if ((value as number) > 6) {
-              const secondaryBehavior = char.motionBehaviors[Math.floor(Math.random() * char.motionBehaviors.length)];
+            if ((value as number) > 6 && behaviors.length > 0) {
+              const secondaryBehavior = behaviors[Math.floor(Math.random() * behaviors.length)];
               updatedLine.action = `${line.action} THEN ${secondaryBehavior.action.toLowerCase()}`;
             }
           } else if (line.text.length > 40) {
             const sentences = line.text.split(/[.!?]/);
             updatedLine.text = sentences.length > 1 ? sentences.slice(0, -1).join('.') + "!" : line.text.substring(0, Math.floor(line.text.length * 0.7)) + "...";
 
-            if ((value as number) <= 5) {
-              const behavior = char.motionBehaviors.find(b => b.emotion === line.emotion) || char.motionBehaviors[0];
+            if ((value as number) <= 5 && behaviors.length > 0) {
+              const behavior = behaviors.find(b => b.emotion === line.emotion) || behaviors[0];
               updatedLine.action = behavior.action;
             }
           }
         }
       }
+      // Force prompt update on any change
+      updatedLine.technicalPrompt = getDetailedPrompt(updatedLine, directorIdea, directorSnippet);
+
       return updatedLine;
     }));
   };
@@ -297,142 +351,421 @@ export default function Home() {
   const totalDuration = script.reduce((acc, line) => acc + line.durationEst, 0);
   const totalCost = (totalDuration * 0.14).toFixed(2);
 
-  const getDetailedPrompt = (line: ScriptLine) => {
-    const char = CHARACTERS.find(c => c.id === line.characterId);
+  const getDetailedPrompt = (line: ScriptLine, topicContext?: string, snippetContext?: string) => {
+    const baseChar = CHARACTERS.find(c => c.id === line.characterId);
+    const charConfig = characterConfig[line.characterId];
+
+    const char = baseChar ? {
+      ...baseChar,
+      personality: charConfig?.personality || baseChar.personality,
+      lightingKey: charConfig?.lightingKey || baseChar.lightingKey
+    } : null;
+
     const shot = SHOT_TYPES.find(s => s.id === line.shotType);
+    const topic = topicContext || directorIdea || "Trending News";
+    const explicitNotes = snippetContext || directorSnippet || "";
 
     if (!char) return "";
 
-    const characterBase = `Cinematic 8k video, neuromorphic anthropomorphic ${char.species}, ${char.visualDescription}. Subliminal micro-muscle jitters in fur, dilated pupils to trigger mirror neurons.`;
-    const actionBase = `Action: ${line.action}. High-frequency micro-expressions: ${line.emotion?.toUpperCase()}. Hyper-precise lip-sync alignment for psychological impact: "${line.text}".`;
-    const lightingBase = `Lighting: ${char.lightingKey}, volumetric god-rays with subliminal color-shift triggers (Red/Orange for Boomer, Cool Teal for Kev). Studio: ${STUDIO_SETTING.visualDescription}.`;
-    const cameraBase = `Camera: ${shot?.label}. Rapid 15% FOV pulse on key beats. 60fps, sharp focus on tactile textures.`;
+    let angleSpec = ANGLE_SPECS.main;
+    if (shot?.id === 'WIDE') angleSpec = ANGLE_SPECS.wide;
+    else if (shot?.id.includes('CU')) angleSpec = ANGLE_SPECS.close;
+    else if (shot?.id.includes('OTS')) angleSpec = ANGLE_SPECS.side;
+    else if (shot?.id === 'GOPRO_FISHEYE') angleSpec = ANGLE_SPECS.wide;
 
-    return `${cameraBase} SUBJECT: ${characterBase} ${actionBase} ${lightingBase} STYLE: 2026 Viral Neuromarketing, ultra-realistic podcast, hyper-tactile 3D render.`;
+    // HIGH-END CONSISTENCY INJECTION — Outfit is ALWAYS present, directorial notes layer on top
+    const outfitBase = `Wearing ${char.defaultOutfit}.`;
+    const directorialOverride = explicitNotes ? ` CRITICAL_DIRECTORIAL_OVERRIDE: ${explicitNotes}. Ensure all visual details like jerseys and text are prioritized.` : '';
+    const characterAnchor = `${char.imagePromptContext}. ${outfitBase}${directorialOverride} Visual DNA: ${char.visualDescription}. Physicality: ${char.personality}.`;
+
+    // PERSONALITY-DRIVEN MOTION
+    const personalityLogic = line.characterId === 'boomer'
+      ? "hyper-active muscle tension, aggressive shadow boxing stance, intense eye contact"
+      : "deadpan low-energy, slow heavy blinking, subtle ear tuft movement, indifferent expression";
+
+    const actionBlock = `BEHAVIOR: ${line.action}. ${personalityLogic}. EMOTION: ${line.emotion}. Talking, lips moving clearly to: "${line.text.substring(0, 40)}..."`;
+
+    const cameraBlock = `Highly photorealistic, 8k RAW, movie grade textures, cinematic depth, subsurface scattering on fur, ray-traced lighting, masterpiece. CAMERA: ${shot?.label}, ${shot?.cinematicRule}. ${angleSpec.desc}, ${angleSpec.requirements.join(', ')}.`;
+
+    const activeProps = STUDIO_SETTING.props.filter(p => !p.includes(line.characterId === 'boomer' ? 'Tablet' : 'Gloves')).slice(0, 4).join(', ');
+    const envBlock = `ENVIRONMENT: ${STUDIO_SETTING.promptContext}. Visible props: ${activeProps}. TV screen graphics: ${topic}. Lighting: ${char.lightingKey}. Ambience: ${STUDIO_SETTING.acousticPanels}.`;
+
+    return `CINEMATIC MASTERPIECE. ${characterAnchor} ${actionBlock} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
+  };
+
+  const downloadPromptPDF = (characterId: string, angle: string) => {
+    const char = CHARACTERS.find(c => c.id === characterId);
+    if (!char) return;
+
+    const angleSpec = ANGLE_SPECS[angle as keyof typeof ANGLE_SPECS];
+    if (!angleSpec) return;
+
+    const doc = new jsPDF();
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(10, 10, 10);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 95, 31); // Brand Orange
+    doc.setFont("helvetica", "bold");
+    doc.text("BOOMER & KEV STUDIO", margin, 20);
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("OPTICAL MANIFEST / PROMPT CARD v2.6", margin, 30);
+
+    let y = 60;
+
+    // Metadata Block
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text(`SUBJECT: ${char.name.toUpperCase()}`, margin, y);
+    doc.text(`OPTICAL ANGLE: ${angleSpec.label.toUpperCase()}`, margin + 80, y);
+    y += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`GENETIC ID: ${char.id.toUpperCase()}`, margin, y);
+    doc.text(`REQUIREMENTS: ${angleSpec.requirements.join(' | ').toUpperCase()}`, margin + 80, y);
+    y += 20;
+
+    // Prompt Block
+    doc.setFillColor(245, 245, 245);
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(margin, y, pageWidth - (margin * 2), 60, 'FD');
+
+    doc.setFontSize(9);
+    doc.setTextColor(50, 50, 50);
+    doc.setFont("courier", "bold");
+    doc.text("GENERATIVE_PROMPT_STRING:", margin + 5, y + 10);
+
+    // Construct Prompt
+    const promptText = `(Masterpiece, 8k, Ultra High Res) ${char.imagePromptContext}, ${angleSpec.desc}, ${STUDIO_SETTING.promptContext} --ar 1:1 --stylize 250 --v 6.0`;
+
+    doc.setFont("courier", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    const splitPrompt = doc.splitTextToSize(promptText, pageWidth - (margin * 2) - 10);
+    doc.text(splitPrompt, margin + 5, y + 20);
+
+    y += 70;
+
+    // Negative Prompt Block
+    doc.setFillColor(255, 240, 240); // Slight red tint for negative
+    doc.rect(margin, y, pageWidth - (margin * 2), 40, 'FD');
+    doc.setFont("courier", "bold");
+    doc.setTextColor(150, 50, 50);
+    doc.text("NEGATIVE_PROMPT_STRING:", margin + 5, y + 10);
+
+    const negativeText = "(worst quality, low quality:1.4), text, watermark, signature, blurry, multiple angles, split screen, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped";
+    doc.setFont("courier", "normal");
+    doc.setTextColor(0, 0, 0);
+    const splitNeg = doc.splitTextToSize(negativeText, pageWidth - (margin * 2) - 10);
+    doc.text(splitNeg, margin + 5, y + 20);
+
+    y += 50;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Render this prompt in Midjourney v6 or Stable Diffusion XL for optimal results.", margin, y);
+
+    doc.save(`${char.name}_${angle.toUpperCase()}_PROMPT.pdf`);
+  };
+
+  const downloadScenePromptPDF = (line: ScriptLine, index: number) => {
+    const char = CHARACTERS.find(c => c.id === line.characterId);
+    if (!char) return;
+
+    const doc = new jsPDF();
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const colWidth = (pageWidth - (margin * 2) - 10) / 2; // two equal columns with gap
+    const maxTextWidth = pageWidth - (margin * 2) - 10;
+
+    // Header
+    doc.setFillColor(10, 10, 10);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 95, 31);
+    doc.setFont("helvetica", "bold");
+    doc.text("BOOMER & KEV STUDIO", margin, 20);
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`SCENE PROMPT CARD / SHOT ${index + 1} v2.7`, margin, 30);
+
+    let y = 60;
+
+    // --- Metadata Grid (2 columns, each clamped to colWidth) ---
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text("CHARACTER", margin, y);
+    doc.text("SHOT TYPE", margin + colWidth + 10, y);
+    y += 5;
+
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    const charSplit = doc.splitTextToSize(char.name.toUpperCase(), colWidth);
+    const shotSplit = doc.splitTextToSize(line.shotType, colWidth);
+    doc.text(charSplit, margin, y);
+    doc.text(shotSplit, margin + colWidth + 10, y);
+    y += Math.max(charSplit.length, shotSplit.length) * 5 + 5;
+
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text("MOTION / ACTION", margin, y);
+    doc.text("EMOTION", margin + colWidth + 10, y);
+    y += 5;
+
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    const motionSplit = doc.splitTextToSize((line.action || 'TALKING').toUpperCase(), colWidth);
+    const emotionSplit = doc.splitTextToSize((line.emotion || 'NEUTRAL').toUpperCase(), colWidth);
+    doc.text(motionSplit, margin, y);
+    doc.text(emotionSplit, margin + colWidth + 10, y);
+    y += Math.max(motionSplit.length, emotionSplit.length) * 5 + 10;
+
+    // Dialogue line
+    doc.setFillColor(20, 20, 20);
+    const dialogueSplit = doc.splitTextToSize(`"${line.text.toUpperCase()}"`, maxTextWidth - 10);
+    const dialogueHeight = dialogueSplit.length * 6 + 12;
+    doc.rect(margin, y, maxTextWidth, dialogueHeight, 'F');
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text(dialogueSplit, margin + 5, y + 8);
+    y += dialogueHeight + 10;
+
+    // --- Tech Prompt Box ---
+    doc.setFillColor(245, 245, 245);
+    doc.setDrawColor(200, 200, 200);
+    const techPrompt = getDetailedPrompt(line, directorIdea, directorSnippet);
+
+    doc.setFontSize(6);
+    doc.setFont("courier", "normal");
+    const splitPrompt = doc.splitTextToSize(techPrompt, maxTextWidth - 10);
+    const lineHeight = 3.8;
+    const promptHeight = splitPrompt.length * lineHeight + 18;
+
+    // Check if we need a new page
+    if (y + promptHeight > 275) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.rect(margin, y, maxTextWidth, promptHeight, 'FD');
+    doc.setFontSize(7);
+    doc.setTextColor(255, 95, 31);
+    doc.setFont("helvetica", "bold");
+    doc.text("ENGINE_PROMPT_CONSTRUCTION_STREAM:", margin + 5, y + 8);
+
+    doc.setFontSize(6);
+    doc.setFont("courier", "normal");
+    doc.setTextColor(40, 40, 40);
+    doc.text(splitPrompt, margin + 5, y + 15);
+    y += promptHeight + 10;
+
+    // --- Reference Asset ---
+    if (y + 20 > 275) {
+      doc.addPage();
+      y = 20;
+    }
+
+    const ref = line.characterReference || char.referenceImage || "DEFAULT_DNA";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text("REFERENCE_ASSET:", margin, y);
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(100, 100, 100);
+    const refSplit = doc.splitTextToSize(ref, maxTextWidth);
+    doc.text(refSplit, margin, y);
+    y += refSplit.length * 4 + 10;
+
+    // Footer
+    doc.setFontSize(7);
+    doc.setTextColor(180, 180, 180);
+    doc.text("PROPERTY OF BOOMER & KEV STUDIO.", margin, 285);
+    doc.text(`POWERED BY CINEMATIC ENGINE v2.7 | MODEL: GEMINI_2.5_FLASH`, pageWidth - margin - 85, 285);
+
+    doc.save(`PROMPT-SCENE-${index + 1}-${char.id.toUpperCase()}.pdf`);
+  };
+
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    charId: string,
+    angle: string
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setCharReferences((prev) => ({
+        ...prev,
+        [charId]: {
+          ...prev[charId],
+          [angle]: base64
+        }
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const driveLink = "https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf";
     let y = 0;
     const margin = 20;
     const pageWidth = doc.internal.pageSize.getWidth();
 
     const addHeader = (pageNum: number) => {
-      doc.setFillColor(10, 10, 10);
-      doc.rect(0, 0, pageWidth, 40, 'F');
+      doc.setFillColor(5, 5, 5);
+      doc.rect(0, 0, pageWidth, 35, 'F');
 
-      doc.setFontSize(18);
+      doc.setFontSize(22);
       doc.setTextColor(255, 95, 31);
       doc.setFont("helvetica", "bold");
-      doc.text("BOOMER & KEV STUDIO", margin, 20);
+      doc.text("BOOMER & KEV", margin, 18);
 
-      doc.setFontSize(8);
+      const studioWidth = doc.getTextWidth("BOOMER & KEV");
       doc.setTextColor(255, 255, 255);
-      doc.text("MASTER PRODUCTION MANIFEST / CALL SHEET v2.6", margin, 30);
+      doc.text(" STUDIO", margin + studioWidth, 18);
+
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont("helvetica", "normal");
+      doc.text("MASTER PRODUCTION MANIFEST // CALL SHEET v2.7", margin, 28);
 
       doc.setTextColor(100, 100, 100);
-      doc.text(`PAGE ${pageNum}`, pageWidth - margin - 15, 20);
-      doc.text(`PIPELINE: CINEMATIC_ENGINE`, pageWidth - margin - 40, 30);
+      doc.text(`PAGE ${pageNum}`, pageWidth - margin - 15, 18);
+      doc.text(`PIPELINE: CINEMATIC_ENGINE`, pageWidth - margin - 40, 28);
     };
 
     let pageNum = 1;
     addHeader(pageNum);
-    y = 55;
+    y = 50;
 
-    // Document Summary
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "bold");
-    doc.text("PRODUCTION OVERVIEW", margin, y);
-    y += 7;
+    // Document Summary Panel
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, pageWidth - (margin * 2), 25, 'F');
 
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(`GENERATED: ${new Date().toLocaleString().toUpperCase()}`, margin, y);
-    doc.text(`TOTAL SCENES: ${script.length}`, margin + 80, y);
-    doc.text(`TOTAL RUNTIME: ${Math.floor(totalDuration / 60)}m ${totalDuration % 60}s`, margin + 120, y);
-    y += 10;
-
     doc.setTextColor(255, 95, 31);
     doc.setFont("helvetica", "bold");
-    doc.text(`ASSET REPOSITORY (GOOGLE DRIVE):`, margin, y);
-    y += 5;
+    doc.text("PRODUCTION OVERVIEW", margin + 5, y + 8);
+
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text(driveLink, margin, y);
-    y += 15;
+    doc.setTextColor(80, 80, 80);
+    doc.text(`TIMESTAMP: ${new Date().toLocaleString().toUpperCase()}`, margin + 5, y + 15);
+    doc.text(`SCENE COUNT: ${script.length}`, margin + 80, y + 15);
+    doc.text(`DUR_EST: ${Math.floor(totalDuration / 60)}M ${totalDuration % 60}S`, margin + 120, y + 15);
+
+    doc.setTextColor(150, 150, 150);
+    doc.text(`ENGINE_DNA: NEURAL_CORTEX_v2.7 | MODEL: GEMINI_2.5_FLASH | RENDERING: PHOTOREALISM_PRODUCTION`, margin + 5, y + 21);
+    y += 35;
 
     script.forEach((line, index) => {
       const char = CHARACTERS.find(c => c.id === line.characterId);
       const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
-      // Check for page break (Scene card height approx 60 units)
-      if (y > 230) {
+      // Pre-calculate heights
+      doc.setFontSize(10);
+      const maxTextWidth = pageWidth - (margin * 2) - 16;
+      const splitScript = doc.splitTextToSize(`"${line.text.toUpperCase()}"`, maxTextWidth);
+      const scriptHeight = splitScript.length * 6;
+
+      const techPrompt = getDetailedPrompt(line, directorIdea, directorSnippet);
+      doc.setFontSize(6);
+      doc.setFont("courier", "normal");
+      const splitPrompt = doc.splitTextToSize(techPrompt, maxTextWidth - 6);
+      const promptHeight = splitPrompt.length * 3.5;
+
+      const cardHeight = 40 + scriptHeight + promptHeight + 15;
+
+      // Page Break Guard
+      if (y + cardHeight > 280) {
         doc.addPage();
         pageNum++;
         addHeader(pageNum);
-        y = 50;
+        y = 45;
       }
 
-      // SCENE CARD CONTAINER
+      // Card Container
       doc.setDrawColor(240, 240, 240);
-      doc.setFillColor(252, 252, 252);
-      doc.rect(margin, y, pageWidth - (margin * 2), 65, 'F');
-      doc.rect(margin, y, pageWidth - (margin * 2), 65, 'S');
+      doc.rect(margin, y, pageWidth - (margin * 2), cardHeight);
 
-      // Side Color Bar
-      doc.setFillColor(line.characterId === 'boomer' ? 255 : 200, line.characterId === 'boomer' ? 95 : 200, line.characterId === 'boomer' ? 31 : 200);
-      doc.rect(margin, y, 4, 65, 'F');
+      // Scene Header Bar
+      const isBoomer = line.characterId === 'boomer';
+      doc.setFillColor(isBoomer ? 255 : 40, isBoomer ? 95 : 40, isBoomer ? 31 : 40);
+      doc.rect(margin, y, pageWidth - (margin * 2), 10, 'F');
 
-      // Scene Identifier
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.text(`SCENE ${String(index + 1).padStart(2, '0')} // ${char?.name.toUpperCase()}`, margin + 10, y + 10);
+      doc.text(`SCENE [${String(index + 1).padStart(2, '0')}] // ACTOR: ${char?.name.toUpperCase()}`, margin + 5, y + 7);
 
-      // Shot Info
-      doc.setFontSize(8);
-      doc.setTextColor(255, 95, 31);
-      doc.text(`${line.shotType} | ${shot?.label}`, margin + 10, y + 16);
+      let currentY = y + 18;
 
-      // VOICE OVER Section
-      doc.setFontSize(10);
-      doc.setTextColor(40, 40, 40);
-      doc.setFont("helvetica", "bold");
-      const scriptText = `VOICE OVER: "${line.text.toUpperCase()}"`;
-      const splitText = doc.splitTextToSize(scriptText, 160);
-      doc.text(splitText, margin + 10, y + 28);
-
-      // Dynamic y offset for text
-      const textOffset = (splitText.length * 5);
-
-      // METADATA LINE
+      // Metadata Grid Start
       doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.setFont("helvetica", "normal");
-      doc.text(`MOTION: ${line.action} | EMOTION: ${line.emotion} | EST: ${line.durationEst} SEC`, margin + 10, y + 33 + textOffset);
+      doc.setTextColor(180, 180, 180);
+      doc.text("CAMERA SETTINGS", margin + 5, currentY);
+      doc.text("PHYSICALITY & EMOTION", margin + 80, currentY);
 
-      // AI PROMPT BLOCK
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin + 8, y + 38 + textOffset, pageWidth - (margin * 2) - 16, 20, 'F');
+      currentY += 4;
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${line.shotType} (${shot?.label})`, margin + 5, currentY);
+      const actionText = `${(line.action || "TALKING").toUpperCase()} [${(line.emotion || "ENGAGED").toUpperCase()}]`;
+      const splitAction = doc.splitTextToSize(actionText, pageWidth - (margin * 2) - 88);
+      doc.text(splitAction[0], margin + 80, currentY);
 
-      const prompt = getDetailedPrompt(line);
-      const splitPrompt = doc.splitTextToSize(`TECH_PROMPT: ${prompt}`, 155);
+      // Dialogue Shaded Area
+      currentY += 8;
+      doc.setFillColor(250, 250, 250);
+      doc.rect(margin + 2, currentY, pageWidth - (margin * 2) - 4, scriptHeight + 6, 'F');
+
+      currentY += 6;
+      doc.setFontSize(10);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "bold");
+      doc.text(splitScript, margin + 8, currentY);
+
+      currentY += scriptHeight + 2;
+
+      // Tech Data Stream
+      currentY += 2;
       doc.setFontSize(6);
-      doc.setTextColor(120, 120, 120);
-      doc.text(splitPrompt, margin + 12, y + 43 + textOffset);
+      doc.setTextColor(255, 95, 31);
+      doc.setFont("helvetica", "bold");
+      doc.text("ENGINE_PROMPT_CONSTRUCTION_STREAM:", margin + 5, currentY);
 
-      y += 75; // Card Space
+      currentY += 4;
+      doc.setFillColor(248, 248, 248);
+      doc.setDrawColor(240, 240, 240);
+      doc.rect(margin + 5, currentY, pageWidth - (margin * 2) - 10, promptHeight + 6, 'FD');
+
+      doc.setTextColor(80, 80, 80);
+      doc.setFont("courier", "normal");
+      doc.text(splitPrompt, margin + 8, currentY + 5);
+
+      y += cardHeight + 10;
     });
 
-    // FOOTER
     const lastY = 285;
     doc.setFontSize(7);
     doc.setTextColor(180, 180, 180);
-    doc.text("THIS DOCUMENT IS THE PROPERTY OF BOOMER & KEV STUDIO. UNAUTHORIZED DISTRIBUTION IS RIGOROUSLY PROHIBITED.", margin, lastY);
-    doc.text("POWERED BY CINEMATIC ENGINE v2.6", pageWidth - margin - 45, lastY);
+    doc.text("PROPERTY OF BOOMER & KEV STUDIO. UNAUTHORIZED DISTRIBUTION PROHIBITED.", margin, lastY);
+    doc.text("POWERED BY CINEMATIC ENGINE v2.7", pageWidth - margin - 45, lastY);
 
     doc.save(`BK-MANIFEST-${Date.now()}.pdf`);
   };
@@ -444,19 +777,18 @@ export default function Home() {
   };
 
   const renderProject = async () => {
-    alert("RENDER_SCENE_INITIATED");
     console.log("RENDER_PROJECT_TRIGGERED");
     setIsRenderingProject(true);
     setRenderProgress(0);
-    setRenderLogs(["INITIALIZING_PRODUCTION_PIPELINE...", "CONNECTING_TO_SERVER_ENGINE...", "VALIDATING_NEUROMARKETING_TRIGGERS..."]);
+    setRenderLogs(["🚀 INITIALIZING_PRODUCTION_PIPELINE v2.6...", "CONNECTING_TO_REPLICATE_CORE...", "VALIDATING_NEUROMARKETIC_PAYLOAD..."]);
 
     // Add Balance Diagnostic to logs
     if (balanceData) {
       if (balanceData.elevenlabs?.status === 'AUTHENTICATED') {
-        setRenderLogs(prev => [`SYSTEM_FUEL_STATUS: ${balanceData.elevenlabs.balance}`, ...prev]);
+        setRenderLogs(prev => [`SYSTEM_FUEL_STATUS: ${balanceData.elevenlabs?.balance}`, ...prev]);
       }
       if (balanceData.replicate?.status === 'AUTHENTICATED') {
-        setRenderLogs(prev => [`REPLICATE_SIGNAL: ${balanceData.replicate.balance}`, ...prev]);
+        setRenderLogs(prev => [`REPLICATE_SIGNAL: ${balanceData.replicate?.balance}`, ...prev]);
       }
     }
 
@@ -479,7 +811,7 @@ export default function Home() {
 
         return {
           ...line,
-          technicalPrompt: getDetailedPrompt(line),
+          technicalPrompt: getDetailedPrompt(line, directorIdea, directorSnippet),
           characterReference: selectedReference,
           studioReference: studioReference
         };
@@ -501,7 +833,12 @@ export default function Home() {
         body: JSON.stringify(productionData)
       });
 
-      const data = await response.json();
+      const data = await response.json() as {
+        mode: 'REAL' | 'SANDBOX',
+        results?: { sceneId: string, predictionId?: string, status?: string }[],
+        error?: string,
+        suggestion?: string
+      };
       console.log("RENDER_API_RESPONSE:", data);
       setRenderMode(data.mode);
 
@@ -537,57 +874,171 @@ export default function Home() {
         };
       }));
 
-      // Start individual polling for real results
-      if (sceneResults.length > 0 && sceneResults[0].predictionId && !sceneResults[0].predictionId.startsWith('rep_')) {
-        sceneResults.forEach((res: { sceneId: string, predictionId: string }) => {
-          const poll = setInterval(async () => {
-            try {
-              const pollRes = await fetch(`/api/render/status?id=${res.predictionId}`);
-              const pollData = await pollRes.json();
+      // SONIC_SYNTHESIS: Generate Voices in parallel
+      sceneResults.forEach(async (res: { sceneId: string }) => {
+        const line = script.find(l => l.id === res.sceneId);
+        if (line) {
+          try {
+            setRenderLogs(prev => [`SYNTHESIZING_VOICE: ${line.characterId.toUpperCase()}...`, ...prev]);
+            const voiceRes = await fetch('/api/ai/voice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: line.text,
+                characterId: line.characterId,
+                apiKey: apiKeys.elevenlabs
+              })
+            });
+            if (voiceRes.ok) {
+              const audioBlob = await voiceRes.blob();
+              const audioUrl = URL.createObjectURL(audioBlob);
 
-              if (pollData.status === 'succeeded' || pollData.status === 'failed') {
-                clearInterval(poll);
-                setScript(prev => prev.map(l => l.id === res.sceneId ? {
-                  ...l,
-                  status: pollData.status === 'succeeded' ? 'COMPLETED' : 'FAILED',
-                  videoUrl: pollData.output?.[0]
-                } : l));
-              } else if (pollData.status === 'processing') {
-                setScript(prev => prev.map(l => l.id === res.sceneId ? { ...l, status: 'PROCESSING' } : l));
-              }
-            } catch (e) {
-              clearInterval(poll);
+              // Frontend storage of audio for the preview button
+              // We also need the base64 for the Replicate LipSync input
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              reader.onloadend = () => {
+                const audioDataUri = reader.result as string;
+                setScript(prev => {
+                  const updated = prev.map(l => l.id === res.sceneId ? { ...l, audioUrl, audioDataUri } : l);
+                  const line = updated.find(l => l.id === res.sceneId);
+                  // If video finished polling already, trigger sync now
+                  if (line?.videoUrl && line?.audioDataUri && line.status === 'COMPLETED' && (!line.syncStatus || line.syncStatus === 'IDLE')) {
+                    triggerLipsync(line.id, line.videoUrl, line.audioDataUri);
+                  }
+                  return updated;
+                });
+              };
             }
-          }, 4000);
-        });
-      }
+          } catch (e) {
+            console.error("SONIC_FAIL", e);
+          }
+        }
+      });
+
+      // Internal LipSync Orchestrator
+      const triggerLipsync = async (sceneId: string, videoUrl: string, audioDataUri: string) => {
+        try {
+          setRenderLogs(prev => [`NEURAL_LIPSYNC_INITIATED: SCENE_${sceneId}`, ...prev]);
+          const res = await fetch('/api/ai/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sceneId, videoUrl, audioUrl: audioDataUri })
+          });
+          const data = await res.json();
+
+          if (data.mode === 'REAL') {
+            setScript(prev => prev.map(l => l.id === sceneId ? { ...l, syncPredictionId: data.predictionId, syncStatus: 'QUEUED' } : l));
+
+            const pollSync = setInterval(async () => {
+              const pollRes = await fetch(`/api/render/status?id=${data.predictionId}`);
+              const pollData = await pollRes.json();
+              if (pollData.status === 'succeeded' || pollData.status === 'failed') {
+                clearInterval(pollSync);
+                setScript(prev => prev.map(l => l.id === sceneId ? {
+                  ...l,
+                  syncStatus: (pollData.status === 'succeeded' ? 'COMPLETED' : 'FAILED') as 'COMPLETED' | 'FAILED',
+                  videoUrl: pollData.status === 'succeeded' ? (Array.isArray(pollData.output) ? pollData.output[0] : pollData.output) : l.videoUrl
+                } : l));
+                if (pollData.status === 'succeeded') setRenderLogs(prev => [`SYNCHRONIZATION_COMPLETE: SCENE_${sceneId}`, ...prev]);
+              } else if (pollData.status === 'processing') {
+                setScript(prev => prev.map(l => l.id === sceneId ? { ...l, syncStatus: 'PROCESSING' } : l));
+              }
+            }, 4000);
+          }
+        } catch (e) {
+          console.error("SYNC_FAIL", e);
+        }
+      };
+
+      // Start individual polling for real results
+      const realScenes = sceneResults.filter((res: { predictionId?: string }) => res.predictionId && !res.predictionId.startsWith('rep_'));
+
+      realScenes.filter((res: { sceneId: string, predictionId?: string }): res is { sceneId: string, predictionId: string } => !!res.predictionId).forEach((res) => {
+        const poll = setInterval(async () => {
+          try {
+            const pollRes = await fetch(`/api/render/status?id=${res.predictionId}`);
+            const pollData = await pollRes.json();
+
+            if (pollData.status === 'succeeded' || pollData.status === 'failed') {
+              clearInterval(poll);
+              const finalRawVideoUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+
+              setScript(prev => {
+                const updated = prev.map(l => l.id === res.sceneId ? {
+                  ...l,
+                  status: (pollData.status === 'succeeded' ? 'COMPLETED' : 'FAILED') as 'COMPLETED' | 'FAILED',
+                  videoUrl: finalRawVideoUrl
+                } : l);
+
+                // AUTOMATIC_TRIGGER: If video and audio are both ready, fire the Neural Lipsync
+                const line = updated.find(l => l.id === res.sceneId);
+                if (line?.videoUrl && line?.audioDataUri && pollData.status === 'succeeded') {
+                  triggerLipsync(line.id, line.videoUrl, line.audioDataUri);
+                }
+
+                return updated;
+              });
+            } else if (pollData.status === 'processing') {
+              setScript(prev => prev.map(l => l.id === res.sceneId ? { ...l, status: 'PROCESSING' as const } : l));
+            }
+          } catch (_e) {
+            clearInterval(poll);
+          }
+        }, 4000);
+      });
 
       // Visual Terminal Progress (Aesthetic & Sandbox Logic)
       let currentProgress = 20;
       const interval = setInterval(() => {
-        currentProgress += Math.random() * 8;
-        if (currentProgress >= 100) {
-          currentProgress = 100;
-          clearInterval(interval);
-          setRenderLogs(prev => ["SUCCESS: PRODUCTION_READY. PIPELINE_IDLE.", ...prev]);
-          setTimeout(() => {
-            setIsRenderingProject(false);
-            setRenderMode(null);
-          }, 2500);
-        }
-        setRenderProgress(currentProgress);
-
-        // Progressively finalize sandbox statuses based on progress %
         if (data.mode === 'SANDBOX') {
+          currentProgress += Math.random() * 8;
+          if (currentProgress >= 100) {
+            currentProgress = 100;
+            clearInterval(interval);
+            setRenderLogs(prev => ["SUCCESS: PRODUCTION_READY. PIPELINE_IDLE.", ...prev]);
+            setTimeout(() => {
+              setIsRenderingProject(false);
+              setRenderMode(null);
+            }, 2500);
+          }
+          setRenderProgress(currentProgress);
+
           setScript(prev => prev.map((line, idx) => {
             const threshold = (idx / prev.length) * 100;
             if (currentProgress > threshold && line.status === 'QUEUED') {
-              return { ...line, status: 'COMPLETED' };
+              return {
+                ...line,
+                status: 'COMPLETED',
+                videoUrl: "https://replicate.delivery/pbxt/example/video.mp4"
+              };
             }
             return line;
           }));
+        } else {
+          // REAL MODE PROGRESS: Sync with actual polling statuses
+          setScript(prev => {
+            const total = prev.length;
+            const finalized = prev.filter(l => l.status === 'COMPLETED' || l.status === 'FAILED').length;
+            const syncFinalized = prev.filter(l => l.syncStatus === 'COMPLETED' || l.syncStatus === 'FAILED' || !l.audioDataUri).length;
+
+            // Progress is a mix of video gen and lipsync
+            const progressVal = 20 + ((finalized + syncFinalized) / (total * 2)) * 80;
+            setRenderProgress(Math.min(99, progressVal));
+
+            if (finalized === total && syncFinalized === total) {
+              clearInterval(interval);
+              setRenderProgress(100);
+              setRenderLogs(prevLogs => ["SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prevLogs]);
+              setTimeout(() => {
+                setIsRenderingProject(false);
+                setRenderMode(null);
+              }, 3000);
+            }
+            return prev;
+          });
         }
-      }, 600);
+      }, 1500);
 
     } catch (error) {
       console.error("RENDER_PROJECT_ERROR:", error);
@@ -611,30 +1062,40 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-[2px] bg-white/5">
               <button
                 onClick={() => setActiveTab('director')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group",
+                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
                   activeTab === 'director' ? "text-[#FF5F1F]" : "text-white/20")}
               >
-                <MonitorPlay size={24} />
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-[100]">Director_Terminal</span>
+                <div className={cn("cine-icon mx-auto", activeTab === 'director' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
+                  <MonitorPlay size={20} />
+                </div>
+                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Director_Terminal</span>
               </button>
+
               <button
                 onClick={() => setActiveTab('script')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group",
+                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
                   activeTab === 'script' ? "text-[#FF5F1F]" : "text-white/20")}
+                style={{ animationDelay: '100ms' }}
               >
-                <Zap size={24} />
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-[100]">Production_Timeline</span>
+                <div className={cn("cine-icon mx-auto", activeTab === 'script' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
+                  <Clapperboard size={20} />
+                </div>
+                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Production_Timeline</span>
               </button>
+
               <button
                 onClick={() => setActiveTab('dna')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group",
+                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
                   activeTab === 'dna' ? "text-[#FF5F1F]" : "text-white/20")}
+                style={{ animationDelay: '200ms' }}
               >
-                <History size={24} />
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-[100]">Engine_DNA</span>
+                <div className={cn("cine-icon mx-auto", activeTab === 'dna' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
+                  <Dna size={20} />
+                </div>
+                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Engine_DNA</span>
               </button>
             </div>
           </div>
@@ -660,12 +1121,12 @@ export default function Home() {
             className="w-full px-8 py-4 flex flex-col md:flex-row justify-between items-center bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 z-50 gap-4"
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)]">
+              <div className="w-10 h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)] neural-sparkle">
                 <BrainCircuit size={22} className="text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-black tracking-tighter leading-none">BOOMER & KEV <span className="text-[#FF5F1F]">STUDIO</span></h1>
-                <p className="text-[10px] text-white/40 tracking-[0.3em] font-bold">CINEMATIC ENGINE v2.6</p>
+                <p className="text-[10px] text-white/40 tracking-[0.3em] font-bold">CINEMATIC ENGINE v2.8 [HOTFIX]</p>
               </div>
             </div>
 
@@ -677,7 +1138,7 @@ export default function Home() {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'dna')}
                   aria-label={`Switch to ${tab.label}`}
                   aria-pressed={activeTab === tab.id}
                   className={cn("px-6 py-2 text-[11px] font-black tracking-widest transition-all",
@@ -738,42 +1199,186 @@ export default function Home() {
                       <p className="text-xl text-white/30 font-bold max-w-xl leading-snug uppercase tracking-tight">The engine will synthesize storytelling, character motion, and cinematic framing from your core idea.</p>
                     </div>
 
-                    <div className="studio-panel p-1 border-white/10 focus-within:border-[#FF5F1F]/50 transition-all duration-700 bg-[#111111]">
-                      <div className="p-10 bg-[#0d0d0d]">
-                        <div className="flex items-center gap-2 mb-6 opacity-40">
-                          <Zap size={14} className="text-[#FF5F1F]" />
-                          <span className="text-[10px] font-black tracking-widest uppercase">Input_Narrative_Terminal</span>
+                    <div className="border-4 border-[#FF5F1F] bg-[#111111] overflow-hidden relative z-[1000] shadow-[0_0_100px_rgba(255,95,31,0.1)]">
+                      <div className="p-10 bg-[#0d0d0d] flex flex-col h-[600px] relative">
+                        {/* Status Header */}
+                        <div className="flex items-center justify-between mb-6 shrink-0">
+                          <div className="flex items-center gap-2 opacity-40">
+                            <Zap size={14} className="text-[#FF5F1F]" />
+                            <span className="text-[10px] font-black tracking-widest uppercase">Input_Narrative_Terminal</span>
+                          </div>
+                          {directorIdea.length > 0 && (
+                            <div className="flex items-center gap-3">
+                              <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Neural Signal</span>
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className={cn("w-1 h-3 transition-colors",
+                                      i < Math.min(5, Math.ceil(directorIdea.length / 50)) ? "bg-[#FF5F1F]" : "bg-white/5"
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <textarea
-                          value={directorIdea}
-                          onChange={(e) => setDirectorIdea(e.target.value)}
-                          placeholder="NARRATIVE TRIGGER..."
-                          className="w-full bg-transparent border-none text-4xl font-black placeholder:text-white/5 focus:ring-0 outline-none resize-none min-h-[300px] uppercase italic tracking-tighter leading-[0.85]"
-                        />
-                        <div className="flex justify-between items-center mt-10">
+
+                        {/* Scrollable Entry Field */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                          <textarea
+                            value={directorIdea}
+                            autoFocus
+                            onChange={(e) => {
+                              console.log("⌨️ [Neural_Input] Stream detected:", e.target.value.substring(0, 10));
+                              setDirectorIdea(e.target.value);
+                            }}
+                            placeholder={`LINE 1: TOPIC (E.G. NRL VS AFL)
+  LINE 2+: DIRECTORIAL NOTES (E.G. KEV WEARING NRL JERSEY)`}
+                            className="w-full bg-transparent border-none text-4xl font-black text-white placeholder:text-white/10 focus:ring-0 outline-none resize-none min-h-full uppercase italic tracking-tighter leading-[0.85] py-4"
+                          />
+                        </div>
+
+                        {/* Sticky Action Bar */}
+                        <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center shrink-0 relative z-[100] bg-[#0d0d0d]">
                           <div className="flex items-center gap-4">
-                            <div className="px-3 py-1 border border-white/10 text-[10px] font-black text-white/20">NVIDIA_CUDA: ACTIVE</div>
+                            <button
+                              onClick={() => {
+                                console.log("🧠 [Neural_Input] Instructor Triggered");
+                                triggerInstructor();
+                              }}
+                              disabled={!directorIdea || isGenerating || isInterviewing}
+                              className="px-6 py-3 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black uppercase tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all flex items-center gap-2 group active:scale-95"
+                            >
+                              <BrainCircuit size={14} className="group-hover:rotate-12 transition-transform" />
+                              PLAN WITH INSTRUCTOR
+                            </button>
                             <div className="px-3 py-1 border border-white/10 text-[10px] font-black text-white/20">AGENT_CONFIDENCE: 98.4%</div>
                           </div>
+
                           <button
-                            onClick={() => generateAIScript()}
-                            disabled={!directorIdea || isGenerating}
-                            className="bg-white text-black px-12 py-6 font-black text-sm tracking-[0.2em] flex items-center gap-4 hover:bg-[#FF5F1F] hover:text-white transition-all disabled:opacity-20 shadow-[12px_12px_0_rgba(255,95,31,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+                            id="production-trigger"
+                            onClick={(e) => {
+                              // Visual confirmation flash
+                              const btn = e.currentTarget;
+                              btn.style.backgroundColor = '#ffffff';
+                              btn.style.color = '#000000';
+                              console.warn("!! PRODUCTION_SIGNAL_SENT !!");
+                              generateAIScript();
+                            }}
+                            className="bg-[#FF5F1F] text-white px-20 py-10 font-black text-2xl tracking-[0.4em] uppercase italic hover:bg-white hover:text-[#FF5F1F] transition-all transform active:scale-90 flex items-center gap-8 relative z-[9999] cursor-pointer"
                           >
-                            {isGenerating ? "MODULATING..." : "START PRODUCTION"}
-                            <Wand2 size={20} />
+                            <span>START PRODUCTION</span>
+                            <Wand2 size={32} />
                           </button>
                         </div>
                       </div>
                     </div>
+
+                    {isInterviewing && (
+                      <div className="mt-8 animate-in slide-in-from-top-4 duration-500">
+                        <div className="studio-panel p-1 border-[#FF5F1F]/30 bg-[#111111]">
+                          <div className="p-10 bg-[#0d0d0d] space-y-8">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="cine-icon w-12 h-12 border-[#FF5F1F]/30 bg-[#FF5F1F]/5 group">
+                                  <BrainCircuit size={20} className="text-[#FF5F1F] group-hover:scale-110 transition-transform neural-sparkle" />
+                                </div>
+                                <div>
+                                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Instructor <span className="text-[#FF5F1F]">Analysis</span></h3>
+                                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Neural Psychology & Drama Module v2.7</p>
+                                </div>
+                              </div>
+                              <button onClick={() => setIsInterviewing(false)} className="cine-icon w-8 h-8 border-white/5 hover:border-red-500 hover:text-red-500 transition-all">
+                                <X size={14} />
+                              </button>
+                            </div>
+
+                            {isGeneratingQuestions ? (
+                              <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                                <RefreshCcw size={40} className="text-[#FF5F1F] animate-spin" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Synthesizing targeted inquiries...</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-10">
+                                {interviewQuestions.map((q, i) => (
+                                  <div key={i} className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[#FF5F1F] text-xs font-black">0{i + 1}</span>
+                                      <p className="text-lg font-bold text-white/80 uppercase italic tracking-tight">{q}</p>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      value={currentAnswers[i]}
+                                      onChange={(e) => {
+                                        const newAnswers = [...currentAnswers];
+                                        newAnswers[i] = e.target.value;
+                                        setCurrentAnswers(newAnswers);
+                                      }}
+                                      placeholder="TYPE YOUR RESPONSE..."
+                                      className="w-full bg-white/5 border border-white/10 p-4 text-white font-bold placeholder:text-white/10 focus:border-[#FF5F1F] outline-none uppercase transition-all"
+                                    />
+                                  </div>
+                                ))}
+
+                                <button
+                                  onClick={finalizeInterview}
+                                  disabled={isRefiningBlueprint || currentAnswers.some(a => !a)}
+                                  className="w-full py-6 bg-[#FF5F1F] text-white font-black text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-[#FF5F1F] transition-all flex items-center justify-center gap-3 shadow-[10px_10px_0_rgba(255,95,31,0.2)]"
+                                >
+                                  {isRefiningBlueprint ? (
+                                    <>
+                                      <RefreshCcw size={16} className="animate-spin" />
+                                      WEAVING BLUEPRINT...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShieldCheck size={16} />
+                                      FINALIZE DIRECTORIAL BLUEPRINT
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {directorSnippet && (
+                      <div className="mt-8 animate-in slide-in-from-bottom-4 duration-700">
+                        <div className="p-6 bg-[#111111] border-l-4 border-[#FF5F1F] relative overflow-hidden group">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Sparkles size={12} className="text-[#FF5F1F]" />
+                              <span className="text-[10px] font-black text-[#FF5F1F] uppercase tracking-widest">Refined Directive</span>
+                            </div>
+                            <button onClick={() => setDirectorSnippet("")} className="text-white/10 hover:text-white"><Trash2 size={12} /></button>
+                          </div>
+                          <textarea
+                            value={directorSnippet}
+                            onChange={(e) => setDirectorSnippet(e.target.value)}
+                            className="w-full bg-transparent border-none text-xs font-bold text-white/60 leading-relaxed uppercase outline-none resize-none min-h-[100px]"
+                          />
+                          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <BrainCircuit size={80} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                 </div>
 
                 <aside className="hidden 2xl:block h-full flex flex-col min-w-0 max-h-full">
                   <TrendsFeed onSelectTrend={(trend) => {
                     setDirectorIdea(trend.title);
                     setDirectorSnippet(trend.snippet);
-                    generateAIScript({ title: trend.title, snippet: trend.snippet });
+                    generateAIScript({
+                      title: trend.title,
+                      snippet: trend.snippet,
+                      intelligence: trend.directorialIntelligence
+                    });
                   }} />
                 </aside>
               </div>
@@ -800,7 +1405,8 @@ export default function Home() {
                   {script.map((line, index) => (
                     <div
                       key={line.id}
-                      className={cn("bg-[#080808] flex min-h-[300px] border-l-4 transition-all duration-500",
+                      style={{ animationDelay: `${index * 100}ms` }}
+                      className={cn("bg-[#080808] flex min-h-[300px] border-l-4 transition-all duration-500 hover:z-10 group stagger-item",
                         line.characterId === 'boomer' ? "border-[#FF5F1F]" : "border-white/20")}
                       onMouseEnter={() => setPreviewLineId(line.id)}
                       onMouseLeave={() => setPreviewLineId(null)}
@@ -841,14 +1447,25 @@ export default function Home() {
                           <ClockInput value={line.durationEst} onChange={(val) => updateLine(line.id, 'durationEst', val)} />
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => setSharingLineId(line.id)}
-                              className="p-2 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all"
+                              onClick={() => downloadScenePromptPDF(line, index)}
+                              className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                              title="DOWNLOAD INDIVIDUAL PROMPT CARD"
                             >
-                              <Share2 size={16} />
+                              <FileText size={18} />
                             </button>
-                            {index >= 4 && (
-                              <button onClick={() => removeLine(line.id)} className="text-red-500/30 hover:text-red-500 hover:scale-110 transition-all p-2">
-                                <Trash2 size={16} />
+                            <button
+                              onClick={() => setSharingLineId(line.id)}
+                              className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                              title="SHARE SCENE"
+                            >
+                              <Share2 size={18} />
+                            </button>
+                            {script.length > 1 && (
+                              <button
+                                onClick={() => removeLine(line.id)}
+                                className="text-red-500/30 hover:text-red-500 hover:scale-110 transition-all p-3 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                              >
+                                <Trash2 size={18} />
                               </button>
                             )}
                           </div>
@@ -878,6 +1495,18 @@ export default function Home() {
                             <div className="text-[10px] font-black text-white/20 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
                               {line.emotion || 'Neutral'}
                             </div>
+                            {line.audioUrl && (
+                              <button
+                                onClick={() => {
+                                  const audio = new Audio(line.audioUrl);
+                                  audio.play();
+                                }}
+                                className="flex items-center gap-2 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-3 py-1 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all group/audio ml-2"
+                              >
+                                <Volume2 size={12} className="group-hover/audio:animate-pulse" />
+                                <span className="text-[8px] font-black tracking-widest uppercase">Sonic_Preview</span>
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -928,7 +1557,17 @@ export default function Home() {
                               line.status === 'PROCESSING' && "animate-pulse"
                             )}
                           >
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#FF5F1F]/20 to-transparent opacity-50" />
+                            {line.videoUrl && (
+                              <video
+                                src={line.videoUrl}
+                                className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale hover:grayscale-0 transition-all duration-700"
+                                muted
+                                loop
+                                onMouseEnter={(e) => e.currentTarget.play()}
+                                onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#FF5F1F]/20 to-transparent opacity-50 pointer-events-none" />
                             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2">
                               {line.status === 'COMPLETED' ? (
                                 <>
@@ -1002,9 +1641,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-[2px] bg-white/5 border-b border-white/5 mb-16 px-2 pb-16">
-                  {CHARACTERS.map(char => (
-                    <div key={char.id} className="bg-[#080808] p-16 space-y-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-[2px] bg-white/5 border-b border-white/5 mb-16 px-2 pb-16 stagger-item">
+                  {CHARACTERS.map((char, idx) => (
+                    <div
+                      key={char.id}
+                      style={{ animationDelay: `${idx * 200}ms` }}
+                      className="studio-panel p-16 space-y-12 transition-all"
+                    >
                       <div className="flex items-center justify-between">
                         <div className="w-20 h-20 bg-[#111111] border border-white/10 flex items-center justify-center text-5xl font-black">
                           {char.name[0]}
@@ -1017,14 +1660,15 @@ export default function Home() {
 
                       <div className="space-y-8">
                         <div className="space-y-6">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5F1F]">Primary_Genetic_Anchor</h4>
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5F1F]">Primary_Genetic_Anchor</h3>
 
                           <div className="relative aspect-square w-full bg-[#111111] border border-white/10 overflow-hidden group/dna-preview">
                             {charReferences[char.id].main ? (
                               <img
                                 src={getPreviewUrl(charReferences[char.id].main) || ''}
                                 alt={`${char.name} DNA`}
-                                className="w-full h-full object-cover opacity-80 group-hover/dna-preview:opacity-100 transition-opacity duration-700"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover opacity-80 group-hover/dna-preview:opacity-100 transition-all duration-700 dna-float"
                               />
                             ) : (
                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#080808]">
@@ -1062,22 +1706,49 @@ export default function Home() {
                               </span>
                             </div>
                           </div>
-                          <input
-                            type="text"
-                            placeholder="PASTE_MASTER_DNA_URL"
-                            value={charReferences[char.id].main}
-                            onChange={(e) => setCharReferences(prev => ({
-                              ...prev,
-                              [char.id]: { ...prev[char.id], main: e.target.value }
-                            }))}
-                            className="w-full bg-[#111111] border border-white/10 px-6 py-4 text-[10px] font-bold text-white uppercase outline-none focus:border-[#FF5F1F] transition-all"
-                          />
+                          <div className="bg-[#0A0A0A] border border-white/10 mt-2 group hover:border-[#FF5F1F]/50 transition-colors">
+                            <div className="flex divide-x divide-white/10 h-10">
+                              <button
+                                onClick={() => downloadPromptPDF(char.id, 'main')}
+                                className="px-6 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors group/ext flex items-center gap-3"
+                                title="EXTRACT NEURAL MANIFEST"
+                              >
+                                <Download size={12} className="group-hover/ext:animate-bounce" />
+                                <span className="text-[9px] font-black uppercase tracking-widest hidden xl:block">EXTRACT</span>
+                              </button>
+                              <label className="px-6 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors cursor-pointer group/inj flex items-center gap-3" title="INJECT BIOLOGICAL SOURCE">
+                                <Upload size={12} className="group-hover/inj:animate-pulse" />
+                                <span className="text-[9px] font-black uppercase tracking-widest hidden xl:block">INJECT</span>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={(e) => handleImageUpload(e, char.id, 'main')}
+                                />
+                              </label>
+                              <div className="flex-1 relative">
+                                <input
+                                  type="text"
+                                  placeholder="MASTER_GENETIC_SOURCE_URL"
+                                  value={charReferences[char.id].main}
+                                  onChange={(e) => setCharReferences(prev => ({
+                                    ...prev,
+                                    [char.id]: { ...prev[char.id], main: e.target.value }
+                                  }))}
+                                  className="w-full h-full bg-transparent px-6 text-[10px] font-bold text-white uppercase outline-none placeholder:text-white/10 focus:bg-white/5 transition-colors"
+                                />
+                                {charReferences[char.id].main && (
+                                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Sonic Behavioral Module */}
                         <div className="space-y-6">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5F1F]">Sonic_Behavioral_Module</h4>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5F1F]">Sonic_Behavioral_Module</h3>
                             <div className="flex items-center gap-2">
                               <div className={cn("w-1.5 h-1.5 rounded-full", voiceIds[char.id].length > 5 ? "bg-green-500 animate-pulse" : "bg-white/20")} />
                               <span className="text-[8px] font-black text-white/40 uppercase">SIGNAL_STRENGTH</span>
@@ -1111,7 +1782,7 @@ export default function Home() {
                         </div>
 
                         <div className="space-y-6">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Optical_Angle_Expansion_Matrix</h4>
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Optical_Angle_Expansion_Matrix</h3>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                             {['wide', 'side', 'close', 'profile', 'detail'].map((angle) => (
                               <div key={angle} className="space-y-4">
@@ -1119,6 +1790,7 @@ export default function Home() {
                                   {charReferences[char.id][angle as keyof typeof charReferences[string]] ? (
                                     <img
                                       src={getPreviewUrl(charReferences[char.id][angle as keyof typeof charReferences[string]]) || ''}
+                                      referrerPolicy="no-referrer"
                                       className="w-full h-full object-cover opacity-40 group-hover/angle:opacity-100 transition-all duration-500"
                                       alt={`${char.name} ${angle}`}
                                     />
@@ -1126,7 +1798,7 @@ export default function Home() {
                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#080808]">
                                       <img
                                         src={GUIDE_IMAGES[angle] || GUIDE_IMAGES.main}
-                                        className="absolute inset-0 w-full h-full object-cover opacity-[0.03] grayscale brightness-50"
+                                        className="absolute inset-0 w-full h-full object-cover opacity-[0.1] grayscale brightness-50"
                                         alt="Shot Guide"
                                       />
                                       <Camera size={14} className="text-[#FF5F1F]/20 relative z-10" />
@@ -1160,39 +1832,107 @@ export default function Home() {
                                     {angle}
                                   </div>
                                 </div>
-                                <input
-                                  type="text"
-                                  placeholder="ANCHOR_URL"
-                                  value={charReferences[char.id][angle as keyof typeof charReferences[string]]}
-                                  onChange={(e) => setCharReferences(prev => ({
-                                    ...prev,
-                                    [char.id]: { ...prev[char.id], [angle]: e.target.value }
-                                  }))}
-                                  className="w-full bg-[#111111] border border-white/5 text-[8px] font-bold text-white/20 uppercase outline-none focus:border-[#FF5F1F] p-2 transition-colors"
-                                />
+
+                                <div className="bg-[#0A0A0A] border border-white/5 group hover:border-[#FF5F1F]/50 transition-colors">
+                                  <div className="flex divide-x divide-white/5">
+                                    <button
+                                      onClick={() => downloadPromptPDF(char.id, angle)}
+                                      className="p-3 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors group/pdf flex items-center justify-center"
+                                      title="EXTRACT OPTICAL DATA"
+                                    >
+                                      <Download size={10} className="group-hover/pdf:animate-bounce" />
+                                    </button>
+                                    <label className="p-3 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors cursor-pointer group/upl flex items-center justify-center" title="INJECT OPTICAL FEED">
+                                      <Upload size={10} className="group-hover/upl:animate-pulse" />
+                                      <input
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={(e) => handleImageUpload(e, char.id, angle)}
+                                      />
+                                    </label>
+                                    <div className="flex-1 relative">
+                                      <input
+                                        type="text"
+                                        placeholder="LINK_PROTOCOL"
+                                        value={charReferences[char.id][angle as keyof typeof charReferences[string]]}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setCharReferences(prev => ({
+                                            ...prev,
+                                            [char.id]: { ...prev[char.id], [angle]: val }
+                                          }));
+                                        }}
+                                        className="w-full h-full bg-transparent px-3 text-[9px] font-bold text-white uppercase outline-none placeholder:text-white/10 focus:bg-white/5 transition-colors"
+                                      />
+                                      {charReferences[char.id][angle as keyof typeof charReferences[string]] && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
                         </div>
 
                         <div className="space-y-4">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Behavioral Sets</h4>
-                          <div className="flex flex-wrap gap-1">
-                            {char.motionBehaviors.map((behavior, bIndex) => (
-                              <span key={bIndex} className="px-3 py-1 bg-white/5 text-[9px] font-black uppercase tracking-wider text-white/50">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Behavioral Sets</h4>
+                            <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Editable Matrix</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {characterConfig[char.id]?.behaviors.map((behavior, bIndex) => (
+                              <div key={bIndex} className="group/tag relative px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase tracking-wider text-white/50 hover:text-white transition-all cursor-pointer">
                                 {behavior.action}
-                              </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newBehaviors = characterConfig[char.id].behaviors.filter((_, idx) => idx !== bIndex);
+                                    setCharacterConfig(prev => ({ ...prev, [char.id]: { ...prev[char.id], behaviors: newBehaviors } }));
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 opacity-0 group-hover/tag:opacity-100 transition-opacity hover:scale-110"
+                                >
+                                  <X size={8} className="text-white" />
+                                </button>
+                              </div>
                             ))}
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FF5F1F]/10 hover:bg-[#FF5F1F]/20 border border-[#FF5F1F]/20 transition-all rounded-sm group/add">
+                              <Plus size={10} className="text-[#FF5F1F]" />
+                              <input
+                                type="text"
+                                placeholder="ADD_BEHAVIOR"
+                                className="bg-transparent text-[9px] font-black text-[#FF5F1F] placeholder:text-[#FF5F1F]/30 uppercase outline-none w-24"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value.trim();
+                                    if (val) {
+                                      const newBehaviors = [...characterConfig[char.id].behaviors, { action: val, emotion: 'CUSTOM' }];
+                                      setCharacterConfig(prev => ({ ...prev, [char.id]: { ...prev[char.id], behaviors: newBehaviors } }));
+                                      e.currentTarget.value = '';
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-10 items-start">
-                          <div className="space-y-2">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF5F1F]">Psych_Logic</h4>
-                            <p className="text-xs font-bold text-white/40 leading-relaxed uppercase">{char.personality}</p>
+                        <div className="grid grid-cols-2 gap-10 items-start mt-8">
+                          <div className="space-y-2 group/psych">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF5F1F] group-hover/psych:text-white transition-colors">Psych_Logic</h4>
+                            <textarea
+                              value={characterConfig[char.id]?.personality || ''}
+                              onChange={(e) => setCharacterConfig(prev => ({ ...prev, [char.id]: { ...prev[char.id], personality: e.target.value } }))}
+                              className="w-full bg-transparent text-xs font-bold text-white/40 leading-relaxed uppercase outline-none focus:text-white transition-colors resize-none h-24 scrollbar-hide border-l-2 border-transparent focus:border-[#FF5F1F] pl-2"
+                            />
                           </div>
-                          <div className="space-y-2 text-right">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF5F1F]">Optical_Key</h4>
-                            <p className="text-xs font-bold text-white/40 leading-relaxed uppercase italic">{char.lightingKey}</p>
+                          <div className="space-y-2 text-right group/opt">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#FF5F1F] group-hover/opt:text-white transition-colors">Optical_Key</h4>
+                            <textarea
+                              value={characterConfig[char.id]?.lightingKey || ''}
+                              onChange={(e) => setCharacterConfig(prev => ({ ...prev, [char.id]: { ...prev[char.id], lightingKey: e.target.value } }))}
+                              className="w-full bg-transparent text-xs font-bold text-white/40 leading-relaxed uppercase italic outline-none focus:text-white transition-colors resize-none h-24 scrollbar-hide text-right border-r-2 border-transparent focus:border-[#FF5F1F] pr-2"
+                            />
                           </div>
                         </div>
                       </div>
@@ -1226,6 +1966,7 @@ export default function Home() {
                           <img
                             src={getPreviewUrl(studioReference) || ''}
                             alt="Studio DNA"
+                            referrerPolicy="no-referrer"
                             className="w-full h-full object-cover opacity-60 group-hover/studio-preview:opacity-100 transition-opacity duration-700"
                           />
                           <div className="absolute inset-x-0 bottom-0 p-4 bg-black/80 backdrop-blur-md flex items-center gap-2">
@@ -1304,73 +2045,96 @@ export default function Home() {
           </div>
         </div>
 
-        {sharingLineId && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
-            <div className="max-w-2xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[20px_20px_0_rgba(255,95,31,0.1)]">
-              <button
-                onClick={() => setSharingLineId(null)}
-                className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"
-              >
-                <Trash2 size={24} />
-              </button>
+        {
+          sharingLineId && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
+              <div className="max-w-2xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[20px_20px_0_rgba(255,95,31,0.1)]">
+                <button
+                  onClick={() => setSharingLineId(null)}
+                  className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"
+                >
+                  <Trash2 size={24} />
+                </button>
 
-              <div className="mb-10">
-                <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-2 uppercase italic">Exporting Beat</span>
-                <h2 className="text-4xl font-black tracking-tighter uppercase italic">Output Channel</h2>
-              </div>
+                <div className="mb-10">
+                  <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-2 uppercase italic">Exporting Beat</span>
+                  <h2 className="text-4xl font-black tracking-tighter uppercase italic">Output Channel</h2>
+                </div>
 
-              <div className="bg-black/50 border border-white/5 p-8 mb-6 overflow-hidden relative">
-                <div className="absolute top-2 right-4 text-[7px] font-black text-white/10 tracking-[0.5em] uppercase">Beat_Buffer_Raw</div>
-                <p className="text-lg font-bold text-white/80 leading-relaxed uppercase mb-4">
-                  VOICE OVER: &quot;{script.find(l => l.id === sharingLineId)?.text}&quot;
-                </p>
-                <div className="mt-6 pt-6 border-t border-white/5">
-                  <span className="text-[8px] font-black text-[#FF5F1F] tracking-[0.3em] uppercase block mb-2">AI_Video_Prompt_Synthesis</span>
-                  <p className="text-[10px] text-white/40 italic leading-relaxed">
-                    {sharingLineId && getDetailedPrompt(script.find(l => l.id === sharingLineId)!)}
+                <div className="bg-black/50 border border-white/5 p-8 mb-6 overflow-hidden relative">
+                  <div className="absolute top-2 right-4 text-[7px] font-black text-white/10 tracking-[0.5em] uppercase">Beat_Buffer_Raw</div>
+                  <p className="text-lg font-bold text-white/80 leading-relaxed uppercase mb-4">
+                    VOICE OVER: &quot;{script.find(l => l.id === sharingLineId)?.text}&quot;
                   </p>
+                  <div className="mt-6 pt-6 border-t border-white/5">
+                    <span className="text-[8px] font-black text-[#FF5F1F] tracking-[0.3em] uppercase block mb-2">AI_Video_Prompt_Synthesis</span>
+                    <p className="text-[10px] text-white/40 italic leading-relaxed">
+                      {sharingLineId && getDetailedPrompt(script.find(l => l.id === sharingLineId)!, directorIdea, directorSnippet)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-10 p-4 border border-[#FF5F1F]/20 bg-[#FF5F1F]/5">
+                  <span className="text-[8px] font-black text-white/40 tracking-[0.2em] uppercase block mb-1">Visual Asset Remote Repository</span>
+                  <a href={dnaFolderUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#FF5F1F] font-bold hover:underline break-all">
+                    {dnaFolderUrl}
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => copyToClipboard(script.find(l => l.id === sharingLineId)?.text || "")}
+                    className={cn("px-8 py-5 font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 transition-all duration-300",
+                      isCopied ? "bg-green-500 text-white" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white shadow-[8px_8px_0_rgba(255,255,255,0.1)]")}
+                  >
+                    {isCopied ? <Plus size={18} className="rotate-45" /> : <Copy size={18} />}
+                    {isCopied ? "COPIED TO CLIPBOARD" : "COPY TO CLIPBOARD"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const line = script.find(l => l.id === sharingLineId);
+                      if (line) {
+                        const char = CHARACTERS.find(c => c.id === line.characterId);
+                        const doc = new jsPDF();
+                        doc.setFontSize(16);
+                        doc.text(`${char?.name.toUpperCase()} - Beat Script`, 20, 20);
+                        doc.setFontSize(12);
+                        doc.text(doc.splitTextToSize(line.text.toUpperCase(), 170), 20, 40);
+                        doc.save(`beat-export-${line.id}.pdf`);
+                      }
+                    }}
+                    className="px-8 py-5 border border-white/10 text-white font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 hover:bg-white/5 transition-all shadow-[8px_8px_0_rgba(255,255,255,0.05)]"
+                  >
+                    <Download size={18} /> DOWNLOAD BEAT (PDF)
+                  </button>
                 </div>
               </div>
-
-              <div className="mb-10 p-4 border border-[#FF5F1F]/20 bg-[#FF5F1F]/5">
-                <span className="text-[8px] font-black text-white/40 tracking-[0.2em] uppercase block mb-1">Visual Asset Remote Repository</span>
-                <a href={dnaFolderUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#FF5F1F] font-bold hover:underline break-all">
-                  {dnaFolderUrl}
-                </a>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => copyToClipboard(script.find(l => l.id === sharingLineId)?.text || "")}
-                  className={cn("px-8 py-5 font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 transition-all duration-300",
-                    isCopied ? "bg-green-500 text-white" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white shadow-[8px_8px_0_rgba(255,255,255,0.1)]")}
-                >
-                  {isCopied ? <Plus size={18} className="rotate-45" /> : <Copy size={18} />}
-                  {isCopied ? "COPIED TO CLIPBOARD" : "COPY TO CLIPBOARD"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    const line = script.find(l => l.id === sharingLineId);
-                    if (line) {
-                      const char = CHARACTERS.find(c => c.id === line.characterId);
-                      const doc = new jsPDF();
-                      doc.setFontSize(16);
-                      doc.text(`${char?.name.toUpperCase()} - Beat Script`, 20, 20);
-                      doc.setFontSize(12);
-                      doc.text(doc.splitTextToSize(line.text.toUpperCase(), 170), 20, 40);
-                      doc.save(`beat-export-${line.id}.pdf`);
-                    }
-                  }}
-                  className="px-8 py-5 border border-white/10 text-white font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 hover:bg-white/5 transition-all shadow-[8px_8px_0_rgba(255,255,255,0.05)]"
-                >
-                  <Download size={18} /> DOWNLOAD BEAT (PDF)
-                </button>
-              </div>
             </div>
-          </div>
-        )}
-      </main>
+          )
+        }
+      </main >
+
+      {isDrafting && (
+        <DraftingTable
+          topic={directorIdea}
+          snippet={directorSnippet}
+          apiKey={apiKeys.gemini}
+          onClose={() => setIsDrafting(false)}
+          onAssemble={(draftedLines) => {
+            const hydratedScript = draftedLines.map((line, idx) => ({
+              ...line,
+              id: `scene-${Date.now()}-${idx}`,
+              technicalPrompt: getDetailedPrompt(line as ScriptLine, directorIdea, directorSnippet),
+              characterReference: charReferences[line.characterId]?.main || CHARACTERS.find(c => c.id === line.characterId)?.referenceImage,
+              studioReference: GUIDE_IMAGES[line.shotType]
+            }));
+            setScript(hydratedScript as ScriptLine[]);
+            setIsDrafting(false);
+            setActiveTab('script');
+          }}
+        />
+      )}
 
       <footer className="w-full z-[60] px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-[9px] font-black tracking-[0.2em] text-white/20">
         <div className="flex gap-10">
@@ -1504,7 +2268,7 @@ export default function Home() {
                   onClick={() => setCinemaLineId(null)}
                   className="text-white/30 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
                 >
-                  CLOSE_CONSOLE <Trash2 size={16} />
+                  CLOSE_CONSOLE <X size={16} />
                 </button>
               </div>
 
@@ -1580,274 +2344,301 @@ export default function Home() {
               </div>
             </div>
           </div>
-        )}
+        )
+      }
 
       {/* FOOTER MODALS */}
-      {activeFooterModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-8 bg-black/90 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
-          <div className="max-w-4xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[40px_40px_0_rgba(255,95,31,0.05)] flex flex-col max-h-[90vh]">
-            <button
-              onClick={() => setActiveFooterModal(null)}
-              className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-            >
-              Close_Terminal <Trash2 size={20} />
-            </button>
+      {
+        activeFooterModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-8 bg-black/90 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
+            <div className="max-w-4xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[40px_40px_0_rgba(255,95,31,0.05)] flex flex-col max-h-[90vh]">
+              <button
+                onClick={() => setActiveFooterModal(null)}
+                className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+              >
+                Close_Terminal <X size={20} />
+              </button>
 
-            {activeFooterModal === 'docs' && (
-              <div className="flex flex-col h-full overflow-hidden">
-                <div className="mb-12">
-                  <div className="flex items-center gap-3 mb-2">
-                    <BookOpen size={24} className="text-[#FF5F1F]" />
-                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Operations Manual v2.6</span>
-                  </div>
-                  <h2 className="text-5xl font-black tracking-tighter uppercase italic">Documentation</h2>
-                </div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-12 pr-6">
-                  <section className="space-y-4">
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">01_The_Narrative_Engine</h3>
-                    <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
-                      The studio utilizes high-velocity LLM synthesis to transform raw &quot;narrative triggers&quot; into structured cinematic beats.
-                      Every script line is metadata-rich, containing character identifiers, motion behaviors, and shot dynamics.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
-                        <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Input_Shorthand</span>
-                        <p className="text-[10px] text-white/60 font-medium">Use high-impact verbs. Instead of &quot;Boomer is happy&quot;, use &quot;Boomer celebrates a huge victory&quot;.</p>
-                      </div>
-                      <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
-                        <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Vibe_Modulation</span>
-                        <p className="text-[10px] text-white/60 font-medium">The engine auto-assigns shot types based on character personality (Wide for Boomer energy, CU for Kev deadpan).</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="space-y-4">
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">02_Character_DNA</h3>
-                    <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
-                      Characters are defined by their unique DNA profiles. Each character has a specific &quot;Motion Buffer&quot; and &quot;Catchphrase Registry&quot;.
-                    </p>
-                    <div className="studio-panel p-6 space-y-6 bg-black/40">
-                      <div>
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">BOOMER (Alpha_Roo)</span>
-                        <ul className="text-[10px] text-white/60 space-y-1 font-bold">
-                          <li>• High_Energy_Constraint: ACTIVE</li>
-                          <li>• Boxing_Glove_Asset: MANDATORY</li>
-                          <li>• Speech_Velocity: 1.5x</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">KEV (Deadpan_Koala)</span>
-                        <ul className="text-[10px] text-white/60 space-y-1 font-bold">
-                          <li>• Kinetic_Damping: 100%</li>
-                          <li>• Sarcasm_Multiplier: INFINITE</li>
-                          <li>• Eucalyptus_Dependency: HIGH</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="p-8 bg-[#FF5F1F]/5 border border-[#FF5F1F]/20">
-                    <div className="flex items-center gap-3 mb-4">
-                      <ShieldCheck size={20} className="text-[#FF5F1F]" />
-                      <h4 className="text-xs font-black uppercase text-[#FF5F1F] tracking-widest">Production_Protocol_Clearance</h4>
-                    </div>
-                    <p className="text-[11px] font-bold text-white/80 leading-relaxed uppercase italic">
-                      All generated video assets are temporary biological references. For high-fidelity final renders,
-                      use the &quot;Export Beat&quot; function to download the prompt manifest for professional AI video workstations (Kling, Wan, LTX).
-                    </p>
-                  </section>
-                </div>
-              </div>
-            )}
-
-            {activeFooterModal === 'keys' && (
-              <div className="flex flex-col h-full overflow-hidden">
-                <div className="mb-12 flex justify-between items-end">
-                  <div>
+              {activeFooterModal === 'docs' && (
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="mb-12">
                     <div className="flex items-center gap-3 mb-2">
-                      <Key size={24} className="text-[#FF5F1F]" />
-                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">External Signal Authentication</span>
+                      <BookOpen size={24} className="text-[#FF5F1F]" />
+                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Operations Manual v2.6</span>
                     </div>
-                    <h2 className="text-5xl font-black tracking-tighter uppercase italic">API Settings</h2>
-                  </div>
-                  <button
-                    onClick={() => refreshBalance()}
-                    disabled={isCheckingBalance}
-                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-[8px] font-black uppercase tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all"
-                  >
-                    <RefreshCcw size={12} className={cn(isCheckingBalance && "animate-spin")} />
-                    Refresh_Signal_Stats
-                  </button>
-                </div>
-
-                <div className="space-y-10">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        Replicate_API_Token <Info size={12} className="text-white/20" />
-                      </label>
-                      <div className="flex items-center gap-3">
-                        {balanceData?.replicate && (
-                          <span className={cn(
-                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
-                            balanceData.replicate.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
-                          )}>
-                            {balanceData.replicate.status}: {balanceData.replicate.balance}
-                          </span>
-                        )}
-                        <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Network: KLING_V2.6_SDK</span>
-                      </div>
-                    </div>
-                    <div className="relative group">
-                      <input
-                        type="password"
-                        value={apiKeys.replicate}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setApiKeys(prev => ({ ...prev, replicate: val }));
-                          localStorage.setItem('BK_REPLICATE_KEY', val);
-                          if (val.length > 10) refreshBalance({ ...apiKeys, replicate: val });
-                        }}
-                        placeholder="R8_********************************"
-                        className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
-                      />
-                      <Key className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#FF5F1F] transition-colors" size={20} />
-                    </div>
+                    <h2 className="text-5xl font-black tracking-tighter uppercase italic">Documentation</h2>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        ElevenLabs_API_Key <Info size={12} className="text-white/20" />
-                      </label>
-                      <div className="flex items-center gap-3">
-                        {balanceData?.elevenlabs && (
-                          <div className="flex items-center gap-4">
-                            <span className={cn(
-                              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
-                              balanceData.elevenlabs.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
-                            )}>
-                              {balanceData.elevenlabs.status}
-                            </span>
-                            <div className="flex flex-col items-end">
-                              <span className="text-[8px] font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
-                              {balanceData.elevenlabs.percent !== undefined && (
-                                <div className="w-24 h-1 bg-white/5 mt-1">
-                                  <div className="h-full bg-[#FF5F1F]" style={{ width: `${balanceData.elevenlabs.percent}%` }} />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <input
-                      type="password"
-                      value={apiKeys.elevenlabs}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setApiKeys(prev => ({ ...prev, elevenlabs: val }));
-                        localStorage.setItem('BK_ELEVENLABS_KEY', val);
-                        if (val.length > 10) refreshBalance({ ...apiKeys, elevenlabs: val });
-                      }}
-                      placeholder="SK_********************************"
-                      className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
-                    />
-                  </div>
-
-                  <div className="p-8 bg-white/[0.01] border border-white/5 flex items-start gap-4">
-                    <ShieldCheck size={24} className="text-white/20 mt-1" />
-                    <div>
-                      <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Security_Notice</p>
-                      <p className="text-[9px] font-bold text-white/20 leading-relaxed uppercase">
-                        Keys are stored locally in your browser&apos;s persistent storage. We never transmit these tokens to our central server.
-                        Signal is encrypted during biological transmission.
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-12 pr-6">
+                    <section className="space-y-4">
+                      <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">01_The_Narrative_Engine</h3>
+                      <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                        The studio utilizes high-velocity LLM synthesis to transform raw &quot;narrative triggers&quot; into structured cinematic beats.
+                        Every script line is metadata-rich, containing character identifiers, motion behaviors, and shot dynamics.
                       </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
+                          <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Input_Shorthand</span>
+                          <p className="text-[10px] text-white/60 font-medium">Use high-impact verbs. Instead of &quot;Boomer is happy&quot;, use &quot;Boomer celebrates a huge victory&quot;.</p>
+                        </div>
+                        <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
+                          <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Vibe_Modulation</span>
+                          <p className="text-[10px] text-white/60 font-medium">The engine auto-assigns shot types based on character personality (Wide for Boomer energy, CU for Kev deadpan).</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="space-y-4">
+                      <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">02_Character_DNA</h3>
+                      <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                        Characters are defined by their unique DNA profiles. Each character has a specific &quot;Motion Buffer&quot; and &quot;Catchphrase Registry&quot;.
+                      </p>
+                      <div className="studio-panel p-6 space-y-6 bg-black/40">
+                        <div>
+                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">BOOMER (Alpha_Roo)</span>
+                          <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                            <li>• High_Energy_Constraint: ACTIVE</li>
+                            <li>• Boxing_Glove_Asset: MANDATORY</li>
+                            <li>• Speech_Velocity: 1.5x</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">KEV (Deadpan_Koala)</span>
+                          <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                            <li>• Kinetic_Damping: 100%</li>
+                            <li>• Sarcasm_Multiplier: INFINITE</li>
+                            <li>• Eucalyptus_Dependency: HIGH</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="p-8 bg-[#FF5F1F]/5 border border-[#FF5F1F]/20">
+                      <div className="flex items-center gap-3 mb-4">
+                        <ShieldCheck size={20} className="text-[#FF5F1F]" />
+                        <h4 className="text-xs font-black uppercase text-[#FF5F1F] tracking-widest">Production_Protocol_Clearance</h4>
+                      </div>
+                      <p className="text-[11px] font-bold text-white/80 leading-relaxed uppercase italic">
+                        All generated video assets are temporary biological references. For high-fidelity final renders,
+                        use the &quot;Export Beat&quot; function to download the prompt manifest for professional AI video workstations (Kling, Wan, LTX).
+                      </p>
+                    </section>
+                  </div>
+                </div>
+              )}
+
+              {activeFooterModal === 'keys' && (
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="mb-12 flex justify-between items-end">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <Key size={24} className="text-[#FF5F1F]" />
+                        <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">External Signal Authentication</span>
+                      </div>
+                      <h2 className="text-5xl font-black tracking-tighter uppercase italic">API Settings</h2>
                     </div>
+                    <button
+                      onClick={() => refreshBalance()}
+                      disabled={isCheckingBalance}
+                      className="flex items-center gap-2 px-4 py-2 border border-white/10 text-[8px] font-black uppercase tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all"
+                    >
+                      <RefreshCcw size={12} className={cn(isCheckingBalance && "animate-spin")} />
+                      Refresh_Signal_Stats
+                    </button>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {activeFooterModal === 'support' && (
-              <div className="flex flex-col h-full overflow-hidden">
-                <div className="mb-12">
-                  <div className="flex items-center gap-3 mb-2">
-                    <MessageSquare size={24} className="text-[#FF5F1F]" />
-                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Human-Agent Hybrid Interface</span>
-                  </div>
-                  <h2 className="text-5xl font-black tracking-tighter uppercase italic">Support Channel</h2>
-                </div>
-
-                <div className="grid grid-cols-2 gap-12 flex-1 min-h-0">
                   <div className="space-y-10">
                     <div className="space-y-4">
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Operational_Status</span>
-                      <div className="grid grid-cols-1 gap-1">
-                        {[
-                          { label: 'Narrative_Engine', status: 'Optimal', color: '#22c55e' },
-                          { label: 'Biological_Asset_Buffer', status: 'De-synced', color: '#FF5F1F' },
-                          { label: 'Character_Dna_Registry', status: 'Secure', color: '#22c55e' },
-                          { label: 'Regional_Trends_Signal', status: 'Stable', color: '#22c55e' }
-                        ].map((node, i) => (
-                          <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5">
-                            <span className="text-[10px] font-black text-white/60 uppercase">{node.label}</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.color }} />
-                              <span className="text-[8px] font-black uppercase" style={{ color: node.color }}>{node.status}</span>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                          Replicate_API_Token <Info size={12} className="text-white/20" />
+                        </label>
+                        <div className="flex items-center gap-3">
+                          {balanceData?.replicate && (
+                            <span className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                              balanceData.replicate.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
+                            )}>
+                              {balanceData.replicate.status}: {balanceData.replicate.balance}
+                            </span>
+                          )}
+                          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Network: KLING_V2.6_SDK</span>
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <input
+                          type="password"
+                          value={apiKeys.replicate}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setApiKeys(prev => ({ ...prev, replicate: val }));
+                            localStorage.setItem('BK_REPLICATE_KEY', val);
+                            if (val.length > 10) refreshBalance({ ...apiKeys, replicate: val });
+                          }}
+                          placeholder="R8_********************************"
+                          className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
+                        />
+                        <Key className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#FF5F1F] transition-colors" size={20} />
                       </div>
                     </div>
 
-                    <div className="p-8 bg-[#FF5F1F] text-black space-y-4">
-                      <h4 className="text-sm font-black uppercase tracking-tight italic">Emergency_Down_Under_Line</h4>
-                      <p className="text-[10px] font-black leading-tight uppercase">
-                        Having issues with the Roo? Koala not deadpan enough? Our tactical response team is on standby.
-                      </p>
-                      <button className="w-full bg-black text-white py-4 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-                        Initiate_High_Velocity_Support
-                      </button>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                          ElevenLabs_API_Key <Info size={12} className="text-white/20" />
+                        </label>
+                        <div className="flex items-center gap-3">
+                          {balanceData?.elevenlabs && (
+                            <div className="flex items-center gap-4">
+                              <span className={cn(
+                                "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                                balanceData.elevenlabs.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
+                              )}>
+                                {balanceData.elevenlabs.status}
+                              </span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
+                                {balanceData.elevenlabs.percent !== undefined && (
+                                  <div className="w-24 h-1 bg-white/5 mt-1">
+                                    <div className="h-full bg-[#FF5F1F]" style={{ width: `${balanceData.elevenlabs.percent}%` }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <input
+                        type="password"
+                        value={apiKeys.elevenlabs}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setApiKeys(prev => ({ ...prev, elevenlabs: val }));
+                          localStorage.setItem('BK_ELEVENLABS_KEY', val);
+                          if (val.length > 10) refreshBalance({ ...apiKeys, elevenlabs: val });
+                        }}
+                        placeholder="SK_********************************"
+                        className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
+                      />
                     </div>
-                  </div>
 
-                  <div className="space-y-8">
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Tactical_Channels</span>
-                    <div className="space-y-3">
-                      {[
-                        { label: 'Engine_Updates', channel: 'Discord_Terminal', icon: <ChevronRight size={14} /> },
-                        { label: 'Directorial_Hacks', channel: 'YouTube_Central', icon: <ExternalLink size={14} /> },
-                        { label: 'Studio_Vlog', channel: 'Instagram_Feed', icon: <ExternalLink size={14} /> }
-                      ].map((channel, i) => (
-                        <button key={i} className="w-full group/channel flex items-center justify-between p-6 border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/20 transition-all">
-                          <div className="text-left">
-                            <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">{channel.label}</span>
-                            <span className="text-xs font-black text-white uppercase group-hover/channel:text-[#FF5F1F] transition-colors">{channel.channel}</span>
-                          </div>
-                          <div className="text-white/10 group-hover/channel:text-white transition-colors">
-                            {channel.icon}
-                          </div>
-                        </button>
-                      ))}
+                    {/* Gemini Key */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <BrainCircuit size={18} className="text-[#FF5F1F]" />
+                          <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">Gemini_Neural_Core</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-white/5 text-[8px] font-black text-white/40 uppercase">GEMINI_1.5_FLASH</span>
+                        </div>
+                      </div>
+                      <input
+                        type="password"
+                        value={apiKeys.gemini}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setApiKeys(prev => ({ ...prev, gemini: val }));
+                          localStorage.setItem('BK_GEMINI_KEY', val);
+                        }}
+                        placeholder="API_********************************"
+                        className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
+                      />
                     </div>
 
-                    <div className="p-6 border border-white/5 opacity-20">
-                      <span className="text-[7px] font-black text-white uppercase tracking-[0.5em] block mb-4">Diagnostic_Packet_0101</span>
-                      <div className="font-mono text-[7px] text-white/60 break-all">
-                        UA: {typeof window !== 'undefined' ? window.navigator.userAgent : 'SERVER_NODE'}
-                        <br />REF: {typeof window !== 'undefined' ? window.location.origin : 'BK_STUDIO'}
+                    <div className="p-8 bg-white/[0.01] border border-white/5 flex items-start gap-4">
+                      <ShieldCheck size={24} className="text-white/20 mt-1" />
+                      <div>
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Security_Notice</p>
+                        <p className="text-[9px] font-bold text-white/20 leading-relaxed uppercase">
+                          Keys are stored locally in your browser&apos;s persistent storage. We never transmit these tokens to our central server.
+                          Signal is encrypted during biological transmission.
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {activeFooterModal === 'support' && (
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="mb-12">
+                    <div className="flex items-center gap-3 mb-2">
+                      <MessageSquare size={24} className="text-[#FF5F1F]" />
+                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Human-Agent Hybrid Interface</span>
+                    </div>
+                    <h2 className="text-5xl font-black tracking-tighter uppercase italic">Support Channel</h2>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-12 flex-1 min-h-0">
+                    <div className="space-y-10">
+                      <div className="space-y-4">
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Operational_Status</span>
+                        <div className="grid grid-cols-1 gap-1">
+                          {[
+                            { label: 'Narrative_Engine', status: 'Optimal', color: '#22c55e' },
+                            { label: 'Biological_Asset_Buffer', status: 'De-synced', color: '#FF5F1F' },
+                            { label: 'Character_Dna_Registry', status: 'Secure', color: '#22c55e' },
+                            { label: 'Regional_Trends_Signal', status: 'Stable', color: '#22c55e' }
+                          ].map((node, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5">
+                              <span className="text-[10px] font-black text-white/60 uppercase">{node.label}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.color }} />
+                                <span className="text-[8px] font-black uppercase" style={{ color: node.color }}>{node.status}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-8 bg-[#FF5F1F] text-black space-y-4">
+                        <h4 className="text-sm font-black uppercase tracking-tight italic">Emergency_Down_Under_Line</h4>
+                        <p className="text-[10px] font-black leading-tight uppercase">
+                          Having issues with the Roo? Koala not deadpan enough? Our tactical response team is on standby.
+                        </p>
+                        <button className="w-full bg-black text-white py-4 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                          Initiate_High_Velocity_Support
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-8">
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Tactical_Channels</span>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Engine_Updates', channel: 'Discord_Terminal', icon: <ChevronRight size={14} /> },
+                          { label: 'Directorial_Hacks', channel: 'YouTube_Central', icon: <ExternalLink size={14} /> },
+                          { label: 'Studio_Vlog', channel: 'Instagram_Feed', icon: <ExternalLink size={14} /> }
+                        ].map((channel, i) => (
+                          <button key={i} className="w-full group/channel flex items-center justify-between p-6 border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/20 transition-all">
+                            <div className="text-left">
+                              <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">{channel.label}</span>
+                              <span className="text-xs font-black text-white uppercase group-hover/channel:text-[#FF5F1F] transition-colors">{channel.channel}</span>
+                            </div>
+                            <div className="text-white/10 group-hover/channel:text-white transition-colors">
+                              {channel.icon}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="p-6 border border-white/5 opacity-20">
+                        <span className="text-[7px] font-black text-white uppercase tracking-[0.5em] block mb-4">Diagnostic_Packet_0101</span>
+                        <div className="font-mono text-[7px] text-white/60 break-all">
+                          UA: {typeof window !== 'undefined' ? window.navigator.userAgent : 'SERVER_NODE'}
+                          <br />REF: {typeof window !== 'undefined' ? window.location.origin : 'BK_STUDIO'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 

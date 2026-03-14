@@ -15,7 +15,10 @@ export async function POST(req: Request) {
         }
 
         const { replicate, elevenlabs } = validation.data;
-        const results: any = {
+        const results: {
+            replicate: { status: string, balance: string },
+            elevenlabs: { status: string, balance: string, percent?: number }
+        } = {
             replicate: { status: 'OFFLINE', balance: 'N/A' },
             elevenlabs: { status: 'OFFLINE', balance: 'N/A' }
         };
@@ -71,7 +74,7 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json(results);
-    } catch (error) {
+    } catch (_error) {
         return NextResponse.json({ error: 'FAILED_TO_FETCH_BALANCE' }, { status: 500 });
     }
 }

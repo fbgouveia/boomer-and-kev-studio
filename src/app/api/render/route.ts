@@ -15,7 +15,7 @@ const resolveGDriveLink = (url: string | undefined) => {
   if (cleanUrl.includes('drive.google.com')) {
     const gMatch = cleanUrl.match(/\/d\/(.+?)(?:\/|$|\?)/) || cleanUrl.match(/id=(.+?)(?:&|$|#)/);
     const fileId = gMatch ? gMatch[1] : null;
-    if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    if (fileId) return `https://drive.google.com/uc?export=download&id=${fileId}`;
   }
   return cleanUrl;
 };
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     const validation = renderSchema.safeParse(rawBody);
 
     if (!validation.success) {
+      console.warn("RENDER_VALIDATION_FAILURE:", JSON.stringify(validation.error.format(), null, 2));
       return NextResponse.json({
         error: "INVALID_INPUT_SIGNAL",
         details: validation.error.format()
@@ -50,14 +51,10 @@ export async function POST(req: Request) {
             model: "kwaivgi/kling-v2.6",
             input: {
               prompt: prompt,
-              duration: line.durationEst,
+              duration: line.durationEst <= 5 ? 5 : 10, // Kling supports 5 or 10s
               aspect_ratio: "9:16",
-              cfg_scale: 12,
-              motion_score: 5,
-              // Kling-v2.6 takes one primary image anchor. 
-              // We prioritize the character image for consistency, 
-              // but you could also pass a studio image for environmental consistency in I2V.
-              image: charImage || studioImage
+              start_image: charImage || studioImage,
+              generate_audio: false // We use ElevenLabs for audio
             }
           });
 

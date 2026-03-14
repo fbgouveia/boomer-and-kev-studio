@@ -15,6 +15,13 @@
   --corner-soft: 2px;
   --corner-organic: 100px;
 
+  /* Animation Timings */
+  --ease-brutal: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  --t-fast: 200ms;
+  --t-normal: 400ms;
+  --t-slow: 700ms;
+
   /* Glass Effects */
   --glass-bg: rgba(5, 5, 5, 0.85);
   --glass-border: rgba(255, 255, 255, 0.05);
@@ -38,7 +45,6 @@ body {
 
 .font-narrative {
   font-family: var(--font-inter);
-  /* Using Inter but with Serif-like styling in page.tsx */
   letter-spacing: -0.02em;
 }
 
@@ -47,29 +53,48 @@ body {
   background-color: var(--studio-black);
   border: 1px solid var(--glass-border);
   border-radius: var(--corner-sharp);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--t-normal) var(--ease-brutal);
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
 .studio-panel:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 95, 31, 0.3);
   background-color: var(--studio-obsidian);
+  transform: translateY(-2px) rotateX(1deg);
+  box-shadow: 0 20px 40px -20px rgba(255, 95, 31, 0.15);
 }
 
-/* High-Vis Buttons */
+/* High-Vis Buttons & Signal Effects */
 .btn-signal {
-  background-color: var(--signal-orange);
-  color: white;
-  border-radius: var(--corner-organic);
-  padding: 0.75rem 2rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  box-shadow: 0 0 0 0 rgba(255, 95, 31, 0);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-signal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
+  transform: skewX(-25deg);
+  transition: 0.5s;
+}
+
+.btn-signal:hover::before {
+  left: 150%;
 }
 
 .btn-signal:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 30px -5px rgba(255, 95, 31, 0.4);
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 30px rgba(255, 95, 31, 0.3);
+  filter: brightness(1.1);
 }
 
 /* Z-Axis Transitions */
@@ -123,17 +148,6 @@ body {
   background: var(--signal-orange);
 }
 
-/* Utility Animations */
-.accent-glow {
-  box-shadow: 0 0 50px -10px var(--signal-orange-low);
-}
-
-* {
-  transition-property: color, background-color, border-color, transform, opacity;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  transition-duration: 400ms;
-}
-
 /* Cinematic Grain Overlay */
 body::after {
   content: "";
@@ -149,15 +163,139 @@ body::after {
   mix-blend-mode: overlay;
 }
 
-.depth-layer {
-  position: relative;
-  isolation: isolate;
+/* Staggered Content Animation */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUp var(--t-slow) var(--ease-brutal) forwards;
 }
 
-.depth-layer::before {
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Neural Pulse for AI */
+.neural-pulse {
+  position: relative;
+}
+
+.neural-pulse::after {
   content: "";
   position: absolute;
-  inset: -1px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  inset: -20%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--signal-orange) 0%, transparent 70%);
+  opacity: 0;
+  animation: pulseRotate 2s linear infinite;
+  pointer-events: none;
   z-index: -1;
+}
+
+@keyframes pulseRotate {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.15;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Scanning Line Enhancement */
+@keyframes scan {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+
+  5% {
+    opacity: 1;
+  }
+
+  95% {
+    opacity: 1;
+  }
+
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-scan {
+  animation: scan 4s linear infinite;
+}
+
+/* Branded Neural Sparkle */
+.neural-sparkle {
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(255, 95, 31, 0.4));
+    transform: scale(1);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 95, 31, 0.8));
+    transform: scale(1.1);
+  }
+}
+
+/* Cine-Icon Premium Styling */
+.cine-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 95, 31, 0.02);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cine-icon:hover {
+  border-color: var(--signal-orange);
+  background: rgba(255, 95, 31, 0.1);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 25px -10px rgba(255, 95, 31, 0.5);
+}
+
+.cine-icon svg {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cine-icon:hover svg {
+  color: var(--signal-orange);
+  transform: scale(1.1);
+}
+
+/* DNA Floating for engine overview */
+.dna-float {
+  animation: dnaFloat 6s ease-in-out infinite;
+}
+
+@keyframes dnaFloat {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
 }

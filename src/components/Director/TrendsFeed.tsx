@@ -11,8 +11,10 @@ import {
     BarChart3,
     Newspaper,
     ChevronRight,
-    ExternalLink
+    ExternalLink,
+    Calendar as CalendarIcon
 } from 'lucide-react';
+import { AUSSIE_CALENDAR, getUpcomingEvent } from '@/data/calendar';
 import { cn } from '@/lib/utils';
 
 type NewsItem = {
@@ -55,6 +57,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
     const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [lastSyncTime, setLastSyncTime] = useState<string>("");
+    const [feedMode, setFeedMode] = useState<'LIVE' | 'CALENDAR'>('LIVE');
 
     const fetchTrends = useCallback(async (currentGeo?: string) => {
         const targetGeo = currentGeo || geo;
@@ -90,38 +93,75 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
             {/* LEFT: Trend List (Daily Aggregator) */}
             <div className="w-80 border-r border-white/5 flex flex-col h-full bg-[#080808] min-h-0 max-h-full">
                 <div className="p-8 border-b border-white/5 flex flex-col gap-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">Daily Feed</span>
-                            <h3 className="text-xl font-black tracking-tighter uppercase">Aggregator</h3>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex rounded-md overflow-hidden border border-white/10 w-fit">
+                            <button
+                                onClick={() => setFeedMode('LIVE')}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFeedMode('LIVE'); } }}
+                                className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all",
+                                    feedMode === 'LIVE' ? "bg-[#FF5F1F] text-white" : "bg-white/5 text-white/40 hover:text-white")}
+                            >
+                                <TrendingUp size={12} className="inline mr-2 mb-0.5" />
+                                LIVE WIRE
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setFeedMode('CALENDAR');
+                                    // Auto-select upcoming event
+                                    const nextEvent = getUpcomingEvent();
+                                    if (nextEvent) {
+                                        // Mock convert to Trend
+                                        // logic will be in render
+                                    }
+                                }}
+                                className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all",
+                                    feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-white" : "bg-white/5 text-white/40 hover:text-white")}
+                            >
+                                <CalendarIcon size={12} className="inline mr-2 mb-0.5" />
+                                2026 PLANNER
+                            </button>
                         </div>
-                        <button
-                            onClick={() => fetchTrends()}
-                            disabled={isLoading}
-                            className="p-2 border border-white/10 hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all disabled:opacity-20 translate-y-1"
-                        >
-                            <RefreshCcw size={14} className={cn(isLoading && "animate-spin")} />
-                        </button>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">
+                                    {feedMode === 'LIVE' ? 'Global Signal' : 'Future Events'}
+                                </span>
+                                <h3 className="text-xl font-black tracking-tighter uppercase">Aggregator</h3>
+                            </div>
+                            {feedMode === 'LIVE' && (
+                                <button
+                                    onClick={() => fetchTrends()}
+                                    disabled={isLoading}
+                                    className="p-2 border border-white/10 hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all disabled:opacity-20 translate-y-1"
+                                >
+                                    <RefreshCcw size={14} className={cn(isLoading && "animate-spin")} />
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Region Selector - Premium Brutalist Style */}
-                    <div className="space-y-2">
-                        <span className="text-[8px] font-black text-white/30 tracking-[0.2em] uppercase">Regional Signal</span>
-                        <div className="grid grid-cols-3 gap-1">
-                            {REGIONS.map((region) => (
-                                <button
-                                    key={region.id}
-                                    onClick={() => handleRegionChange(region.id)}
-                                    className={cn(
-                                        "py-2 px-1 text-[9px] font-black transition-all border border-white/5 uppercase tracking-tighter",
-                                        geo === region.id ? "bg-[#FF5F1F] text-white border-[#FF5F1F] shadow-[0_0_10px_rgba(255,95,31,0.2)]" : "hover:bg-white/5 text-white/30"
-                                    )}
-                                >
-                                    {region.name}
-                                </button>
-                            ))}
+                    {feedMode === 'LIVE' && (
+                        <div className="space-y-2">
+                            <span className="text-[8px] font-black text-white/30 tracking-[0.2em] uppercase">Regional Signal</span>
+                            <div className="grid grid-cols-3 gap-1">
+                                {REGIONS.map((region) => (
+                                    <button
+                                        key={region.id}
+                                        onClick={() => handleRegionChange(region.id)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRegionChange(region.id); } }}
+                                        className={cn(
+                                            "py-2 px-1 text-[9px] font-black transition-all border border-white/5 uppercase tracking-tighter",
+                                            geo === region.id ? "bg-[#FF5F1F] text-white border-[#FF5F1F] shadow-[0_0_10px_rgba(255,95,31,0.2)]" : "hover:bg-white/5 text-white/30"
+                                        )}
+                                    >
+                                        {region.name}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="flex items-center gap-2 text-[8px] font-black text-white/20 uppercase tracking-widest">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
@@ -131,14 +171,15 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
                     <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-[#080808] to-transparent z-10 pointer-events-none opacity-50" />
-                    {isLoading && Array(8).fill(0).map((_, i) => (
+                    {isLoading && feedMode === 'LIVE' && Array(8).fill(0).map((_, i) => (
                         <div key={i} className="h-20 bg-white/5 animate-pulse border-b border-white/5" />
                     ))}
 
-                    {!isLoading && trends.map((trend, index) => (
+                    {feedMode === 'LIVE' && !isLoading && trends.map((trend, index) => (
                         <button
                             key={index}
                             onClick={() => setSelectedTrend(trend)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTrend(trend); } }}
                             className={cn(
                                 "w-full text-left p-6 border-b border-white/5 transition-all relative group",
                                 selectedTrend?.title === trend.title ? "bg-[#111111]" : "hover:bg-[#0d0d0d]"
@@ -158,7 +199,50 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             )}
                         </button>
                     ))}
-                    {!isLoading && trends.length > 5 && (
+
+                    {feedMode === 'CALENDAR' && AUSSIE_CALENDAR.map((event, index) => {
+                        const isSelected = selectedTrend?.title === event.name;
+                        return (
+                            <button
+                                key={event.id}
+                                onClick={() => {
+                                    setSelectedTrend({
+                                        title: event.name,
+                                        snippet: event.boomerTake,
+                                        url: '',
+                                        traffic: event.date,
+                                        published: 'UPCOMING',
+                                        news: [],
+                                        directorialIntelligence: {
+                                            take: { character: 'BOOMER', text: event.boomerTake },
+                                            hooks: [`${event.name} Special`, "National Debate", "Cultural Deep Dive"],
+                                            viralPotential: 90 + (index % 10)
+                                        }
+                                    });
+                                }}
+                                className={cn(
+                                    "w-full text-left p-6 border-b border-white/5 transition-all relative group",
+                                    isSelected ? "bg-[#111111]" : "hover:bg-[#0d0d0d]"
+                                )}
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="text-[11px] font-black text-white/90 uppercase tracking-tight">{event.name}</span>
+                                    <span className="px-1.5 py-0.5 bg-white/10 text-[7px] font-black text-white tracking-tighter rounded uppercase">{event.category}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[8px] font-bold text-white/20 uppercase mt-2">
+                                    <span className="text-[#FF5F1F]">{event.date}</span>
+                                    <span>•</span>
+                                    <span>2026</span>
+                                </div>
+
+                                {isSelected && (
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FF5F1F]" />
+                                )}
+                            </button>
+                        );
+                    })}
+
+                    {feedMode === 'LIVE' && !isLoading && trends.length > 5 && (
                         <div className="py-8 text-center opacity-10 animate-pulse">
                             <div className="text-[8px] font-black tracking-[0.5em] uppercase italic">Scroll for more intelligence</div>
                         </div>
