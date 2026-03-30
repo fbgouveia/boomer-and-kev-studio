@@ -480,11 +480,12 @@ For details, see [scripts/README.md](scripts/README.md)
 
 | Metric              | Value                         |
 | ------------------- | ----------------------------- |
-| **Total Agents**    | 20                            |
-| **Total Skills**    | 36                            |
+| **Total Agents**    | 40 (+ CLARA_ULTRA, LORENA_ULTRA) |
+| **Total Skills**    | 1220                          |
 | **Total Workflows** | 11                            |
 | **Total Scripts**   | 2 (master) + 18 (skill-level) |
-| **Coverage**        | ~90% web/mobile development   |
+| **Coverage**        | ~99% full-stack + social + AI |
+| **Atualizado**      | 2026-03-28 (V.L.A.E.G. sync)  |
 
 ---
 

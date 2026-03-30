@@ -1,4 +1,5 @@
 import { CHARACTERS } from '@/data/characters';
+import { ScriptLine } from '@/types';
 
 // ==========================================
 // 1. TOPIC CLASSIFICATION SYSTEM
@@ -347,7 +348,7 @@ export class ScriptEngine {
         });
     }
 
-    public static generateNextLine(currentScript: Record<string, unknown>[], title: string): Record<string, unknown> {
+    public static generateNextLine(currentScript: ScriptLine[], title: string): ScriptLine {
         const topicData = detectTopic(title);
         const topic = topicData.category;
         const keyword = topicData.keyword;

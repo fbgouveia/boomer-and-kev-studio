@@ -44,7 +44,7 @@ export const CHARACTERS: Character[] = [
         voiceStyle: 'Deep, booming Queensland accent. Fast-paced, high energy.',
         imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, gold chain necklace, black singlet option, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
-        voiceId: 'exT9S2zWNo7lSxSrsD73', // Example Aussie Alpha Voice
+        voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
         referenceImage: 'https://drive.google.com/file/d/160ZOQOxYsAzk6-ftW6rRVccQbBVR8jn1/view?usp=sharing'
     },
     {
@@ -75,7 +75,7 @@ export const CHARACTERS: Character[] = [
         voiceStyle: 'Slow, nasally, relaxed, deadpan Queensland accent.',
         imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
-        voiceId: 'pqHFr7yk3tS6H7G4Umlf', // Example Aussie Deadpan Voice
+        voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Laid-Back, Casual, Resonant
         referenceImage: 'https://drive.google.com/file/d/1Msb2xa_rbAeMlzvuKh9Hi8zCdzw15bQh/view?usp=sharing'
     }
 ];

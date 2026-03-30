@@ -1,0 +1,5 @@
+{
+  "status": "ok",
+  "model": "gemini-2.5-flash",
+  "endpoint": "v1beta"
+}

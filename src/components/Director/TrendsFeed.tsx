@@ -23,7 +23,7 @@ type NewsItem = {
     url: string;
 };
 
-type Trend = {
+export type Trend = {
     title: string;
     snippet: string;
     url: string;
