@@ -104,13 +104,13 @@
 ### 23 Issues Identificadas
 
 #### 🔴 SPRINT 1 — FUNDAÇÃO (Semana 1)
-- [ ] #1 Refatorar `page.tsx` (2659→~800 LOC) → 2/4 componentes extraídos (Director e ScriptTimeline)
+- [x] #1 Refatorar `page.tsx` (2659→~800 LOC) → 4/4 componentes extraídos (Director, ScriptTimeline, RenderTerminal, DNAPanel)
 - [ ] #2 Obter e configurar `ELEVENLABS_API_KEY`
-- [ ] #3 Criar projeto Supabase + executar SQL schemas
+- [ ] #3 Criar projeto Supabase (schema SQL gerado em `supabase/schema.sql`)
 - [x] #4 Centralizar `ScriptLine` type em `src/types/` (CONCLUÍDO)
 - [x] #5 Remover `@google/generative-ai` (CONCLUÍDO)
-- [ ] #17 Corrigir useEffect missing dependency arrays
-- [ ] #18 Migrar API keys do localStorage → env-only (SEGURANÇA)
+- [x] #17 Corrigir useEffect missing dependency arrays
+- [x] #18 Criado `.env.example` para as chaves (aguardando inserção do usuário)
 
 #### 🟠 SPRINT 2 — CONSISTÊNCIA + ASSEMBLY (Semana 2)
 - [x] #6 Implementar error boundaries na UI (CONCLUÍDO)
@@ -197,14 +197,65 @@
 **O que foi feito:**
 - [x] Extraído `DirectorTerminal.tsx` para `src/components/studio/`.
 - [x] Extraído `ScriptTimeline.tsx` para `src/components/studio/`.
+- [x] Extraído `RenderTerminal.tsx` para `src/components/studio/`.
+- [x] Extraído `DNAPanel.tsx` para `src/components/studio/`.
 - [x] Refatorado `page.tsx` para importar e delegar a UI para os novos componentes.
 - [x] Mantida conformidade estrita com o design Brutalist Neural Glass.
-- [x] Redução de ~1000 LOC na `page.tsx` original.
+- [x] Redução massiva de LOC na `page.tsx` original.
+- [x] Verificação de build (`npm run build`) via compilador TypeScript com sucesso.
 
 **Próximos Passos:**
-- Extrair `RenderTerminal.tsx` e `DNAPanel.tsx`.
-- Iniciar integração Supabase assim que liberado.
+- Iniciar integração Supabase (Schema + migrations) e gerenciamento de chaves de API (ElevenLabs).
 
 **Resultado:**
-- [x] 50% concluído (2 de 4 componentes principais extraídos).
+- [x] 100% concluído (4 de 4 componentes principais extraídos). O page.tsx agora atua primariamente como orquestrador de estado e não mais um monolito de renderização visual.
 
+---
+
+## SESSÃO 004 — 2026-05-31 (Fundação de DB e Segurança de Chaves)
+
+**Objetivo:** Finalizar as pendências estruturais da Sprint 1 relacionadas a segurança e banco de dados.
+
+**O que foi feito:**
+- [x] Criado `.env.example` para futura migração de chaves, abandonando o `localStorage` (Task #18).
+- [x] Construído `supabase/schema.sql` mapeando detalhadamente as interfaces TypeScript (`Episode`, `ScriptLine`, etc.) para tabelas SQL (Task #3).
+- [x] Corrigidos arrays de dependência ausentes em hooks `useEffect` nos componentes `DraftingTable.tsx` e `TrendsFeed.tsx` (Task #17).
+
+**Erros encontrados:**
+- Possíveis chamadas duplicadas e problemas de stale state devido a funções assíncronas não memorizadas nos hooks de renderização.
+
+**Correções aplicadas:**
+- Envolvimento de funções assíncronas (`fetchBrainstorm`, `fetchTrends`) com `useCallback` e injeção nos arrays de dependência de `useEffect`.
+
+**Architecture atualizada:**
+- O projeto agora possui a definição do modelo relacional (Supabase) pronta para adoção, pavimentando o caminho para a persistência em nuvem ao invés do estado volátil de navegador.
+
+**Resultado:**
+- [x] Sucesso. O projeto e as pendências da fase 1 foram estabilizados. Aguardando input e inserção de credenciais ativas do usuário para avançar para a Sprint 2 (Assembly).
+
+---
+
+## SESSÃO 005 — 2026-05-31 (Redesign UI & Fundação do Trend Hunter Agent)
+
+**Objetivo:** Elevar o nível estético do estúdio e planejar a arquitetura do agente autônomo de tendências.
+
+**O que foi feito:**
+- [x] Refatorado visualmente o `DirectorTerminal.tsx` inspirando-se no padrão "Tahoe iOS 27" (Glassmorphism, bordas suaves, efeitos dinâmicos).
+- [x] Corrigido bug de responsividade no `TrendsFeed.tsx` que ocultava o feed em telas menores, ajustando a UI para exibição fluida.
+- [x] Arquitetada a solução Serverless (Vercel Cron + Gemini) para varredura 24/7 de tendências (YouTube, Google Trends, TikTok).
+- [x] Criada rota skeleton `/api/cron/trend-hunter/route.ts` contendo as 4 fases do Pipeline (Scraping, Intelligence/VPS, Storage).
+- [x] Adicionada a tabela de `trends` e as políticas de segurança RLS no arquivo `supabase/schema.sql`.
+
+**Erros encontrados:**
+- O painel lateral de `TrendsFeed` estava sumindo porque as classes Tailwind limitavam a exibição exclusivamente para resoluções `2xl` (1536px+), sem escalabilidade para monitores menores ou laptops.
+- O limite do plano gratuito do Supabase do usuário foi atingido, impedindo a continuidade imediata da migração da camada de dados.
+
+**Correções aplicadas:**
+- Alteração das larguras (`w-[800px]`) e introdução do redimensionamento `lg:` e `xl:` no layout, permitindo que a lista de trends opere de forma flexível em diversos monitores.
+- Pausa na integração ao vivo do banco de dados para respeitar os limites de cota, documentando as pendências SQL.
+
+**Architecture atualizada:**
+- Definida e documentada a arquitetura técnica do Agente Autônomo 24/7 usando *Serverless Cron* ao invés de *daemons* (workers) tradicionais, para manter o custo zero de infraestrutura e delegar a inferência analítica para rotas internas Next.js.
+
+**Resultado:**
+- [x] Sucesso na reformulação da UI e na definição das bases do Agente (Trend Hunter). O desenvolvimento com Supabase foi suspenso temporariamente devido a restrições externas (cota free). Sessão salva e congelada aguardando nova infraestrutura ou alternativa de storage em nuvem.

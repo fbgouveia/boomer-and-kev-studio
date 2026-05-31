@@ -82,7 +82,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
 
     const [retryCountdown, setRetryCountdown] = useState<number>(0);
 
-    const fetchBrainstorm = async () => {
+    const fetchBrainstorm = React.useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -118,7 +118,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [topic, snippet, apiKey]);
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -132,7 +132,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
 
     useEffect(() => {
         if (topic) fetchBrainstorm();
-    }, [topic]);
+    }, [topic, fetchBrainstorm]);
 
     const handleAssemble = () => {
         if (!brainstorm) return;

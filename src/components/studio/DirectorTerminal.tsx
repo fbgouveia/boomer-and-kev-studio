@@ -40,31 +40,42 @@ export function DirectorTerminal({
   isRefiningBlueprint
 }: DirectorTerminalProps) {
   return (
-    <div className="flex-1 flex overflow-hidden min-h-0">
-      <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth bg-[#0a0a0a]/50">
+    <div className="flex-1 flex overflow-hidden min-h-0 bg-transparent">
+      <div className="flex-1 overflow-y-auto px-8 md:px-12 py-12 scroll-smooth">
         <div className="max-w-4xl mx-auto xl:mx-0 animate-in fade-in duration-700">
-          <div className="mb-20 space-y-2">
-            <h2 className="text-7xl font-black tracking-tighter uppercase italic">Feed the <span className="text-[#FF5F1F]">Machine.</span></h2>
-            <p className="text-xl text-white/30 font-bold max-w-xl leading-snug uppercase tracking-tight">The engine will synthesize storytelling, character motion, and cinematic framing from your core idea.</p>
+          
+          <div className="mb-12 space-y-3">
+            <h2 className="text-5xl md:text-6xl font-semibold tracking-tight text-white/90">
+              Feed the <span className="text-[#FF5F1F]">Machine.</span>
+            </h2>
+            <p className="text-lg text-white/40 font-medium max-w-xl leading-relaxed tracking-wide">
+              The engine will synthesize storytelling, character motion, and cinematic framing from your core idea.
+            </p>
           </div>
 
-          <div className="border-4 border-[#FF5F1F] bg-[#111111] overflow-hidden relative z-[1000] shadow-[0_0_100px_rgba(255,95,31,0.1)]">
-            <div className="p-10 bg-[#0d0d0d] flex flex-col h-[600px] relative">
+          {/* Main Input Terminal (Tahoe iOS 27 Glassmorphism) */}
+          <div className="rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-3xl overflow-hidden shadow-2xl relative z-[1000] ring-1 ring-black/20">
+            {/* Ambient Glow */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
+            
+            <div className="p-8 md:p-10 flex flex-col h-[500px] relative">
               {/* Status Header */}
-              <div className="flex items-center justify-between mb-6 shrink-0">
-                <div className="flex items-center gap-2 opacity-40">
-                  <Zap size={14} className="text-[#FF5F1F]" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">Input_Narrative_Terminal</span>
+              <div className="flex items-center justify-between mb-8 shrink-0">
+                <div className="flex items-center gap-3 opacity-60">
+                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                    <Zap size={14} className="text-[#FF5F1F]" />
+                  </div>
+                  <span className="text-[11px] font-medium tracking-widest uppercase text-white/70">Narrative Terminal</span>
                 </div>
                 {directorIdea.length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Neural Signal</span>
-                    <div className="flex gap-0.5">
+                  <div className="flex items-center gap-3 bg-black/20 px-4 py-2 rounded-full border border-white/5">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">Signal</span>
+                    <div className="flex gap-1">
                       {[...Array(5)].map((_, i) => (
                         <div
                           key={i}
-                          className={cn("w-1 h-3 transition-colors",
-                            i < Math.min(5, Math.ceil(directorIdea.length / 50)) ? "bg-[#FF5F1F]" : "bg-white/5"
+                          className={cn("w-1.5 h-1.5 rounded-full transition-colors duration-500",
+                            i < Math.min(5, Math.ceil(directorIdea.length / 50)) ? "bg-[#FF5F1F] shadow-[0_0_8px_rgba(255,95,31,0.6)]" : "bg-white/10"
                           )}
                         />
                       ))}
@@ -74,7 +85,7 @@ export function DirectorTerminal({
               </div>
 
               {/* Scrollable Entry Field */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+              <div className="flex-1 overflow-y-auto custom-scrollbar relative pr-2">
                 <textarea
                   value={directorIdea}
                   autoFocus
@@ -82,13 +93,13 @@ export function DirectorTerminal({
                     console.log("⌨️ [Neural_Input] Stream detected:", e.target.value.substring(0, 10));
                     setDirectorIdea(e.target.value);
                   }}
-                  placeholder={`LINE 1: TOPIC (E.G. NRL VS AFL)\nLINE 2+: DIRECTORIAL NOTES (E.G. KEV WEARING NRL JERSEY)`}
-                  className="w-full bg-transparent border-none text-4xl font-black text-white placeholder:text-white/10 focus:ring-0 outline-none resize-none min-h-full uppercase italic tracking-tighter leading-[0.85] py-4"
+                  placeholder={`Topic (e.g. NRL vs AFL)\nDirectorial Notes (e.g. Kev wearing NRL Jersey)`}
+                  className="w-full bg-transparent border-none text-2xl md:text-3xl font-medium text-white/90 placeholder:text-white/20 focus:ring-0 outline-none resize-none min-h-full tracking-tight leading-[1.4] py-2"
                 />
               </div>
 
               {/* Sticky Action Bar */}
-              <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center shrink-0 relative z-[100] bg-[#0d0d0d]">
+              <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center shrink-0 relative z-[100]">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => {
@@ -96,29 +107,26 @@ export function DirectorTerminal({
                       triggerInstructor();
                     }}
                     disabled={!directorIdea || isGenerating || isInterviewing}
-                    className="px-6 py-3 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black uppercase tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all flex items-center gap-2 group active:scale-95 disabled:opacity-50"
+                    className="px-5 py-3 rounded-full border border-white/10 bg-white/5 text-white/70 text-[11px] font-semibold tracking-wide hover:bg-white/10 hover:text-white backdrop-blur-md transition-all flex items-center gap-2 group active:scale-95 disabled:opacity-30"
                   >
-                    <BrainCircuit size={14} className="group-hover:rotate-12 transition-transform" />
-                    PLAN WITH INSTRUCTOR
+                    <BrainCircuit size={14} className="group-hover:rotate-12 transition-transform text-[#FF5F1F]" />
+                    Plan with Instructor
                   </button>
-                  <div className="px-3 py-1 border border-white/10 text-[10px] font-black text-white/20">AGENT_CONFIDENCE: 98.4%</div>
+                  <div className="hidden sm:block px-4 py-2 rounded-full bg-black/20 border border-white/5 text-[10px] font-medium text-white/40">
+                    Confidence: 98.4%
+                  </div>
                 </div>
 
                 <button
                   id="production-trigger"
                   onClick={(e) => {
-                    // Visual confirmation flash
-                    const btn = e.currentTarget;
-                    btn.style.backgroundColor = '#ffffff';
-                    btn.style.color = '#000000';
-                    console.warn("!! PRODUCTION_SIGNAL_SENT !!");
                     generateAIScript();
                   }}
                   disabled={!directorIdea || isGenerating}
-                  className="bg-[#FF5F1F] text-white px-20 py-10 font-black text-2xl tracking-[0.4em] uppercase italic hover:bg-white hover:text-[#FF5F1F] transition-all transform active:scale-90 flex items-center gap-8 relative z-[9999] cursor-pointer disabled:opacity-50"
+                  className="bg-gradient-to-r from-[#FF5F1F] to-[#E04B14] rounded-[20px] text-white px-8 md:px-12 py-4 font-bold text-sm tracking-widest uppercase hover:scale-[1.02] shadow-[0_8px_32px_rgba(255,95,31,0.25)] hover:shadow-[0_12px_48px_rgba(255,95,31,0.4)] transition-all duration-300 flex items-center gap-4 relative z-[9999] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
                 >
-                  <span>{isGenerating ? "GENERATING..." : "START PRODUCTION"}</span>
-                  <Wand2 size={32} />
+                  <span>{isGenerating ? "Generating..." : "Start Production"}</span>
+                  <Wand2 size={20} className={cn(isGenerating && "animate-pulse")} />
                 </button>
               </div>
             </div>
@@ -126,64 +134,70 @@ export function DirectorTerminal({
 
           {isInterviewing && (
             <div className="mt-8 animate-in slide-in-from-top-4 duration-500">
-              <div className="studio-panel p-1 border-[#FF5F1F]/30 bg-[#111111]">
-                <div className="p-10 bg-[#0d0d0d] space-y-8">
+              <div className="rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-3xl overflow-hidden shadow-2xl relative ring-1 ring-black/20">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-30" />
+                
+                <div className="p-8 md:p-10 space-y-8">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="cine-icon w-12 h-12 border-[#FF5F1F]/30 bg-[#FF5F1F]/5 group">
-                        <BrainCircuit size={20} className="text-[#FF5F1F] group-hover:scale-110 transition-transform neural-sparkle" />
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group shadow-inner">
+                        <BrainCircuit size={24} className="text-[#FF5F1F] group-hover:scale-110 transition-transform" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-black uppercase italic tracking-tighter">Instructor <span className="text-[#FF5F1F]">Analysis</span></h3>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Neural Psychology & Drama Module v2.7</p>
+                        <h3 className="text-xl font-semibold tracking-tight text-white/90">Instructor Analysis</h3>
+                        <p className="text-[11px] text-white/40 font-medium tracking-wide mt-1">Neural Psychology Module v2.7</p>
                       </div>
                     </div>
-                    <button onClick={() => setIsInterviewing(false)} className="cine-icon w-8 h-8 border-white/5 hover:border-red-500 hover:text-red-500 transition-all">
-                      <X size={14} />
+                    <button onClick={() => setIsInterviewing(false)} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:text-red-400 transition-all text-white/50">
+                      <X size={16} />
                     </button>
                   </div>
 
                   {isGeneratingQuestions ? (
-                    <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                      <RefreshCcw size={40} className="text-[#FF5F1F] animate-spin" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Synthesizing targeted inquiries...</p>
+                    <div className="py-24 flex flex-col items-center justify-center space-y-5">
+                      <RefreshCcw size={32} className="text-[#FF5F1F] animate-spin" />
+                      <p className="text-[11px] font-medium tracking-[0.2em] uppercase text-white/40">Synthesizing inquiries...</p>
                     </div>
                   ) : (
-                    <div className="space-y-10">
+                    <div className="space-y-8">
                       {interviewQuestions.map((q, i) => (
-                        <div key={i} className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[#FF5F1F] text-xs font-black">0{i + 1}</span>
-                            <p className="text-lg font-bold text-white/80 uppercase italic tracking-tight">{q}</p>
+                        <div key={i} className="space-y-4 bg-black/20 p-6 rounded-[24px] border border-white/5">
+                          <div className="flex items-start gap-4">
+                            <div className="mt-1 w-6 h-6 rounded-full bg-[#FF5F1F]/20 text-[#FF5F1F] flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {i + 1}
+                            </div>
+                            <p className="text-base md:text-lg font-medium text-white/80 tracking-tight leading-relaxed">{q}</p>
                           </div>
-                          <input
-                            type="text"
-                            value={currentAnswers[i]}
-                            onChange={(e) => {
-                              const newAnswers = [...currentAnswers];
-                              newAnswers[i] = e.target.value;
-                              setCurrentAnswers(newAnswers);
-                            }}
-                            placeholder="TYPE YOUR RESPONSE..."
-                            className="w-full bg-white/5 border border-white/10 p-4 text-white font-bold placeholder:text-white/10 focus:border-[#FF5F1F] outline-none uppercase transition-all"
-                          />
+                          <div className="pl-10">
+                            <input
+                              type="text"
+                              value={currentAnswers[i]}
+                              onChange={(e) => {
+                                const newAnswers = [...currentAnswers];
+                                newAnswers[i] = e.target.value;
+                                setCurrentAnswers(newAnswers);
+                              }}
+                              placeholder="Type your response..."
+                              className="w-full bg-white/5 rounded-xl border border-white/10 px-5 py-4 text-white font-medium placeholder:text-white/20 focus:border-[#FF5F1F]/50 focus:ring-1 focus:ring-[#FF5F1F]/50 focus:bg-white/10 outline-none transition-all"
+                            />
+                          </div>
                         </div>
                       ))}
 
                       <button
                         onClick={finalizeInterview}
                         disabled={isRefiningBlueprint || currentAnswers.some(a => !a)}
-                        className="w-full py-6 bg-[#FF5F1F] text-white font-black text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-[#FF5F1F] transition-all flex items-center justify-center gap-3 shadow-[10px_10px_0_rgba(255,95,31,0.2)]"
+                        className="w-full py-5 bg-white text-black rounded-2xl font-bold text-sm tracking-widest uppercase hover:bg-white/90 transition-all flex items-center justify-center gap-3 disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99] shadow-lg"
                       >
                         {isRefiningBlueprint ? (
                           <>
-                            <RefreshCcw size={16} className="animate-spin" />
-                            WEAVING BLUEPRINT...
+                            <RefreshCcw size={18} className="animate-spin" />
+                            Weaving Blueprint...
                           </>
                         ) : (
                           <>
-                            <ShieldCheck size={16} />
-                            FINALIZE DIRECTORIAL BLUEPRINT
+                            <ShieldCheck size={18} />
+                            Finalize Blueprint
                           </>
                         )}
                       </button>
@@ -196,21 +210,25 @@ export function DirectorTerminal({
 
           {directorSnippet && (
             <div className="mt-8 animate-in slide-in-from-bottom-4 duration-700">
-              <div className="p-6 bg-[#111111] border-l-4 border-[#FF5F1F] relative overflow-hidden group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={12} className="text-[#FF5F1F]" />
-                    <span className="text-[10px] font-black text-[#FF5F1F] uppercase tracking-widest">Refined Directive</span>
+              <div className="p-8 rounded-[24px] border border-[#FF5F1F]/30 bg-gradient-to-br from-[#FF5F1F]/10 to-transparent backdrop-blur-2xl relative overflow-hidden group shadow-[0_8px_32px_rgba(255,95,31,0.1)] ring-1 ring-black/20">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#FF5F1F]/20 flex items-center justify-center">
+                      <Sparkles size={14} className="text-[#FF5F1F]" />
+                    </div>
+                    <span className="text-[12px] font-semibold text-white/90 uppercase tracking-widest">Refined Directive</span>
                   </div>
-                  <button onClick={() => setDirectorSnippet("")} className="text-white/10 hover:text-white"><Trash2 size={12} /></button>
+                  <button onClick={() => setDirectorSnippet("")} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 hover:text-white text-white/40 transition-all">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
                 <textarea
                   value={directorSnippet}
                   onChange={(e) => setDirectorSnippet(e.target.value)}
-                  className="w-full bg-transparent border-none text-xs font-bold text-white/60 leading-relaxed uppercase outline-none resize-none min-h-[100px]"
+                  className="w-full bg-transparent border-none text-sm font-medium text-white/70 leading-relaxed outline-none resize-none min-h-[100px] focus:text-white/90 transition-colors"
                 />
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <BrainCircuit size={80} />
+                <div className="absolute -bottom-10 -right-10 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                  <BrainCircuit size={160} />
                 </div>
               </div>
             </div>
@@ -218,7 +236,7 @@ export function DirectorTerminal({
         </div>
       </div>
 
-      <aside className="hidden 2xl:block h-full flex flex-col min-w-0 max-h-full">
+      <aside className="hidden lg:block h-full border-l border-white/5 flex-shrink-0">
         <TrendsFeed onSelectTrend={(trend: Trend) => {
           setDirectorIdea(trend.title);
           setDirectorSnippet(trend.snippet);

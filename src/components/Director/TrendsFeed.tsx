@@ -81,7 +81,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
 
     useEffect(() => {
         fetchTrends();
-    }, []);
+    }, [fetchTrends]);
 
     const handleRegionChange = (newGeo: string) => {
         setGeo(newGeo);
@@ -89,9 +89,9 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
     };
 
     return (
-        <div className="w-full lg:w-[800px] border-l border-white/5 bg-[#050505] flex h-full overflow-hidden min-h-0">
+        <div className="w-full lg:w-[350px] xl:w-[400px] 2xl:w-[800px] bg-[#050505] flex h-full overflow-hidden min-h-0">
             {/* LEFT: Trend List (Daily Aggregator) */}
-            <div className="w-80 border-r border-white/5 flex flex-col h-full bg-[#080808] min-h-0 max-h-full">
+            <div className="flex-1 2xl:w-80 2xl:flex-none border-r border-white/5 flex flex-col h-full bg-[#080808] min-h-0 max-h-full">
                 <div className="p-8 border-b border-white/5 flex flex-col gap-6">
                     <div className="flex flex-col gap-4">
                         <div className="flex rounded-md overflow-hidden border border-white/10 w-fit">
@@ -251,7 +251,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
             </div>
 
             {/* RIGHT: Trend Intelligence & Visualization */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="hidden 2xl:flex flex-1 flex-col h-full overflow-hidden">
                 {selectedTrend ? (
                     <div className="flex-1 flex flex-col h-full">
                         <div className="p-10 border-b border-white/5">
