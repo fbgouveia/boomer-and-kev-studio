@@ -13,14 +13,20 @@ Personagens: Boomer (canguru) + Kev (coala). Formato 9:16, 30–60s, p/ TikTok/I
 
 ---
 
-## 🔴 ESTADO REAL DO CÓDIGO (verificado via git em 2026-06-02)
-- O commit `96601cd` ("Sessão 005: Redesign UI") **DELETOU o motor de produção inteiro**:
-  `/api/ai/script`, `/api/ai/voice`, `/api/ai/sync`, `/api/ai/interview`, `/api/render`, `/api/render/status`.
-- **Restam só 4 rotas**: `/api/ai/brainstorm`, `/api/trends`, `/api/keys/balance`, `/api/cron/trend-hunter` (este último é STUB com dados mockados).
-- `page.tsx` ainda é monolito de **2.003 LOC** (docs dizem que foi refatorado — NÃO foi).
-- `supabase/schema.sql` existe (4 tabelas) mas **nunca foi deployado**.
-- ✅ O motor deletado está VIVO no commit pai **`f85f8ee`** — recuperável com `git checkout f85f8ee -- <rota>`.
-- Verificar a verdade a qualquer momento: `git ls-files 'src/app/api/**'`.
+## 🟢 ESTADO REAL DO CÓDIGO (verificado em 2026-07-06 — motor RESTAURADO)
+> Fase 0 (resgate) executada nesta sessão. Branch: **`restore-engine`** (ainda NÃO commitado/mergeado — aguardando ok do Felipe).
+- ✅ **Motor restaurado do `f85f8ee`**: `/api/ai/script`, `/api/ai/voice`, `/api/ai/sync`, `/api/ai/interview`, `/api/render`, `/api/render/status` de volta.
+- ✅ **Build verde** (`npm run build` — 10 rotas compilam, `tsc --noEmit` limpo). Deps (`replicate`, `zod`) e libs (`fetch-retry`, `validations`) intactas.
+- ✅ **Roteiro (Gemini) FUNCIONA** — testado ao vivo: gera 6 cenas com personagens consistentes. HTTP 200, ~15s.
+- ✅ **Vídeo (Replicate `kwaivgi/kling-v2.6`)**: token válido (conta `fbgouveia`), modelo acessível. Render funciona — só custa (~$3–6/vídeo) e depende de ordem do Felipe.
+- 🔴 **VOZ (ElevenLabs) BLOQUEADA** — API retorna: *"Your subscription has a failed or incomplete payment. Complete the latest invoice to continue usage."* → **Felipe precisa pagar a fatura.** É o ÚNICO bloqueio de caminho crítico (voz → lipsync → vídeo).
+- ⚠️ **Discrepância de voiceId**: o código usa vozes de CATÁLOGO (`IKne3meq5aSn9XLyUdCD` = Charlie, `CwhRBWXzGAHq8TQ4Fs17` = Roger), **não** as customizadas `exT9S2.../pqHFr7...` que este doc chamava de "ativo de identidade". Decidir: treinar/plugar vozes custom OU assumir as de catálogo.
+- ✅ **Âncora de consistência FUNCIONA**: `characters.ts` aponta `referenceImage` p/ links `/view` do Google Drive; testado — resolvem p/ PNG real (Boomer 1376×768, HTTP 200 `image/png`). O render passa isso como `start_image` do Kling (I2V). Ressalva: frágil se o arquivo virar privado ou passar do limite de vírus-scan do Drive.
+- ✅ **Buraco #1 (montagem) TAPADO**: criado `tools/assemble.mjs` (ffmpeg concat → 1 MP4 9:16 1080×1920 30fps). Testado nos clipes reais do piloto (3 cenas → 20.1s, duração exata). Antes NÃO existia montagem — o pipeline gerava clipes soltos.
+- 🔴 **Buraco #2 (orquestrador) AINDA ABERTO — de propósito**: o encadeamento script→voz→render→lipsync→montagem não existe (era o monolito deletado; "n8n" é plano, não código). NÃO foi construído porque não dá p/ testar até o ElevenLabs ser pago + ok de gasto no render — construir cego = bug garantido. Construir junto com o 1º run real.
+- ⚠️ **Fraquezas de consistência conhecidas** (fonte das "falhas"): 1 referência por cena (cenas WIDE com os 2 ancoram só um); sem encadeamento último-frame→primeiro-frame; sem portão de QA/rejeição. O QA é o que entrega "sem falha".
+- ⏳ **Ainda pendente** (não tocado): `page.tsx` monolito (2.003 LOC), `supabase/schema.sql` nunca deployado, `trend-hunter` é STUB mockado. `getDetailedPrompt` está acoplado ao `page.tsx` (cliente) — orquestrador headless vai precisar dela server-side.
+- Verificar a verdade a qualquer momento: `git ls-files 'src/app/api/**'` e `git branch`.
 
 ---
 

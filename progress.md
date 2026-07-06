@@ -259,3 +259,29 @@
 
 **Resultado:**
 - [x] Sucesso na reformulação da UI e na definição das bases do Agente (Trend Hunter). O desenvolvimento com Supabase foi suspenso temporariamente devido a restrições externas (cota free). Sessão salva e congelada aguardando nova infraestrutura ou alternativa de storage em nuvem.
+
+---
+
+## SESSÃO 006 — 2026-07-06 (Fase 0: Resgate do Motor + Montagem)
+
+**Objetivo:** Executar a Fase 0 do handoff — restaurar o motor de produção deletado e caminhar até "1 vídeo end-to-end". Branch: `restore-engine`.
+
+**O que foi feito:**
+- [x] Restauradas do commit `f85f8ee` as 6 rotas do motor deletadas na Sessão 005: `script`, `voice`, `sync`, `interview`, `render`, `render/status`.
+- [x] Build verde confirmado (`npm run build` — 10 rotas; `tsc --noEmit` limpo). Deps (`replicate`, `zod`) e libs intactas.
+- [x] Roteiro (Gemini 2.5 Flash) testado AO VIVO: gera 6 cenas com personagens consistentes (Boomer alto-astral / Kev deadpan). HTTP 200, ~15s.
+- [x] Âncora de consistência validada: `referenceImage` (link Drive `/view` do Boomer) resolve p/ PNG real (1376×768, HTTP 200 `image/png`). O render passa como `start_image` do Kling (I2V real, não text-to-video).
+- [x] **Buraco #1 (montagem) tapado**: criado `tools/assemble.mjs` (ffmpeg concat → 1 MP4 9:16 1080×1920 30fps, com autoteste). Testado nos clipes reais do piloto (3 cenas → 20.1s, duração exata). Antes NÃO existia montagem final.
+- [x] `.tmp/` adicionado ao `.gitignore`.
+- [x] Docs corrigidos (`HANDOFF_AMANHA.md`) — antes mentiam que o motor estava deletado.
+
+**Erros/Bloqueios encontrados:**
+- 🔴 **ElevenLabs (voz) BLOQUEADO** — API: *"Your subscription has a failed or incomplete payment. Complete the latest invoice to continue usage."* → único bloqueio de caminho crítico (voz→lipsync→vídeo). Ação do Felipe: pagar a fatura.
+- ⚠️ **voiceId de catálogo, não custom**: código usa `IKne3meq5aSn9XLyUdCD` (Charlie) / `CwhRBWXzGAHq8TQ4Fs17` (Roger), não vozes clonadas do Boomer/Kev. Decisão pendente.
+- ⚠️ Replicate (vídeo, Kling 2.6): token válido, modelo acessível — render funciona, mas custa ~$3–6/vídeo (aguarda ok de gasto do Felipe).
+
+**Decisão deliberada (não é pendência esquecida):**
+- Orquestrador (encadeamento voz→render→lipsync→montagem) NÃO construído — impossível testar até ElevenLabs pago + ok de render. Construir cego = bug garantido. Será feito junto com o 1º run real.
+
+**Resultado:**
+- [x] Fase 0 parte 1 (build verde) concluída e verificada. Parte 2 (1 vídeo end-to-end) travada só no billing do ElevenLabs. Motor + montagem prontos; falta o maestro, que se constrói no 1º run pago.
