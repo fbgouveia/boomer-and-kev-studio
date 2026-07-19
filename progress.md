@@ -552,3 +552,35 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - [x] Reverificado por releitura independente da API: produção v6 (14 nós, pré-voo e abort intactos, inativa), vigilância v2 (ativa).
 
 **Nota:** o `errorWorkflow` pega apenas falhas **barulhentas** (nó que estoura). Deriva silenciosa continua sendo trabalho das sondas — os dois mecanismos são complementares, não redundantes.
+
+---
+
+## SESSÃO 010 — 2026-07-19 (Teste de stress via browser — PARCIAL, interrompido por cota)
+
+**Setup:** dev server local + MCP `chrome-devtools` (já instalado — não foi preciso instalar Playwright).
+
+**Achados até a interrupção:**
+- 🐛 **Processo zumbi**: um `next-server` de 5h atrás segurava a porta 3000 sem responder (HTTP 000) + lock em `.next/dev/lock`. Morto com `kill -9`; servidor limpo subiu em 484ms. Lição: sessões anteriores deixam dev servers pendurados.
+- ✅ **Home (DIRECTOR) carrega** — HUD, Narrative Terminal, trends com 4 sinais reais da região AU (`GET /api/trends?geo=AU` 200), seletor de região com 6 opções, seletor de engine (Kling/Higgsfield), botão RENDER SCENE.
+- ⚠️ **Falso positivo evitado**: `fill()` programático NÃO habilita os botões (`START PRODUCTION`/`PLAN WITH INSTRUCTOR` continuam disabled) porque o React não vê o evento sintético. Com digitação real (`type_text`) habilitam normalmente. **Não é bug do app** — é artefato de teste. Registrar para futuros testes: usar teclado real, nunca fill().
+- ✅ **START PRODUCTION funciona** — abre o modal "NEURAL DRAFTING MODE" (Neural Synthesis v2.7): 6 seções (Hook/Bridge/Reaction/Dialogue 1-2/Closing), variantes de bloco com "momentum" %, REROLL_STUBS, blueprint montado à direita com as 6 falas, "Directorial Confidence 100%", botão COMMIT TO TIMELINE. Conteúdo real do Gemini **referenciando o tópico digitado** (Bondi Beach fechada, tubarão) — contrato cumprido na UI.
+- 🐛 **BUG REAL — double-fire do brainstorm**: 1 clique em START PRODUCTION gerou **2×** `POST /api/ai/brainstorm` (28.2s e 29.6s, ambos 200). Custo Gemini duplicado a cada clique. Provável falta de guard/debounce no handler (ou StrictMode em dev — verificar em prod build antes de corrigir).
+- 🐛 **UX menor**: com texto pré-existente no textarea, `Meta+A` + digitação intercalou o texto novo no meio do antigo (o app não limpa/normaliza). Ficou string embaralhada no estado — o brainstorm rodou mesmo assim.
+
+**NÃO testado (fica para a próxima sessão):**
+- COMMIT TO TIMELINE (fluxo pós-brainstorm) e aba PRODUCTION_TIMELINE.
+- Botões FEED MACHINE das trends; alternância LIVE WIRE/2026 PLANNER; troca de região.
+- Abas ENGINE_DNA (upload/SYNTHESIZE Imagen) e STUDIO_LABS.
+- PLAN WITH INSTRUCTOR (rota `/api/ai/interview`).
+- Rodapé (Compliance Scan/Documentation/API Keys/Support) e sidebar.
+- RENDER SCENE (dispara custo — precisa OK do Felipe).
+- **Vídeo/gravação do teste** (pedido do Felipe — pendente).
+- Teste de stress completo + relatório funciona/quebrado/nunca-construído.
+
+**Pendências gerais em aberto (consolidado):**
+1. 🔴 1º run real de produção via n8n (~US$3-6) — único teste que falta do pipeline.
+2. 🔴 Continuar/terminar o stress test do front + gravar vídeo.
+3. 🟠 Bug double-fire do brainstorm (verificar prod build; se persistir, guard no handler).
+4. 🟠 Felipe: apagar projeto Supabase de SP (`fjirjelpkheuflumxbhz`, $10/mês) — modal trava, caminho alternativo = CLI `supabase login` + `projects delete`.
+5. 🟠 Fallback de áudio silencioso viola doutrina Deriva — decidir correção (falhar alto vs carimbar artefato).
+6. 🟡 voiceId catálogo vs custom; merge `restore-engine`→`main` pós-run; CI/CD do subprojeto; `/api/render` ainda em Kling 2.1; `page.tsx` 2.572 linhas; `tools/` com 2 arquivos mortos (orchestrator.ts, run_real_pipeline.js).
