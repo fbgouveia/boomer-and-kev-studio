@@ -695,3 +695,21 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 4. **Sonda do roteirista**: contrato passa a exigir equilíbrio (mín 3/8 por personagem) — o 5×1 de hoje teria dado VERMELHO no pré-voo antes de gastar render.
 
 **Aceite (5 gerações reais, local):** 5/5 com **exatamente 4×4**, máx 2 cenas consecutivas, 1 WIDE cada. Deploy feito; sonda em produção GREEN reportando "balanco boomer/kev 5/3" (dentro do contrato).
+
+### Sessão 011h — WP 1.6 + 1.7 IMPLEMENTADOS (build verde; NÃO deployados, NÃO testados e2e)
+
+**⚠️ INTERROMPIDO POR COTA — estado exato p/ retomar:**
+
+**Código pronto (tsc + build verdes, commit abaixo), em `src/app/api/pipeline/run/route.ts`:**
+1. **WP 1.6 — encadeamento de último frame:** decisão de arquitetura = encadear SÓ entre cenas consecutivas do MESMO personagem (troca de personagem = corte de câmera, correto em TV; emendar frame do Boomer na cena do Kev poria o Boomer abrindo a cena errada). Implementação: Step 1b detecta `chainFrom` (cena anterior do mesmo char) e ADIA o launch (guarda prompt/duration em `scene.launch`); Step 2, no loop sequencial, extrai o último frame do clipe anterior já processado (`extractLastFrameDataUri`, ffmpeg -sseof) e só então lança o Kling com esse frame como `start_image`. Helpers novos: `probeDuration` (ffprobe) e `extractLastFrameDataUri`.
+2. **WP 1.6b — diretiva CONTINUITY no getDetailedPrompt:** cada clipe é "trecho de transmissão contínua" — começa mid-conversa, termina mid-energia (mata a sensação de cada cena recomeçar/encerrar).
+3. **WP 1.7 — transições xfade:** `assembleVideo` ganhou 3º parâmetro `transitions[]`; monta cadeia xfade+acrossfade com offsets pelas durações REAIS (ffprobe). `pickTransition` determinístico: entra/sai do sponsor break (cenas idx 3 e 5) = fadeblack 0.5s; mesmo personagem (encadeada) = corte (~1 frame); troca de personagem = corte se emoção quente (INTENSE/EXCITED/ANGRY/SHOCKED), crossfade 0.35s se calma. Sem plano → fallback concat original.
+
+**FALTA (próxima sessão):**
+- [ ] **Teste de aceite $0 do 1.7**: rodar pipeline local SEM `REPLICATE_API_TOKEN` (modo sandbox usa pilotos de `00_Legacy_Archives/Piloto/cena1-4.mp4`) e COM ElevenLabs real → valida VOICE_GATE + montagem xfade de ponta a ponta sem custo de render. Assistir o MP4 e conferir transições.
+- [ ] **Deploy na VPS** (`./deploy_studio.sh`) — produção ainda roda a versão SEM 1.6/1.7.
+- [ ] **Validação real do 1.6** (encadeamento) só é possível com render pago — junto do próximo episódio da F2.
+- [ ] Atualizar plano-mestre (artifact 7e32cc32) — 1.6/1.7 p/ "implementado, aguarda validação".
+- [ ] WPs restantes da F1: 1.1 (double-fire) e 1.4 (higiene: pm2 startup, N8N_RADAR_SECRET, arquivar HANDOFF_AMANHA.md, tools mortos).
+
+**Riscos conhecidos do código novo (revisar no teste):** (a) acrossfade exige stream de áudio em TODOS os clipes — clipes sandbox/pilotos precisam ter áudio (o multiplex põe anullsrc quando falta, MAS só no caminho replicate; no full-sandbox os pilotos entram crus — se algum piloto não tiver áudio, o filtro falha → validar no teste $0); (b) offsets do xfade assumem durações ffprobe corretas; (c) encadeamento serializa launches só das cenas CHAINED (heads continuam paralelos).

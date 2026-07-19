@@ -33,18 +33,42 @@ const runPipelineSchema = z.object({
 // FFmpeg Video Assembly function
 const TARGET = { width: 1080, height: 1920, fps: 30 };
 
-function assembleVideo(clips: string[], outPath: string): Promise<string> {
+async function assembleVideo(clips: string[], outPath: string, transitions?: { type: string; dur: number }[]): Promise<string> {
   if (!clips.length) throw new Error('assembleVideo: nenhum clipe fornecido');
   for (const c of clips) {
     if (!existsSync(c)) throw new Error(`clipe não encontrado: ${c}`);
   }
 
-  const parts = clips.map((_, i) =>
+  const norm = clips.map((_, i) =>
     `[${i}:v]scale=${TARGET.width}:${TARGET.height}:force_original_aspect_ratio=increase,` +
     `crop=${TARGET.width}:${TARGET.height},setsar=1,fps=${TARGET.fps}[v${i}]`
   );
-  const concatIn = clips.map((_, i) => `[v${i}][${i}:a]`).join('');
-  const filter = `${parts.join(';')};${concatIn}concat=n=${clips.length}:v=1:a=1[outv][outa]`;
+
+  let filter: string;
+
+  if (transitions && transitions.length === clips.length - 1 && clips.length > 1) {
+    // WP 1.7: cadeia de xfade/acrossfade com offsets pelas durações REAIS (ffprobe).
+    const durs = await Promise.all(clips.map(probeDuration));
+    const anorm = clips.map((_, i) => `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}]`);
+
+    let vPrev = 'v0', aPrev = 'a0', elapsed = durs[0];
+    const chain: string[] = [];
+    for (let i = 1; i < clips.length; i++) {
+      const t = transitions[i - 1];
+      const offset = Math.max(0.1, elapsed - t.dur).toFixed(3);
+      const vOut = i === clips.length - 1 ? 'outv' : `vx${i}`;
+      const aOut = i === clips.length - 1 ? 'outa' : `ax${i}`;
+      chain.push(`[${vPrev}][v${i}]xfade=transition=${t.type}:duration=${t.dur}:offset=${offset}[${vOut}]`);
+      chain.push(`[${aPrev}][a${i}]acrossfade=d=${Math.max(0.04, t.dur)}[${aOut}]`);
+      vPrev = vOut; aPrev = aOut;
+      elapsed = elapsed - t.dur + durs[i];
+    }
+    filter = [...norm, ...anorm, ...chain].join(';');
+  } else {
+    // Fallback: concat original (corte seco em tudo)
+    const concatIn = clips.map((_, i) => `[v${i}][${i}:a]`).join('');
+    filter = `${norm.join(';')};${concatIn}concat=n=${clips.length}:v=1:a=1[outv][outa]`;
+  }
 
   const args = [
     '-y',
@@ -111,7 +135,10 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
     envBlock += ` SPECIAL STUDIO DECOR: ${wardrobe.studio}.`;
   }
 
-  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
+  // WP 1.6: cada clipe deve parecer um TRECHO de transmissão contínua, não um vídeo com início/fim.
+  const continuityDirective = `CONTINUITY: This is a segment of an ONGOING live podcast broadcast. The character is ALREADY mid-conversation when the shot begins — no settling in, no greeting gesture, no looking for position. The shot ENDS mid-energy, as if the camera simply cut away; never a wrap-up pose, never a fade-out feeling.`;
+
+  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
 };
 
 // Replicate polling helper
@@ -127,6 +154,47 @@ async function pollPrediction(replicate: Replicate, predictionId: string, maxAtt
     await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error(`Prediction timed out: ${predictionId}`);
+}
+
+// WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
+
+// Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
+function probeDuration(videoPath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const fp = spawn('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]);
+    let out = '';
+    fp.stdout.on('data', (d) => (out += d));
+    fp.on('error', reject);
+    fp.on('close', (code) => {
+      const dur = parseFloat(out.trim());
+      code === 0 && dur > 0 ? resolve(dur) : reject(new Error(`ffprobe falhou p/ ${videoPath}`));
+    });
+  });
+}
+
+// Último frame de um clipe como data URI (jpg) — vira start_image da cena seguinte.
+function extractLastFrameDataUri(videoPath: string, tmpDir: string, tag: string): Promise<string> {
+  const framePath = path.resolve(tmpDir, `lastframe_${tag}.jpg`);
+  return new Promise((resolve, reject) => {
+    const ff = spawn('ffmpeg', ['-y', '-sseof', '-0.15', '-i', videoPath, '-frames:v', '1', '-q:v', '2', framePath],
+      { stdio: ['ignore', 'ignore', 'inherit'] });
+    ff.on('error', reject);
+    ff.on('close', (code) => {
+      if (code !== 0 || !existsSync(framePath)) return reject(new Error(`extração de último frame falhou (${tag})`));
+      resolve(`data:image/jpeg;base64,${readFileSync(framePath).toString('base64')}`);
+    });
+  });
+}
+
+// WP 1.7: transição por par de cenas, decidida pelo roteiro (determinístico).
+// 'cut' vira xfade de 1 frame (≈ corte seco) p/ manter um único filter graph.
+type Transition = { type: string; dur: number };
+function pickTransition(prev: any, next: any, nextIdx: number): Transition {
+  if (nextIdx === 3 || nextIdx === 5) return { type: 'fadeblack', dur: 0.5 }; // entra/sai do fake sponsor break
+  if (prev.characterId === next.characterId) return { type: 'fade', dur: 0.04 }; // encadeada (1.6): a continuidade É a transição
+  const emotion = String(next.emotion || '').toUpperCase();
+  const intensa = ['INTENSE', 'EXCITED', 'ANGRY', 'SHOCKED'].includes(emotion);
+  return intensa ? { type: 'fade', dur: 0.04 } : { type: 'fade', dur: 0.35 }; // troca de personagem: corte TV se quente, crossfade se calma
 }
 
 // Background Job Worker
@@ -240,6 +308,21 @@ async function processPipeline(
       let videoUrl = "";
       let isSandbox = !replicate;
 
+      // WP 1.6: mesma personagem em cenas consecutivas → a cena N+1 nasce do último
+      // frame da cena N (continuidade real). O launch é ADIADO p/ o Step 2, quando o
+      // clipe anterior já existe. Troca de personagem = corte de câmera (âncora normal).
+      const chainFrom = i > 0 && script[i - 1].characterId === line.characterId ? script[i - 1].id : null;
+
+      if (replicate && chainFrom) {
+        updateJob({ logs: [`🔗 [Scene ${index}] Encadeada à anterior (mesmo personagem) — launch adiado p/ herdar o último frame.`] });
+        scenesToProcess.push({
+          sceneId, index, predictionId: null as string | null, audioDataUri, status: "CHAINED",
+          chainFrom,
+          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe), duration: line.durationEst <= 5 ? 5 : 10 }
+        });
+        continue;
+      }
+
       if (replicate) {
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
@@ -310,8 +393,29 @@ async function processPipeline(
 
     // Process each real scene sequentially or concurrently
     for (const scene of scenesToProcess) {
-      updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
       try {
+        // WP 1.6: cena encadeada — o clipe anterior já foi processado neste loop
+        // sequencial; extrai o último frame dele e SÓ AGORA lança o Kling.
+        if (!scene.predictionId && scene.chainFrom && scene.launch) {
+          const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
+          updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
+          const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
+          const prediction = await replicate!.predictions.create({
+            model: "kwaivgi/kling-v2.6",
+            input: {
+              prompt: scene.launch.prompt,
+              duration: scene.launch.duration,
+              aspect_ratio: "9:16",
+              start_image: frameUri,
+              negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
+              generate_audio: false
+            }
+          });
+          scene.predictionId = prediction.id;
+        }
+
+        if (!scene.predictionId) throw new Error(`cena ${scene.index}: sem predictionId (launch encadeado falhou?)`);
+        updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
         const output = await pollPrediction(replicate!, scene.predictionId);
         const klingVideoUrl = Array.isArray(output) ? output[0] : output;
         updateJob({ logs: [`✅ [Scene ${scene.index}] Kling video generated: ${klingVideoUrl}`] });
@@ -403,7 +507,16 @@ async function processPipeline(
     updateJob({ progress: 85, logs: ["🎬 LAUNCHING_FFMPEG_VIDEO_ASSEMBLER...", "STITCHING_SCENES_AND_NORMALIZING_AUDIO..."] });
 
     const finalVideoPath = path.resolve(tmpDir, `final_${jobId}.mp4`);
-    await assembleVideo(finalClipPaths, finalVideoPath);
+
+    // WP 1.7: plano de transições derivado do roteiro (só quando 1 clipe por cena).
+    const transitions = finalClipPaths.length === script.length && script.length > 1
+      ? script.slice(1).map((next, k) => pickTransition(script[k], next, k + 1))
+      : undefined;
+    if (transitions) {
+      updateJob({ logs: [`🎞️ Transições: ${transitions.map(t => `${t.type}${t.dur >= 0.1 ? '' : '(corte)'}`).join(' → ')}`] });
+    }
+
+    await assembleVideo(finalClipPaths, finalVideoPath, transitions);
 
     let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
     try {
