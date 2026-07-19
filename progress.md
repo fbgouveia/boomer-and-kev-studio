@@ -669,3 +669,19 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - [x] **Aceite testado localmente**: dev server com `ELEVENLABS_API_KEY=invalida` e `REPLICATE_API_TOKEN=` vazio → POST run → job `FAILED` com log `VOICE_GATE: ElevenLabs HTTP 401 na cena 1`, **zero chamadas ao Replicate**, episódio marcado `failed` no Supabase (verificado na linha antes de deletá-la).
 - [x] Deploy em produção via `deploy_studio.sh`.
 - Nota: gate-test deixou claro que o fluxo Supabase→catch→FAILED funciona ponta a ponta.
+
+### Sessão 011f — Diagnóstico dos testes de render + estratégia de edição/B-roll
+
+**Fato novo:** Felipe rodou renders reais hoje por conta própria — 7 runs (6 `assembled`, 1 `failed`) no Supabase. A validação financeira (F2) aconteceu de facto; a qualidade reprovou.
+
+**Diagnóstico "Kev sumiu" (evidência SQL):** episódio "Kangaroo vs Emu war" = **5 cenas Boomer × 1 Kev**. Não é falha do Kling: o roteiro nasce desequilibrado E cada cena ancora um único personagem (`start_image` = referência individual; não existe two-shot). Masters individuais OK (`master_boomer.png`/`master_kev.png` existem).
+
+**Decisões de arquitetura de edição (3 camadas):**
+1. **Gancho entre cenas = problema de GERAÇÃO**, não de edição: encadeamento de último frame (ffmpeg extrai frame final da cena N → `start_image` da N+1).
+2. **Transições = ffmpeg `xfade`** já instalado, com regra determinística por `emotion`/`shotType` (corte seco/crossfade/dip).
+3. **Edição rica = HyperFrames** (skills instaladas) ou Remotion; entra depois.
+**Pesquisa do Felipe avaliada:** LosslessCut/Shotcut/MoviePy — corretos como repositórios populares, inúteis pro pipeline (2 são GUI manuais; MoviePy é Python, vetado pela lei Node-only). LosslessCut recomendado só como ferramenta humana de QA no Mac. Ironia registrada: 2 dos 3 são wrappers do ffmpeg que já temos.
+
+**Visão B-Roll (Felipe):** não é banco de imagem — é **B-roll de evidência**: prints reais dos sites de notícia da pauta pipocando de forma cômica sincronizados à fala. Vantagem: as manchetes já vêm na trend (`news[]` com URLs). Rota: v1 prova de estilo com HyperFrames/graphic-overlays sobre episódio já renderizado ($0) → v2 automação pós-assembleVideo na VPS (container ganha Chromium). Compliance: fonte visível no card.
+
+**Plano atualizado:** WPs novos 1.5 (balanceamento Kev + two-shot + sonda de contrato), 1.6 (last-frame chaining), 1.7 (xfade inteligente), 4.2 (B-Roll Engine v1/v2). F1 NÃO está encerrada — ganhou trabalho com razão.
