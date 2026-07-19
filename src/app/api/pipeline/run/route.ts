@@ -22,7 +22,12 @@ const runPipelineSchema = z.object({
   })),
   directorIdea: z.string().optional(),
   directorSnippet: z.string().optional(),
-  engine: z.string().optional().default('kling')
+  engine: z.string().optional().default('kling'),
+  wardrobe: z.object({
+    boomer: z.string().optional(),
+    kev: z.string().optional(),
+    studio: z.string().optional()
+  }).optional()
 });
 
 // FFmpeg Video Assembly function
@@ -61,7 +66,7 @@ function assembleVideo(clips: string[], outPath: string): Promise<string> {
 }
 
 // Prompt generator helper (mirrors page.tsx)
-const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "") => {
+const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }) => {
   const char = CHARACTERS.find(c => c.id === line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
@@ -73,11 +78,16 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
   else if (shot?.id.includes('OTS')) angleSpec = ANGLE_SPECS.side;
   else if (shot?.id === 'GOPRO_FISHEYE') angleSpec = ANGLE_SPECS.wide;
 
-  const outfitBase = `Wearing ${char.defaultOutfit}.`;
+  let outfitBase = `Wearing ${char.defaultOutfit}.`;
+  if (wardrobe && line.characterId === 'boomer' && wardrobe.boomer) {
+    outfitBase = `Wearing ${wardrobe.boomer}.`;
+  } else if (wardrobe && line.characterId === 'kev' && wardrobe.kev) {
+    outfitBase = `Wearing ${wardrobe.kev}.`;
+  }
   const directorialOverride = directorSnippet ? ` CRITICAL_DIRECTORIAL_OVERRIDE: ${directorSnippet}. Ensure all visual details like jerseys and text are prioritized.` : '';
   const characterAnchor = `${char.imagePromptContext}. ${outfitBase}${directorialOverride} Visual DNA: ${char.visualDescription}. Physicality: ${char.personality}.`;
 
-  const anthropomorphicDirective = `ANTHROPOMORPHIC ACTING: This character is an animal but acts, sits, and gesticulates EXACTLY like a human podcast host. Human-like posture, human-like hand gestures, interacting with the environment like a human.`;
+  const anthropomorphicDirective = `ANTHROPOMORPHIC ACTING: This character is an animal but acts, sits, and gesticulates EXACTLY like a human podcast host. Extremely human-like posture, human-like hand gestures, interacting with the environment like a human. They must look like a person wearing a hyper-realistic animal head.`;
 
   const personalityLogic = line.characterId === 'boomer'
     ? "hyper-active muscle tension, leaning aggressively into the microphone, intense eye contact"
@@ -87,8 +97,19 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
 
   const cameraBlock = `Highly photorealistic, 8k RAW, movie grade textures, cinematic depth, subsurface scattering on fur, ray-traced lighting, masterpiece. CAMERA: ${shot?.label}, ${shot?.cinematicRule}. ${angleSpec.desc}, ${angleSpec.requirements.join(', ')}.`;
 
-  const activeProps = STUDIO_SETTING.props.filter(p => !p.includes(line.characterId === 'boomer' ? 'Tablet' : 'Gloves')).slice(0, 4).join(', ');
-  const envBlock = `ENVIRONMENT: ${STUDIO_SETTING.promptContext}. Visible props: ${activeProps}. TV screen graphics: ${directorIdea}. Lighting: ${char.lightingKey}. Ambience: ${STUDIO_SETTING.acousticPanels}.`;
+  let activeProps = STUDIO_SETTING.props.filter(p => !p.includes(line.characterId === 'boomer' ? 'Tablet' : 'Gloves')).slice(0, 4).join(', ');
+  let tvGraphics = directorIdea;
+
+  // Emphasize sponsor integration in scenes 3 and 4 (0-indexed, so the 4th and 5th scenes)
+  if (sceneIndex === 3 || sceneIndex === 4) {
+    activeProps = "prominently displayed energy drink cans with bright logos, sponsored branded merch on the desk, " + activeProps;
+    tvGraphics = "HUGE SPONSOR LOGO, bright commercial advertisement";
+  }
+
+  let envBlock = `ENVIRONMENT: ${STUDIO_SETTING.promptContext}. Visible props: ${activeProps}. TV screen graphics: ${tvGraphics}. Lighting: ${char.lightingKey}. Ambience: ${STUDIO_SETTING.acousticPanels}.`;
+  if (wardrobe && wardrobe.studio) {
+    envBlock += ` SPECIAL STUDIO DECOR: ${wardrobe.studio}.`;
+  }
 
   return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
 };
@@ -117,7 +138,8 @@ async function processPipeline(
   script: any[],
   directorIdea: string,
   directorSnippet: string,
-  engine: string
+  engine: string,
+  wardrobe?: { boomer?: string, kev?: string, studio?: string }
 ) {
   const tmpDir = path.resolve(process.cwd(), '.tmp');
   const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
@@ -215,7 +237,7 @@ async function processPipeline(
       if (replicate) {
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
-          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet);
+          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe);
           const character = CHARACTERS.find(c => c.id === line.characterId);
           
           const resolveAssetUrl = (url: string) => {
@@ -457,7 +479,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_INPUT_SIGNAL", details: validation.error.format() }, { status: 400 });
     }
 
-    const { script, directorIdea = "", directorSnippet = "", engine = "kling" } = validation.data;
+    const { script, directorIdea = "", directorSnippet = "", engine = "kling", wardrobe } = validation.data;
 
     // Create .tmp directory
     const tmpDir = path.resolve(process.cwd(), '.tmp');
@@ -480,7 +502,7 @@ export async function POST(req: Request) {
     writeFileSync(jobFilePath, JSON.stringify(initialJobState, null, 2));
 
     // Fire background task
-    processPipeline(jobId, script, directorIdea, directorSnippet, engine).catch(err => {
+    processPipeline(jobId, script, directorIdea, directorSnippet, engine, wardrobe).catch(err => {
       console.error(`Uncaught background task error for job ${jobId}:`, err);
     });
 

@@ -246,102 +246,85 @@ export class ScriptEngine {
         const topic = topicData.category;
         const keyword = topicData.keyword;
 
-        // generated IDs
+        // generated IDs for 8 scenes
         const id1 = Math.random().toString(36).substr(2, 9);
         const id2 = Math.random().toString(36).substr(2, 9);
         const id3 = Math.random().toString(36).substr(2, 9);
         const id4 = Math.random().toString(36).substr(2, 9);
+        const id5 = Math.random().toString(36).substr(2, 9);
+        const id6 = Math.random().toString(36).substr(2, 9);
+        const id7 = Math.random().toString(36).substr(2, 9);
+        const id8 = Math.random().toString(36).substr(2, 9);
 
         // INTELLIGENCE OVERRIDE
         // If we have a specific 'take' from the trends feed, we should build the script around it.
         // It serves as the 'anchor' moment of the script.
 
-        let hookLine, hypeLine, rebuttalLine, closingLine;
+        let hookLine, hypeLine, rebuttalLine, sponsorPitchLine, sponsorRebuttalLine, interaction1Line, interaction2Line, closingLine;
 
         if (intelligence) {
             // SCENARIO 1: Intelligence provided a BOOMER take
             if (intelligence.take.character === 'BOOMER') {
-                hookLine = {
-                    text: fill(intelligence.take.text, title, keyword),
-                    char: 'boomer',
-                    intensity: 'HIGH'
-                };
+                hookLine = { text: fill(intelligence.take.text, title, keyword), char: 'boomer', intensity: 'HIGH' };
+                
                 let cleanSnippet = typeof snippet === 'string' ? snippet : "";
                 if (cleanSnippet.includes("Trending in")) cleanSnippet = "The numbers are completely off the charts!";
                 if (cleanSnippet.length < 10) cleanSnippet = "This is the signal we've been waiting for!";
-
-                hypeLine = {
-                    text: `And that's just the tip of the iceberg! ${cleanSnippet.split('.')[0]}!`,
-                    char: 'boomer',
-                    intensity: 'MEDIUM'
-                };
-                rebuttalLine = {
-                    text: fill(this.getRandom(KEV_RESPONSES[topic]), title, keyword),
-                    char: 'kev',
-                    intensity: 'MEDIUM'
-                };
-                closingLine = {
-                    text: fill(this.getRandom(BOOMER_REBUTTALS[topic]), title, keyword),
-                    char: 'boomer',
-                    intensity: 'HIGH'
-                };
+                
+                hypeLine = { text: `And that's just the tip of the iceberg! ${cleanSnippet.split('.')[0]}!`, char: 'boomer', intensity: 'MEDIUM' };
+                rebuttalLine = { text: fill(this.getRandom(KEV_RESPONSES[topic]), title, keyword), char: 'kev', intensity: 'MEDIUM' };
+                sponsorPitchLine = { text: "But before the world ends, you NEED the new Alpha-Roo Energy Shake! It's got real battery acid!", char: 'boomer', intensity: 'HIGH' };
+                sponsorRebuttalLine = { text: "Mate, nobody is buying your radioactive sludge. Put it away.", char: 'kev', intensity: 'LOW' };
+                interaction1Line = { text: "You have no vision, Kev! Anyway, back to the data!", char: 'boomer', intensity: 'MEDIUM' };
+                interaction2Line = { text: "Yeah, nah. I'm going back to sleep.", char: 'kev', intensity: 'LOW' };
+                closingLine = { text: fill(this.getRandom(BOOMER_REBUTTALS[topic]), title, keyword), char: 'boomer', intensity: 'HIGH' };
             } else {
-                hookLine = {
-                    text: fill(this.getRandom(BOOMER_HOOKS[topic]), title, keyword),
-                    char: 'boomer',
-                    intensity: 'HIGH'
-                };
-                hypeLine = {
-                    text: snippet ? `Listen to this: "${snippet.split('.')[0]}"!` : `It's happening everywhere, Kev! Look at the screens!`,
-                    char: 'boomer',
-                    intensity: 'MEDIUM'
-                };
-                rebuttalLine = {
-                    text: fill(intelligence.take.text, title, keyword),
-                    char: 'kev',
-                    intensity: 'MEDIUM'
-                };
-                closingLine = {
-                    text: `You just don't get the vision, mate! This is history in the making!`,
-                    char: 'boomer',
-                    intensity: 'HIGH'
-                };
+                hookLine = { text: fill(this.getRandom(BOOMER_HOOKS[topic]), title, keyword), char: 'boomer', intensity: 'HIGH' };
+                hypeLine = { text: snippet ? `Listen to this: "${snippet.split('.')[0]}"!` : `It's happening everywhere, Kev! Look at the screens!`, char: 'boomer', intensity: 'MEDIUM' };
+                rebuttalLine = { text: fill(intelligence.take.text, title, keyword), char: 'kev', intensity: 'MEDIUM' };
+                sponsorPitchLine = { text: "This stress requires the Boomer Boxing Glove - perfect for punching reality!", char: 'boomer', intensity: 'HIGH' };
+                sponsorRebuttalLine = { text: "It's just a regular glove with your face drawn on it, mate.", char: 'kev', intensity: 'LOW' };
+                interaction1Line = { text: "It's MERCHANDISE! But listen, we need to focus!", char: 'boomer', intensity: 'HIGH' };
+                interaction2Line = { text: "I am focusing... on my gum leaves.", char: 'kev', intensity: 'LOW' };
+                closingLine = { text: `You just don't get the vision, mate! This is history in the making!`, char: 'boomer', intensity: 'HIGH' };
             }
         } else {
-            hookLine = {
-                text: fill(this.getRandom(BOOMER_HOOKS[topic]), title, keyword),
-                char: 'boomer',
-                intensity: 'HIGH'
-            };
-            hypeLine = {
-                text: snippet ? `Read the data! "${snippet.split('.')[0]}"!` : `Every metric is flashing red! This isn't just a trend, it's a paradigm shift!`,
-                char: 'boomer',
-                intensity: 'MEDIUM'
-            };
-            rebuttalLine = {
-                text: fill(this.getRandom(KEV_RESPONSES[topic]), title),
-                char: 'kev',
-                intensity: 'MEDIUM'
-            };
-            closingLine = {
-                text: fill(this.getRandom(BOOMER_REBUTTALS[topic]), title),
-                char: 'boomer',
-                intensity: 'HIGH'
-            };
+            hookLine = { text: fill(this.getRandom(BOOMER_HOOKS[topic]), title, keyword), char: 'boomer', intensity: 'HIGH' };
+            hypeLine = { text: snippet ? `Read the data! "${snippet.split('.')[0]}"!` : `Every metric is flashing red! This isn't just a trend, it's a paradigm shift!`, char: 'boomer', intensity: 'MEDIUM' };
+            rebuttalLine = { text: fill(this.getRandom(KEV_RESPONSES[topic]), title), char: 'kev', intensity: 'MEDIUM' };
+            sponsorPitchLine = { text: "Quick! Buy the Boomer Apocalypse Survival Kit before they run out!", char: 'boomer', intensity: 'HIGH' };
+            sponsorRebuttalLine = { text: "It's literally just a roll of duct tape and a rusty spoon.", char: 'kev', intensity: 'LOW' };
+            interaction1Line = { text: "It's tactical! But whatever, the point is this is massive!", char: 'boomer', intensity: 'HIGH' };
+            interaction2Line = { text: "I'll take your word for it.", char: 'kev', intensity: 'LOW' };
+            closingLine = { text: fill(this.getRandom(BOOMER_REBUTTALS[topic]), title), char: 'boomer', intensity: 'HIGH' };
         }
 
-        const lines = [hookLine, hypeLine, rebuttalLine, closingLine];
-        const ids = [id1, id2, id3, id4];
+        const lines = [hookLine, hypeLine, rebuttalLine, sponsorPitchLine, sponsorRebuttalLine, interaction1Line, interaction2Line, closingLine];
+        const ids = [id1, id2, id3, id4, id5, id6, id7, id8];
 
         return lines.map((line, index) => {
             const motion = this.getMotion(line.char, line.intensity as 'HIGH' | 'LOW' | 'MEDIUM');
+            
+            let shotType = 'WIDE';
+            if (line.char === 'boomer') {
+                shotType = index === 0 ? 'LOW_ANGLE_BOOMER' : (index === 7 ? 'GOPRO_FISHEYE' : 'BOOMER_MCU');
+            } else {
+                shotType = 'KEV_CU';
+            }
+
+            let durationEst = 6;
+            if (index === 1) durationEst = 8;
+            if (index === 3) durationEst = 7;
+            if (index === 4) durationEst = 5;
+            if (index === 7) durationEst = 7;
+
             return {
                 id: ids[index],
                 characterId: line.char,
                 text: line.text,
-                shotType: line.char === 'boomer' ? (index === 0 ? 'LOW_ANGLE_BOOMER' : (index === 3 ? 'GOPRO_FISHEYE' : 'BOOMER_MCU')) : 'KEV_CU',
+                shotType,
                 action: motion.action,
-                durationEst: index === 1 ? 8 : (index === 0 ? 6 : (index === 3 ? 7 : 5)), // Hype is longest
+                durationEst,
                 emotion: motion.emotion,
                 status: 'IDLE',
                 visualPrompt: "",

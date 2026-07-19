@@ -37,9 +37,16 @@ type BrainstormData = {
     hooks: BrainstormOption[];
     bridges: BrainstormOption[];
     reactions: BrainstormOption[];
+    sponsorPitch: BrainstormOption[];
+    sponsorRebuttal: BrainstormOption[];
     interaction1: BrainstormOption[];
     interaction2: BrainstormOption[];
     closings: BrainstormOption[];
+    wardrobe?: {
+        boomer: string;
+        kev: string;
+        studio: string;
+    };
 };
 
 interface DraftingTableProps {
@@ -55,7 +62,7 @@ interface DraftingTableProps {
         emotion: string,
         action: string,
         status: 'IDLE'
-    }[]) => void;
+    }[], wardrobe?: { boomer: string, kev: string, studio: string }) => void;
     onClose: () => void;
 }
 
@@ -66,6 +73,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     const [selectedHook, setSelectedHook] = useState<number | null>(null);
     const [selectedBridge, setSelectedBridge] = useState<number | null>(null);
     const [selectedReaction, setSelectedReaction] = useState<number | null>(null);
+    const [selectedSponsorPitch, setSelectedSponsorPitch] = useState<number | null>(null);
+    const [selectedSponsorRebuttal, setSelectedSponsorRebuttal] = useState<number | null>(null);
     const [selectedInteraction1, setSelectedInteraction1] = useState<number | null>(null);
     const [selectedInteraction2, setSelectedInteraction2] = useState<number | null>(null);
     const [selectedClosing, setSelectedClosing] = useState<number | null>(null);
@@ -75,6 +84,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         if (selectedHook === null) { setActiveSection('hooks'); return; }
         if (selectedBridge === null) { setActiveSection('bridges'); return; }
         if (selectedReaction === null) { setActiveSection('reactions'); return; }
+        if (selectedSponsorPitch === null) { setActiveSection('sponsorPitch'); return; }
+        if (selectedSponsorRebuttal === null) { setActiveSection('sponsorRebuttal'); return; }
         if (selectedInteraction1 === null) { setActiveSection('interaction1'); return; }
         if (selectedInteraction2 === null) { setActiveSection('interaction2'); return; }
         if (selectedClosing === null) { setActiveSection('closings'); return; }
@@ -109,6 +120,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 if (data.hooks?.length > 0) setSelectedHook(0);
                 if (data.bridges?.length > 0) setSelectedBridge(0);
                 if (data.reactions?.length > 0) setSelectedReaction(0);
+                if (data.sponsorPitch?.length > 0) setSelectedSponsorPitch(0);
+                if (data.sponsorRebuttal?.length > 0) setSelectedSponsorRebuttal(0);
                 if (data.interaction1?.length > 0) setSelectedInteraction1(0);
                 if (data.interaction2?.length > 0) setSelectedInteraction2(0);
                 if (data.closings?.length > 0) setSelectedClosing(0);
@@ -141,11 +154,13 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         const hook = selectedHook !== null ? brainstorm.hooks?.[selectedHook] : null;
         const bridge = selectedBridge !== null ? brainstorm.bridges?.[selectedBridge] : null;
         const reaction = selectedReaction !== null ? brainstorm.reactions?.[selectedReaction] : null;
+        const sPitch = selectedSponsorPitch !== null ? brainstorm.sponsorPitch?.[selectedSponsorPitch] : null;
+        const sReb = selectedSponsorRebuttal !== null ? brainstorm.sponsorRebuttal?.[selectedSponsorRebuttal] : null;
         const i1 = selectedInteraction1 !== null ? brainstorm.interaction1?.[selectedInteraction1] : null;
         const i2 = selectedInteraction2 !== null ? brainstorm.interaction2?.[selectedInteraction2] : null;
         const closing = selectedClosing !== null ? brainstorm.closings?.[selectedClosing] : null;
 
-        if (!hook || !bridge || !reaction || !i1 || !i2 || !closing) return;
+        if (!hook || !bridge || !reaction || !sPitch || !sReb || !i1 || !i2 || !closing) return;
 
         onAssemble([
             {
@@ -180,9 +195,29 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
             },
             {
                 id: Math.random().toString(36).substr(2, 9),
+                characterId: sPitch.characterId || 'boomer',
+                text: sPitch.text,
+                shotType: 'WIDE',
+                durationEst: 7,
+                emotion: sPitch.emotion || 'SALESMAN',
+                action: sPitch.action || 'HOLDING_IMAGINARY_PRODUCT',
+                status: 'IDLE'
+            },
+            {
+                id: Math.random().toString(36).substr(2, 9),
+                characterId: sReb.characterId || 'kev',
+                text: sReb.text,
+                shotType: 'KEV_CU',
+                durationEst: 5,
+                emotion: sReb.emotion || 'DISGUSTED',
+                action: sReb.action || 'SHAKING_HEAD',
+                status: 'IDLE'
+            },
+            {
+                id: Math.random().toString(36).substr(2, 9),
                 characterId: i1.characterId || 'boomer',
                 text: i1.text,
-                shotType: 'WIDE',
+                shotType: 'BOOMER_MCU',
                 durationEst: 6,
                 emotion: i1.emotion || 'ENGAGED',
                 action: i1.action || 'TALKING',
@@ -202,13 +237,13 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 id: Math.random().toString(36).substr(2, 9),
                 characterId: closing.characterId || 'boomer',
                 text: closing.text,
-                shotType: 'WIDE',
+                shotType: 'BOOMER_MCU',
                 durationEst: 6,
                 emotion: closing.emotion || 'PUMPED',
                 action: closing.action || 'BICEP_FLEX_AND_POINT',
                 status: 'IDLE'
             },
-        ]);
+        ], brainstorm.wardrobe);
     };
 
     const renderOption = (option: BrainstormOption, index: number, isSelected: boolean, onSelect: () => void) => (
@@ -261,9 +296,11 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         { id: 'hooks', label: 'THE HOOK', icon: Zap },
         { id: 'bridges', label: 'THE BRIDGE', icon: Layers },
         { id: 'reactions', label: 'THE REACTION', icon: TrendingUp },
+        { id: 'sponsorPitch', label: 'FAKE SPONSOR PITCH', icon: Sparkles },
+        { id: 'sponsorRebuttal', label: 'SPONSOR REBUTTAL', icon: X },
         { id: 'interaction1', label: 'DIALOGUE 1', icon: MessageSquare },
         { id: 'interaction2', label: 'DIALOGUE 2', icon: Volume2 },
-        { id: 'closings', label: 'THE CLOSING', icon: Sparkles },
+        { id: 'closings', label: 'THE CLOSING', icon: Terminal },
     ];
 
     return (
@@ -333,6 +370,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                 const isComplete = (section.id === 'hooks' && selectedHook !== null) ||
                                     (section.id === 'bridges' && selectedBridge !== null) ||
                                     (section.id === 'reactions' && selectedReaction !== null) ||
+                                    (section.id === 'sponsorPitch' && selectedSponsorPitch !== null) ||
+                                    (section.id === 'sponsorRebuttal' && selectedSponsorRebuttal !== null) ||
                                     (section.id === 'interaction1' && selectedInteraction1 !== null) ||
                                     (section.id === 'interaction2' && selectedInteraction2 !== null) ||
                                     (section.id === 'closings' && selectedClosing !== null);
@@ -434,9 +473,11 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                     {activeSection === 'hooks' ? brainstorm.hooks?.map((opt, i) => renderOption(opt, i, selectedHook === i, () => { setSelectedHook(i); advanceToNextIncompleteSection(); })) :
                                         activeSection === 'bridges' ? brainstorm.bridges?.map((opt, i) => renderOption(opt, i, selectedBridge === i, () => { setSelectedBridge(i); advanceToNextIncompleteSection(); })) :
                                             activeSection === 'reactions' ? brainstorm.reactions?.map((opt, i) => renderOption(opt, i, selectedReaction === i, () => { setSelectedReaction(i); advanceToNextIncompleteSection(); })) :
-                                                activeSection === 'interaction1' ? brainstorm.interaction1?.map((opt, i) => renderOption(opt, i, selectedInteraction1 === i, () => { setSelectedInteraction1(i); advanceToNextIncompleteSection(); })) :
-                                                    activeSection === 'interaction2' ? brainstorm.interaction2?.map((opt, i) => renderOption(opt, i, selectedInteraction2 === i, () => { setSelectedInteraction2(i); advanceToNextIncompleteSection(); })) :
-                                                        activeSection === 'closings' ? brainstorm.closings?.map((opt, i) => renderOption(opt, i, selectedClosing === i, () => { setSelectedClosing(i); advanceToNextIncompleteSection(); })) : null}
+                                                activeSection === 'sponsorPitch' ? brainstorm.sponsorPitch?.map((opt, i) => renderOption(opt, i, selectedSponsorPitch === i, () => { setSelectedSponsorPitch(i); advanceToNextIncompleteSection(); })) :
+                                                    activeSection === 'sponsorRebuttal' ? brainstorm.sponsorRebuttal?.map((opt, i) => renderOption(opt, i, selectedSponsorRebuttal === i, () => { setSelectedSponsorRebuttal(i); advanceToNextIncompleteSection(); })) :
+                                                        activeSection === 'interaction1' ? brainstorm.interaction1?.map((opt, i) => renderOption(opt, i, selectedInteraction1 === i, () => { setSelectedInteraction1(i); advanceToNextIncompleteSection(); })) :
+                                                            activeSection === 'interaction2' ? brainstorm.interaction2?.map((opt, i) => renderOption(opt, i, selectedInteraction2 === i, () => { setSelectedInteraction2(i); advanceToNextIncompleteSection(); })) :
+                                                                activeSection === 'closings' ? brainstorm.closings?.map((opt, i) => renderOption(opt, i, selectedClosing === i, () => { setSelectedClosing(i); advanceToNextIncompleteSection(); })) : null}
                                 </div>
                             ) : (
                                 <div className="p-12 border-2 border-white/5 bg-white/[0.02] text-center">
@@ -449,7 +490,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                         <div className="mt-8 flex justify-end">
                             <button
                                 onClick={() => {
-                                    const sectionOrder: (keyof BrainstormData)[] = ['hooks', 'bridges', 'reactions', 'interaction1', 'interaction2', 'closings'];
+                                    const sectionOrder: (keyof BrainstormData)[] = ['hooks', 'bridges', 'reactions', 'sponsorPitch', 'sponsorRebuttal', 'interaction1', 'interaction2', 'closings'];
                                     const currentIndex = sectionOrder.indexOf(activeSection);
                                     if (currentIndex < sectionOrder.length - 1) {
                                         setActiveSection(sectionOrder[currentIndex + 1]);
@@ -459,6 +500,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                     (activeSection === 'hooks' && selectedHook === null) ||
                                     (activeSection === 'bridges' && selectedBridge === null) ||
                                     (activeSection === 'reactions' && selectedReaction === null) ||
+                                    (activeSection === 'sponsorPitch' && selectedSponsorPitch === null) ||
+                                    (activeSection === 'sponsorRebuttal' && selectedSponsorRebuttal === null) ||
                                     (activeSection === 'interaction1' && selectedInteraction1 === null) ||
                                     (activeSection === 'interaction2' && selectedInteraction2 === null) ||
                                     (activeSection === 'closings' && selectedClosing === null) ||
@@ -482,6 +525,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                     if (section.id === 'hooks' && selectedHook !== null) selectedText = brainstorm?.hooks[selectedHook].text || "...";
                                     if (section.id === 'bridges' && selectedBridge !== null) selectedText = brainstorm?.bridges[selectedBridge].text || "...";
                                     if (section.id === 'reactions' && selectedReaction !== null) selectedText = brainstorm?.reactions[selectedReaction].text || "...";
+                                    if (section.id === 'sponsorPitch' && selectedSponsorPitch !== null) selectedText = brainstorm?.sponsorPitch[selectedSponsorPitch].text || "...";
+                                    if (section.id === 'sponsorRebuttal' && selectedSponsorRebuttal !== null) selectedText = brainstorm?.sponsorRebuttal[selectedSponsorRebuttal].text || "...";
                                     if (section.id === 'interaction1' && selectedInteraction1 !== null) selectedText = brainstorm?.interaction1[selectedInteraction1].text || "...";
                                     if (section.id === 'interaction2' && selectedInteraction2 !== null) selectedText = brainstorm?.interaction2[selectedInteraction2].text || "...";
                                     if (section.id === 'closings' && selectedClosing !== null) selectedText = brainstorm?.closings[selectedClosing].text || "...";
@@ -526,16 +571,18 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                         ((selectedHook !== null ? 1 : 0) +
                                             (selectedBridge !== null ? 1 : 0) +
                                             (selectedReaction !== null ? 1 : 0) +
+                                            (selectedSponsorPitch !== null ? 1 : 0) +
+                                            (selectedSponsorRebuttal !== null ? 1 : 0) +
                                             (selectedInteraction1 !== null ? 1 : 0) +
                                             (selectedInteraction2 !== null ? 1 : 0) +
-                                            (selectedClosing !== null ? 1 : 0)) * (100 / 6)
+                                            (selectedClosing !== null ? 1 : 0)) * (100 / 8)
                                     )}<span className="text-[10px] text-white/40">%</span>
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleAssemble}
-                                disabled={selectedHook === null || selectedBridge === null || selectedReaction === null || selectedInteraction1 === null || selectedInteraction2 === null || selectedClosing === null}
+                                disabled={selectedHook === null || selectedBridge === null || selectedReaction === null || selectedSponsorPitch === null || selectedSponsorRebuttal === null || selectedInteraction1 === null || selectedInteraction2 === null || selectedClosing === null}
                                 className="w-full bg-white text-black py-4 font-black text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-3 hover:bg-[#FF5F1F] hover:text-white transition-all disabled:opacity-20 shadow-[10px_10px_0_rgba(255,95,31,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none btn-signal"
                             >
                                 <Terminal size={14} className="neural-sparkle" /> Commit to Timeline

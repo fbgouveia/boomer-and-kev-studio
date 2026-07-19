@@ -19,13 +19,15 @@ export async function POST(req: Request) {
       TOPIC: "${topic}"
       CONTEXT: "${snippet || 'No additional notes'}"
 
-      You MUST generate exactly 3 options for each of these 6 categories:
-      1. hooks (starting lines - usually high energy Boomer or lazy Kev greeting)
-      2. bridges (moving into the core topic details)
-      3. reactions (how they respond to each other's take on the topic)
-      4. interaction1 (first major back-and-forth dialogue block)
-      5. interaction2 (second major back-and-forth dialogue block)
-      6. closings (final concluding remarks and outro)
+      You MUST generate exactly 3 options for each of these 8 categories (each category maps to a scene):
+      1. hooks (Scene 1: High energy hook. Jump straight into the action. AMYGDALA HIJACK.)
+      2. bridges (Scene 2: Moving into the core topic details)
+      3. reactions (Scene 3: How they respond to each other's take on the topic)
+      4. sponsorPitch (Scene 4: Boomer urgently pitching a satirical, absurd, hyper-masculine, or chaotic fake sponsor product)
+      5. sponsorRebuttal (Scene 5: Kev deadpan reacting and dismissing Boomer's fake sponsor product)
+      6. interaction1 (Scene 6: First major back-and-forth dialogue block returning to the main topic)
+      7. interaction2 (Scene 7: Second major back-and-forth dialogue block escalating the topic)
+      8. closings (Scene 8: Final concluding remarks with an abrupt cut after the punchline for the Anticipation Loop)
 
       Each option in the list must be a JSON object containing:
       - characterId: "boomer" or "kev"
@@ -35,14 +37,26 @@ export async function POST(req: Request) {
       - retentionScore: number (integer between 80 and 99 representing viral hook strength).
       - reasoning: 1 short sentence explanation of the comedic/narrative value of this option.
 
+      Additionally, generate a "wardrobe" object with 3 keys:
+      - "boomer": A short description of Boomer's outfit for this episode (e.g., "A Hawaiian shirt over his black singlet, holding a fake coconut").
+      - "kev": A short description of Kev's outfit (e.g., "A tiny sombrero and sunglasses").
+      - "studio": Any special decor for the studio desk matching the theme.
+
       JSON Format:
       {
         "hooks": [ ... 3 options ... ],
         "bridges": [ ... 3 options ... ],
         "reactions": [ ... 3 options ... ],
+        "sponsorPitch": [ ... 3 options ... ],
+        "sponsorRebuttal": [ ... 3 options ... ],
         "interaction1": [ ... 3 options ... ],
         "interaction2": [ ... 3 options ... ],
-        "closings": [ ... 3 options ... ]
+        "closings": [ ... 3 options ... ],
+        "wardrobe": {
+          "boomer": "outfit description",
+          "kev": "outfit description",
+          "studio": "decor description"
+        }
       }
 
       JSON ONLY. NO MARKDOWN. NO EXPLANATIONS.

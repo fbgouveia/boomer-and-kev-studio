@@ -60,6 +60,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [wardrobeConfig, setWardrobeConfig] = useState<{ boomer?: string, kev?: string, studio?: string }>({});
   const [previewLineId, setPreviewLineId] = useState<string | null>(null);
   const [sharingLineId, setSharingLineId] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -899,7 +900,8 @@ export default function Home() {
       }),
       directorIdea,
       directorSnippet,
-      engine: renderEngine
+      engine: renderEngine,
+      wardrobe: wardrobeConfig
     };
 
     try {
@@ -1859,7 +1861,7 @@ export default function Home() {
           snippet={directorSnippet}
           apiKey={apiKeys.gemini}
           onClose={() => setIsDrafting(false)}
-          onAssemble={(draftedLines) => {
+          onAssemble={(draftedLines, wardrobe) => {
             const hydratedScript = draftedLines.map((line, idx) => ({
               ...line,
               id: `scene-${Date.now()}-${idx}`,
@@ -1868,6 +1870,9 @@ export default function Home() {
               studioReference: GUIDE_IMAGES[line.shotType]
             }));
             setScript(hydratedScript as ScriptLine[]);
+            if (wardrobe) {
+              setWardrobeConfig(wardrobe);
+            }
             setIsDrafting(false);
             setActiveTab('script');
           }}

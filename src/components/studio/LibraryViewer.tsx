@@ -3,6 +3,7 @@ import { querySupabase } from '@/lib/supabase';
 import { Play, Download, Calendar, Loader2, RefreshCw, Trash2, Search, X, Code2, Film, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScriptLine } from '@/types';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface Episode {
   id: string;
@@ -24,6 +25,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  const [expandedSceneIdx, setExpandedSceneIdx] = useState<number | null>(null);
 
   const fetchEpisodes = async () => {
     setIsLoading(true);
@@ -242,11 +244,75 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                               <span>*</span>
                             </p>
                           )}
+                          
+                          {/* Technical Breakdown Expander */}
+                          <button 
+                            onClick={() => setExpandedSceneIdx(expandedSceneIdx === idx ? null : idx)}
+                            className="mt-3 flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-[#FF5F1F] transition-colors"
+                          >
+                            {expandedSceneIdx === idx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {expandedSceneIdx === idx ? 'HIDE TECHNICAL DATA' : 'VIEW TECHNICAL DATA'}
+                          </button>
+                          
+                          {expandedSceneIdx === idx && (
+                            <div className="mt-3 p-3 bg-black/50 border border-white/5 space-y-2">
+                              {line.technicalPrompt ? (
+                                <div>
+                                  <div className="text-[9px] text-[#FF5F1F] font-black uppercase mb-1">Engine Prompt</div>
+                                  <p className="text-[10px] font-mono text-white/60 leading-tight">{line.technicalPrompt}</p>
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-mono text-white/30 italic">No prompt data available.</div>
+                              )}
+                              
+                              <div className="flex gap-4 pt-2 border-t border-white/5">
+                                <div>
+                                  <div className="text-[9px] text-white/40 font-black uppercase mb-1">Duration</div>
+                                  <div className="text-[10px] font-mono text-white/80">{line.durationEst}s</div>
+                                </div>
+                                <div>
+                                  <div className="text-[9px] text-white/40 font-black uppercase mb-1">Emotion</div>
+                                  <div className="text-[10px] font-mono text-white/80">{line.emotion}</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
                       <div className="text-white/40 font-mono text-xs p-4 bg-white/5 border border-white/10">
                         No script data found in this archive record.
+                      </div>
+                    )}
+                    
+                    {selectedEpisode.script_json && selectedEpisode.script_json.length > 0 && (
+                      <div className="flex gap-2 mt-4">
+                        <button 
+                          onClick={() => {
+                            const textToCopy = selectedEpisode.script_json!.map(l => `${l.characterId.toUpperCase()}: ${l.text}`).join('\n\n');
+                            navigator.clipboard.writeText(textToCopy);
+                            alert('Script copied to clipboard!');
+                          }}
+                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest"
+                        >
+                          Copy Script
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const blob = new Blob([JSON.stringify(selectedEpisode, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `episode_${selectedEpisode.id.split('-')[0]}.json`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest"
+                        >
+                          Download JSON Data
+                        </button>
                       </div>
                     )}
                   </div>
