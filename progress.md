@@ -650,3 +650,12 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - Estrutura: Waterfall com gates, 6 fases (F0 Fundação ✅ → F1 Estabilização → F2 Validação Financeira [gate $] → F3 Radar → F4 Neuro-Retenção → F5 Cadência & Publicação), 15 pacotes de trabalho, cada um com tarefas + critério de aceite verificável + executor (Fable=arquitetura, Opus=execução, Felipe=gates) + custo/risco.
 - Identidade visual do próprio estúdio (Brutalist Neural Glass), dropdowns nativos `<details>`, cascata literal com degraus.
 - Decisão em destaque no topo do plano: **cron de produção ATIVO → render real segunda 08h** (manter = F2 acontece sozinha; desativar = F2 espera OK manual).
+
+### Sessão 011d — WP 1.2 CONCLUÍDO: header desktop descongestionado (action bar inferior)
+
+**Pedido do Felipe:** topo só com logo + abas; controles de ação numa barra embaixo — "do jeito que tá eu não tenho todos os botões".
+
+- [x] Bloco da direita da nav (telemetria GPU/VRAM/latency + Duration/Scenes/Budget + seletor de engine + RENDER SCENE) **movido** do header para uma ACTION BAR desktop (`hidden lg:flex`) acima do footer, com borda superior laranja. Mudança cirúrgica: mesmo JSX/handlers, só realocado.
+- [x] Build + deploy via `deploy_studio.sh`, PM2 reiniciado.
+- [x] **Aceite verificado em produção** (JS via browser): 1280/1440/1920px → 6 abas visíveis, `abasCortadas: []`, `overflowX: 0`, RENDER SCENE visível na barra; 390px → overflow 0, action bar `display:none` (mobile segue com hambúrguer).
+- Resultado visual: "STUDIO LABS" e "RADAR" agora inteiras no topo — o bug "STUDI…" morreu junto.

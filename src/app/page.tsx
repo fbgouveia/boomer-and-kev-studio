@@ -1081,68 +1081,6 @@ export default function Home() {
               })}
             </div>
 
-            <div className="hidden lg:flex items-center gap-8">
-              {/* SYSTEM TELEMETRY */}
-              <div className="hidden xl:flex items-center gap-6 border-r border-white/10 pr-8 text-right font-mono text-[9px] text-white/30">
-                <div>
-                  <span className="block text-white/50 font-bold">GPU_PIPELINE</span>
-                  <span className="text-[#FF5F1F] font-black">RTX-4090 // ACTIVE</span>
-                </div>
-                <div>
-                  <span className="block text-white/50 font-bold">VRAM_LOAD</span>
-                  <span className="text-blue-400 font-black">14.8GB / 24GB</span>
-                </div>
-                <div>
-                  <span className="block text-white/50 font-bold">LATENCY</span>
-                  <span className="text-green-400 font-black">18ms // OPTIMAL</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-10">
-                <div className="hidden lg:flex flex-col items-end border-r border-white/10 pr-8">
-                  <span className="text-[10px] text-white/30 tracking-widest uppercase mb-1">Total Duration</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black italic">{Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')} <span className="text-[10px] text-white/40 font-bold ml-1">MINS</span></span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  </div>
-                </div>
-
-                <div className="hidden lg:flex flex-col items-end border-r border-white/10 pr-8">
-                  <span className="text-[10px] text-white/30 tracking-widest uppercase mb-1">Scene Count</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black italic">{script.length} <span className="text-[10px] text-white/40 font-bold ml-1">BLOCKS</span></span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  </div>
-                </div>
-
-                <div className="hidden lg:flex flex-col items-end">
-                  <span className="text-[10px] text-white/30 tracking-widest uppercase mb-1">Production Budget</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black">${totalCost}</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#FF5F1F]" />
-                  </div>
-                </div>
-              </div>
-              <select
-                value={renderEngine}
-                onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
-                disabled={isRenderingProject}
-                className="bg-black/80 border-2 border-white/20 text-[10px] font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
-              >
-                <option value="kling">Kling (Replicate)</option>
-                <option value="higgsfield">Higgsfield.ai</option>
-              </select>
-              <button
-                onClick={renderProject}
-                disabled={isRenderingProject || script.length === 0}
-                aria-label="Initiate Render Cycle"
-                className="btn-signal bg-[#FF5F1F] text-black px-6 py-3 text-xs font-black uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center gap-2 group relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
-                <MonitorPlay size={16} fill="currentColor" className="relative z-10" />
-                <span className="relative z-10">{isRenderingProject ? "RENDERING..." : "RENDER SCENE"}</span>
-              </button>
-            </div>
           </nav>
 
           {/* MAIN CONTENT AREA */}
@@ -1870,6 +1808,70 @@ export default function Home() {
           }}
         />
       )}
+
+      {/* ACTION BAR — controles movidos do topo p/ liberar a nav (pedido Felipe 19/07) */}
+      <div className="hidden lg:flex w-full z-[60] px-8 py-2.5 bg-[#0a0a0a] border-t-2 border-[#FF5F1F]/40 justify-between items-center gap-6">
+        <div className="hidden xl:flex items-center gap-6 text-right font-mono text-[9px] text-white/30">
+          <div>
+            <span className="block text-white/50 font-bold">GPU_PIPELINE</span>
+            <span className="text-[#FF5F1F] font-black">RTX-4090 // ACTIVE</span>
+          </div>
+          <div>
+            <span className="block text-white/50 font-bold">VRAM_LOAD</span>
+            <span className="text-blue-400 font-black">14.8GB / 24GB</span>
+          </div>
+          <div>
+            <span className="block text-white/50 font-bold">LATENCY</span>
+            <span className="text-green-400 font-black">18ms // OPTIMAL</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-8 ml-auto">
+          <div className="flex flex-col items-end border-r border-white/10 pr-8">
+            <span className="text-[10px] text-white/30 tracking-widest uppercase">Total Duration</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black italic">{Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')} <span className="text-[10px] text-white/40 font-bold ml-1">MINS</span></span>
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end border-r border-white/10 pr-8">
+            <span className="text-[10px] text-white/30 tracking-widest uppercase">Scene Count</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black italic">{script.length} <span className="text-[10px] text-white/40 font-bold ml-1">BLOCKS</span></span>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end border-r border-white/10 pr-8">
+            <span className="text-[10px] text-white/30 tracking-widest uppercase">Production Budget</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black">${totalCost}</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#FF5F1F]" />
+            </div>
+          </div>
+
+          <select
+            value={renderEngine}
+            onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
+            disabled={isRenderingProject}
+            className="bg-black/80 border-2 border-white/20 text-[10px] font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
+          >
+            <option value="kling">Kling (Replicate)</option>
+            <option value="higgsfield">Higgsfield.ai</option>
+          </select>
+          <button
+            onClick={renderProject}
+            disabled={isRenderingProject || script.length === 0}
+            aria-label="Initiate Render Cycle"
+            className="btn-signal bg-[#FF5F1F] text-black px-6 py-2.5 text-xs font-black uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center gap-2 group relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
+            <MonitorPlay size={16} fill="currentColor" className="relative z-10" />
+            <span className="relative z-10">{isRenderingProject ? "RENDERING..." : "RENDER SCENE"}</span>
+          </button>
+        </div>
+      </div>
 
       <footer className="w-full z-[60] px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-[9px] font-black tracking-[0.2em] text-white/20">
         <div className="flex gap-10">
