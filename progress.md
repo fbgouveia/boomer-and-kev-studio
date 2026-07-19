@@ -685,3 +685,13 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 **Visão B-Roll (Felipe):** não é banco de imagem — é **B-roll de evidência**: prints reais dos sites de notícia da pauta pipocando de forma cômica sincronizados à fala. Vantagem: as manchetes já vêm na trend (`news[]` com URLs). Rota: v1 prova de estilo com HyperFrames/graphic-overlays sobre episódio já renderizado ($0) → v2 automação pós-assembleVideo na VPS (container ganha Chromium). Compliance: fonte visível no card.
 
 **Plano atualizado:** WPs novos 1.5 (balanceamento Kev + two-shot + sonda de contrato), 1.6 (last-frame chaining), 1.7 (xfade inteligente), 4.2 (B-Roll Engine v1/v2). F1 NÃO está encerrada — ganhou trabalho com razão.
+
+### Sessão 011g — WP 1.5 CONCLUÍDO: Kev de volta (balanceamento + two-shot + sonda)
+
+**4 mudanças cirúrgicas:**
+1. **`/api/ai/script`**: bloco CHARACTER BALANCE no prompt (4/4 exato, máx 5/3, nunca 3 seguidas do mesmo, ≥1 WIDE) + **BALANCE_GATE determinístico** no código — roteiro com personagem <3/8 cenas é rejeitado com erro explícito (não confia só no prompt).
+2. **`/api/ai/brainstorm`**: cada categoria deve oferecer opção dos DOIS personagens (exceto sponsorPitch=Boomer / sponsorRebuttal=Kev, fixos por design).
+3. **`pipeline/run`**: cenas WIDE e OTS_BOOMER agora ancoram em **`master_wide.png`** (two-shot que JÁ EXISTIA em public/assets — os dois na bancada com a marca do programa — e nunca era usado; toda cena ancorava 1 personagem).
+4. **Sonda do roteirista**: contrato passa a exigir equilíbrio (mín 3/8 por personagem) — o 5×1 de hoje teria dado VERMELHO no pré-voo antes de gastar render.
+
+**Aceite (5 gerações reais, local):** 5/5 com **exatamente 4×4**, máx 2 cenas consecutivas, 1 WIDE cada. Deploy feito; sonda em produção GREEN reportando "balanco boomer/kev 5/3" (dentro do contrato).

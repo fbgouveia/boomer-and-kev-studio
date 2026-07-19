@@ -53,7 +53,17 @@ const probeRoteirista = () => run('gemini_roteirista', async () => {
   const corpo = script.map((s: { text: string }) => s.text).join(' ');
   assert(/bondi|shark/i.test(corpo), 'roteiro NAO referencia o topico enviado (deriva silenciosa)');
 
-  return `${script.length} cenas, topico referenciado`;
+  // WP 1.5: contrato de DUO — episodio 5x1 de 19/07 provou que o desequilibrio
+  // e deriva silenciosa (Kev sumiu do video com HTTP 200 em tudo).
+  const porPersonagem: Record<string, number> = {};
+  for (const s of script) porPersonagem[s.characterId] = (porPersonagem[s.characterId] || 0) + 1;
+  const minimo = script.length >= 8 ? 3 : 2;
+  for (const c of ['boomer', 'kev']) {
+    assert((porPersonagem[c] || 0) >= minimo,
+      `desequilibrio de personagens: '${c}' com ${porPersonagem[c] || 0}/${script.length} cenas (minimo ${minimo}) — duo virou monologo`);
+  }
+
+  return `${script.length} cenas, topico referenciado, balanco boomer/kev ${porPersonagem['boomer']}/${porPersonagem['kev']}`;
 });
 
 const probeVoz = () => run('elevenlabs_voz', async () => {

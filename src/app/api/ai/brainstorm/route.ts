@@ -36,6 +36,11 @@ export async function POST(req: Request) {
       7. interaction2 (Scene 7: Second major back-and-forth dialogue block escalating the topic)
       8. closings (Scene 8: Final concluding remarks with an abrupt cut after the punchline for the Anticipation Loop)
 
+      CHARACTER BALANCE (HARD RULE): this is a DUO show. In EVERY category (except sponsorPitch=Boomer
+      and sponsorRebuttal=Kev, which are fixed), the 3 options MUST include at least 1 Boomer option AND
+      at least 1 Kev option, so the assembled episode can alternate. An episode dominated by one character
+      is a FAILED episode — Kev's deadpan reactions are the punchlines.
+
       Each option in the list must be a JSON object containing:
       - characterId: "boomer" or "kev"
       - text: dialogue string filled with rich Aussie slang and character humor. Keep it short (1-2 sentences).

@@ -45,6 +45,12 @@ export async function POST(req: Request) {
       - MIXED EMOTIONS: Shift rapidly from tension to comedy, or confusion to realization. Do not let the emotional tone stay flat for more than 4 seconds.
       - PAYOFF ENDING: Scene 8 must deliver the payoff and end abruptly immediately after the punchline or value is delivered to create a perfect looping effect.
 
+      CHARACTER BALANCE (HARD RULE — scripts violating this are REJECTED by automated validation):
+      - Of the 8 scenes, EXACTLY 4 must be Boomer's lines and 4 must be Kev's. 5/3 is the absolute maximum skew, and only when the comedy demands it.
+      - NEVER give the same character 3 consecutive scenes. This is a DUO — the comedy IS the alternation (Straight Man vs Funny Man).
+      - Kev's deadpan reactions to Boomer's mania are the punchlines. A Boomer monologue is a FAILED script.
+      - At least 1 scene must use shotType WIDE (both characters visible in frame together).
+
       SCRIPT FLOW (8 SCENES):
       1. Scene 1: The Amygdala Hijack (Aggressive hook, visual pattern interrupt, bold claim).
       2. Scene 2: The Open Loop (Deepening the tension or curiosity).
@@ -96,6 +102,18 @@ export async function POST(req: Request) {
         }
 
         const parsedScript = JSON.parse(jsonStr);
+
+        // BALANCE_GATE (WP 1.5): validacao deterministica — o prompt pede 4/4, aqui
+        // rejeitamos o que passar do limite. Evidencia: episodio de 19/07 saiu 5x1
+        // e o Kev sumiu do video. Duo virou monologo = roteiro reprovado.
+        const porPersonagem: Record<string, number> = {};
+        for (const l of parsedScript) porPersonagem[l.characterId] = (porPersonagem[l.characterId] || 0) + 1;
+        const minimo = parsedScript.length >= 8 ? 3 : 2;
+        for (const c of ['boomer', 'kev']) {
+            if ((porPersonagem[c] || 0) < minimo) {
+                throw new Error(`SCRIPT_BALANCE: '${c}' tem ${porPersonagem[c] || 0} cenas de ${parsedScript.length} (minimo ${minimo}). Roteiro desequilibrado rejeitado.`);
+            }
+        }
 
         // Add status: 'IDLE' to each line for the frontend
         const finalScript = parsedScript.map((line: Record<string, unknown>) => ({

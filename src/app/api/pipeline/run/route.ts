@@ -258,13 +258,19 @@ async function processPipeline(
             return url;
           };
 
+          // WP 1.5: cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master —
+          // antes toda cena ancorava 1 personagem e o Kev nunca aparecia junto.
+          const anchorImage = (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER')
+            ? '/assets/master_wide.png'
+            : character?.referenceImage;
+
           const prediction = await replicate.predictions.create({
             model: "kwaivgi/kling-v2.6",
             input: {
               prompt: prompt,
               duration: line.durationEst <= 5 ? 5 : 10,
               aspect_ratio: "9:16",
-              start_image: character?.referenceImage ? resolveAssetUrl(character.referenceImage) : undefined,
+              start_image: anchorImage ? resolveAssetUrl(anchorImage) : undefined,
               negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
               generate_audio: false
             }
