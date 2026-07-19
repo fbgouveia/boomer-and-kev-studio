@@ -544,3 +544,11 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 **Verificado após o deploy:** `tsc --noEmit` limpo, 4/4 sondas verdes.
 
 **Mencionado, não apagado** (Ponytail — código morto se menciona, não se deleta sem pedir): `tools/n8n_boomer_kev_orchestrator.ts` e `tools/run_real_pipeline.js` também não são chamados por nada. O primeiro é provavelmente a origem do workflow n8n quebrado que foi reconstruído hoje.
+
+### Sessão 009j — Commit + Error Handler ligado
+
+- [x] **Commit `bc963b6`** no branch `restore-engine` — 10 arquivos (Dockerfile, .dockerignore, `/api/sentinel`, `deriva.yml`, `gemini.md` v3.0, remoção dos 2 `.py`). Working tree limpo. Conferido antes de commitar que `.env*` está no `.gitignore` e que nenhum arquivo do commit contém segredo (grep por padrões de JWT/token).
+- [x] **`errorWorkflow` ligado** nos dois workflows → `bIQXJgOpo7Y9twof` (`[STANDARD] Error Handler (Telegram)`, que já existia na VPS e não estava conectado a nada do Boomer & Kev). Falha barulhenta em qualquer nó agora avisa no Telegram.
+- [x] Reverificado por releitura independente da API: produção v6 (14 nós, pré-voo e abort intactos, inativa), vigilância v2 (ativa).
+
+**Nota:** o `errorWorkflow` pega apenas falhas **barulhentas** (nó que estoura). Deriva silenciosa continua sendo trabalho das sondas — os dois mecanismos são complementares, não redundantes.
