@@ -636,3 +636,10 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 **⚠️ ACHADO IMPORTANTE:** o workflow de produção está **ATIVO** (não estava na minha última leitura). Cron Seg/Qua/Sex 08h + pré-voo verde = **render real ~US$3-6 na segunda-feira sem intervenção humana**. Sinalizado ao Felipe — se não foi intencional, desativar.
 
 **Cancelado pelo Felipe:** o teste de stress do front desta manhã (tasks #5-9) — supersedido pelos avanços da outra sessão.
+
+### Sessão 011b — Deploy do fix responsivo VERIFICADO em produção
+
+- [x] Pré-deploy (Karpathy): diff de nomes de vars `.env.local` vs `.env` da VPS — idênticos (6 chaves), seguro deixar o script sobrescrever. Descoberta: o brainstorm usa `GEMINI_API_KEY` (o HANDOFF dizia "Claude" — impreciso).
+- [x] `./deploy_studio.sh` rodado: build verde, rsync, PM2 restart (↺1, online).
+- [x] **Verificado ao vivo em https://boomerandkev.fgss.io**: desktop 1440px sem sidebar lateral; mobile 390px com `scrollWidth == clientWidth` (overflow horizontal ZERO, medido via JS); menu hambúrguer abre drawer com as 6 abas (Director/Production/Library/Engine DNA/Studio Labs/Radar).
+- ⚠️ **Bug menor novo (desktop 1440px)**: a aba "STUDIO LABS" do header aparece truncada ("STUDI...") — o HUD de GPU comprime a nav. Vai para o backlog do plano.
