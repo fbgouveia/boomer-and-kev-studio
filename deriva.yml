@@ -1,0 +1,61 @@
+# Política de manutenção do projeto — lida pela skill `deriva`.
+# Declara o que vigiar e quanta autonomia a engenharia tem AQUI.
+# Ausência deste arquivo = modo mais restritivo. Ele só afrouxa, nunca aperta.
+
+projeto: boomer-kev
+cadencia: 3-4 videos/semana (cron seg/qua/sex 08h)
+custo_por_execucao: ~US$3-6 (Kling domina)
+teto_de_gasto: US$25/semana
+
+perfil_de_risco: paranoico
+# Video ruim publicado (marca australiana, viraliza, dificil desfazer) custa mais
+# que 1 dia parado. Na duvida: para e avisa. Nunca publica sem aprovacao.
+
+dependencias:
+  - id: gemini_roteirista
+    contrato: >
+      POST /api/ai/script {topic,snippet} -> array com >=4 cenas; cada cena com
+      id/characterId/text/shotType/action/emotion/durationEst (durationEst numerico);
+      o texto DEVE referenciar o topico enviado.
+    custo_sonda: desprezivel
+    # Deriva ja observada em 19/07: workflow mandava `trend` onde a rota le `topic`
+    # -> topic virava undefined, roteiro saia generico com HTTP 200. Falso positivo.
+
+  - id: elevenlabs_voz
+    contrato: TTS de 3 palavras -> content-type audio/mpeg com >5KB
+    custo_sonda: fracao de centavo por dia
+    # NAO checar via /v1/user: a key e escopada (sem user_read) e devolve 401
+    # mesmo com o billing em dia. So o TTS real prova o contrato.
+    # Fallback de audio silencioso existe no pipeline: se disparar, e DERIVA GRAVE
+    # (gera video mudo reportando sucesso), nao resiliencia.
+
+  - id: replicate_kling
+    contrato: modelo acessivel e schema esperado
+    custo_sonda: zero
+    # NUNCA renderizar na sonda - cada render custa US$3-6.
+
+  - id: supabase_sydney
+    contrato: >
+      service_role grava em `episodes`; anon recebe 401 ao tentar gravar (RLS ativo).
+      Projeto ktysmnltubbfbvyjphdq (ap-southeast-2).
+    custo_sonda: zero
+
+  - id: container_studio
+    contrato: n8n alcanca http://boomer_kev:3000 pela rede docker `n8n_default`
+    custo_sonda: zero
+    # Sem porta publica exposta - so acessivel de dentro da rede.
+
+pre_voo: true
+# Roda 30min antes do cron de producao. Vermelho CANCELA a execucao.
+frequencia_sentinela: diaria + pre-voo
+
+autonomia:
+  verde: []          # v1: nada e aplicado automaticamente
+  amarelo: [tudo]    # diagnostica e propoe no canal
+  vermelho: [credenciais, publicacao, exclusao, gasto]
+
+canal_de_aprovacao: telegram 6431944169 (bot FGSS Sentinela, cred n8n xMM0nVZz16NfA8M8)
+
+nao_confiar_em:
+  - HANDOFF_AMANHA.md e progress.md como prova de estado (ja mentiram; reverificar no sistema vivo)
+  - status HTTP 200 como prova de saude (ver deriva do gemini_roteirista acima)

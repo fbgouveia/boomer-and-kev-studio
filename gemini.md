@@ -1,9 +1,14 @@
 # gemini.md — Constituição do Projeto
 # Boomer & Kev Studio | V.L.A.E.G. Project Constitution
-# Criado: 2026-03-28 | Versão: 2.0 (Respostas de Descoberta Incorporadas)
+# Criado: 2026-03-28 | Versão: 3.0 (Infra real + doutrina Deriva)
 
 > ⚖️ Este arquivo é a LEI do projeto. Atualiza-se ANTES do código.
 > Hierarquia: [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md) > gemini.md > task_plan.md > findings.md > progress.md
+
+> 🚨 **CONVENÇÃO DE HONESTIDADE (desde v3.0):** itens marcados **[REAL]** foram verificados
+> ao vivo no sistema; **[ALVO]** é intenção não construída. Auditoria de 2026-07-19 mostrou que
+> boa parte desta constituição descrevia um pipeline que nunca existiu (LipSync, webhooks de Edge
+> Function, Realtime, Storage). **Documento não é prova de estado — reverifique no sistema vivo.**
 
 ---
 
@@ -19,23 +24,64 @@
 
 ## 🏗️ STACK ARQUITETURAL
 
-| Camada | Tecnologia | Função |
-|--------|-----------|--------|
-| Framework | Next.js 16 App Router | UI + API Routes |
-| Linguagem | TypeScript strict | Toda lógica |
-| Estilo | Tailwind CSS v4 | Design system |
-| AI Engine | Google Gemini 2.5 Flash `v1beta` | Geração de script |
-| Voz | ElevenLabs API | Síntese de voz por personagem |
-| LipSync | Replicate (modelo lipsync) | Sincronização boca/áudio |
-| Vídeo | Replicate Kling v2 | Render final de cenas |
-| **Persistência** | **Supabase** (DB + Storage + Edge Functions) | **NOVO — dados + webhooks** |
-| **Publicação** | **TikTok Creator API + Instagram Graph + YouTube Data v3** | **NOVO — auto-publish** |
-| PDF | jsPDF v2.7 | Export manifesto |
-| Icons | Lucide React | UI |
+| Camada | Tecnologia | Função | Estado |
+|--------|-----------|--------|--------|
+| Framework | Next.js 16 App Router (`output: standalone`) | UI + API Routes | [REAL] |
+| Linguagem | TypeScript strict | Toda lógica | [REAL] |
+| Estilo | Tailwind CSS v4 | Design system | [REAL] |
+| AI Engine | Google Gemini 2.5 Flash `v1beta` | Geração de script | [REAL] |
+| Voz | ElevenLabs API (vozes de catálogo Charlie/Roger) | Síntese por personagem | [REAL] |
+| Vídeo | Replicate `kwaivgi/kling-v2.6` | Render de cenas (~US$3-6/vídeo) | [REAL] |
+| Montagem | ffmpeg (dentro de `/api/pipeline/run` e `tools/assemble.mjs`) | Concat 9:16 1080×1920 30fps | [REAL] |
+| **Orquestração** | **n8n self-hosted em `n8n.fgss.io`** (VPS compartilhada com FGSS) | Cron, retry, pré-voo, Telegram | [REAL] |
+| **Deploy** | **Container Docker `boomer_kev`** na rede `n8n_default`, sem porta pública | Runtime de produção | [REAL] |
+| **Persistência** | **Supabase** projeto `boomer-kev-sydney` (`ktysmnltubbfbvyjphdq`, **ap-southeast-2**) | Dados | [REAL] |
+| **Manutenção** | **Skill `deriva`** + `/api/sentinel` + `deriva.yml` | Sondas de contrato, pré-voo | [REAL] |
+| LipSync | Replicate (modelo lipsync) | Sincronização boca/áudio | [ALVO] — nunca construído |
+| Supabase Storage / Edge Functions / Realtime | — | Webhooks e progresso ao vivo | [ALVO] — nunca construído |
+| **Publicação** | TikTok Creator API + Instagram Graph + YouTube Data v3 | Auto-publish | [ALVO] — credenciais não solicitadas |
+| PDF | jsPDF | Export manifesto | [REAL] |
+| Icons | Lucide React | UI | [REAL] |
+
+> **Região Sydney é decisão deliberada:** este projeto mira a Austrália. O Felipe Portfolio fica em
+> SP/Singapura porque atende Brasil/Europa/EUA. **Infra (VPS + n8n) é compartilhada entre projetos;
+> banco NUNCA é** — cada projeto tem seu próprio Supabase.
 
 ---
 
 ## 📊 DATA SCHEMAS — FONTE DA VERDADE
+
+> **[REAL] 8 tabelas aplicadas** em `ktysmnltubbfbvyjphdq` (Sydney), todas com RLS ativo:
+> `episodes`, `script_lines`, `render_jobs`, `publish_jobs`, `social_accounts`, `pipeline_events`,
+> `trends`, `deriva_runs`. Fonte canônica do DDL: `supabase/schema.sql` + migrations aplicadas.
+> ⚠️ Divergência conhecida: o DDL real usa **`script_json`** em `episodes` (não `script`), e as
+> cenas vivem em `script_lines` — o bloco abaixo é histórico e não foi atualizado à risca.
+
+### Tabela: `deriva_runs` (Supabase) — [REAL, novo em v3.0]
+```sql
+CREATE TABLE deriva_runs (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project    TEXT NOT NULL,
+  status     TEXT NOT NULL,      -- 'GREEN' | 'RED'
+  probes     JSONB NOT NULL,     -- [{id, status, detail, ms}]
+  checked_at TIMESTAMPTZ DEFAULT now()
+);
+-- Escrita via service_role (n8n). Leitura anon LIBERADA: o hook SessionStart
+-- do Claude Code lê daqui sem precisar de segredo na máquina do Felipe.
+```
+
+### Contrato de `/api/pipeline/run` — [REAL] o motor que o n8n aciona
+```typescript
+// POST -> { status: "QUEUED", jobId, statusUrl }
+// GET ?id=<jobId> -> { status, progress, logs[], finalVideoUrl }
+{
+  script: Array<{            // TODOS obrigatórios (zod). durationEst é number.
+    id: string; characterId: string; text: string;
+    shotType: string; action: string; emotion: string; durationEst: number;
+  }>;
+  directorIdea?: string; directorSnippet?: string; engine?: string; // default 'kling'
+}
+```
 
 ### Tabela: `episodes` (Supabase)
 ```sql
@@ -147,25 +193,40 @@ interface PipelineEvent {
 
 ## ⚡ PIPELINE AUTÔNOMO — FLUXO DETERMINÍSTICO
 
+### [REAL] Fluxo em produção (n8n `n6qm9qMxEFvvkU8C`, 14 nós)
+
 ```
-[Trends Feed] → Topic
+[Manual] ou [Cron Seg/Qua/Sex 08h]
       ↓
-[Gemini 2.5 Flash] → Script (6 ScriptLines) → SAVE episodes (status: scripted)
-      ↓ (paralelo por cena)
-[ElevenLabs] → voice_url por cena → UPDATE render_jobs.voice_status = done
-      ↓ (sequencial por cena)
-[Replicate LipSync] → lipsync_url → webhook → UPDATE render_jobs.lipsync_status = done
-      ↓ (sequencial por cena)
-[Replicate Kling v2] → video_url → webhook → UPDATE render_jobs.video_status = done
-      ↓ (quando todas 6 cenas done)
-[Supabase Storage] → upload + ffmpeg assembly → episodes.video_url → status: rendered
-      ↓ (paralelo por plataforma)
-[TikTok API] → post
-[Instagram Graph API] → post    → UPDATE publish_jobs.status = published
-[YouTube Data API] → upload
+[0. PRÉ-VOO] GET /api/sentinel ──── VERMELHO → stopAndError (CANCELA antes de gastar)
+      ↓ VERDE
+[1. GET /api/trends] → [2. Escolher Pauta (maior tráfego)]
       ↓
-episodes.status = published
+[3. POST /api/ai/script {topic, snippet}] → [4. Montar Payload (normaliza os 7 campos do zod)]
+      ↓
+[5. POST /api/pipeline/run] → jobId
+      ↓
+[6. Wait 60s] → [7. GET /api/pipeline/run?id=] → [8. Terminou?] ──não──┐
+      ↓ sim                                              └──────────────┘
+[9. Telegram]
 ```
+
+**Dentro de `/api/pipeline/run` (assíncrono):** roteiro → voz (ElevenLabs) → render por cena
+(Kling 2.6) → ffmpeg concat → grava em `episodes`. **Sem LipSync, sem webhooks, sem Storage.**
+
+### [REAL] Vigilância (n8n `CmHQvdzX5Sk23n7y`, ATIVO)
+```
+[Cron 07:30 diário] → GET /api/sentinel → grava deriva_runs → SE VERMELHO: Telegram
+                                                            → SE VERDE: silêncio
+```
+
+### [ALVO] Publicação automática — não construída
+`publish_jobs` e `social_accounts` existem no banco, mas nenhuma rota publica. Requer credenciais
+de TikTok/Instagram/YouTube (aprovação de 1–3 semanas), ainda não solicitadas.
+
+> **Decisão revogada (era da Sessão 007b):** "aposentar `/api/pipeline/run` e n8n orquestra rotas
+> atômicas". Revogado em 2026-07-19 — `pipeline/run` **é** o motor. Quebrar em nós atômicos exigiria
+> loop por cena na voz e uma rota atômica de montagem ffmpeg que não existe. Só depois de 1 vídeo real.
 
 ---
 
@@ -185,17 +246,49 @@ episodes.status = published
 3. **Fallback de modelo**: `node find-model.js` se 404
 
 ### Pipeline
-1. **Idempotência**: cada step pode ser re-executado sem duplicar dados
-2. **Webhooks > polling**: Replicate callbacks via Supabase Edge Functions
-3. **Paralelo onde possível**: síntese de voz das 6 cenas em paralelo
-4. **Falha isolada**: falha em 1 cena não bloqueia as outras 5
-5. **Progresso visível**: UI mostra o status em tempo real via Supabase Realtime
+1. **Idempotência**: cada step pode ser re-executado sem duplicar dados — [ALVO, não garantido]
+2. **Polling, não webhooks** — [REAL] o n8n faz poll de `GET /api/pipeline/run?id=` a cada 60s, e
+   o `pipeline/run` faz poll das predictions do Replicate. *(A regra anterior dizia "webhooks >
+   polling via Edge Functions" — nunca foi construída. Reescrita para refletir o real.)*
+3. **Paralelo onde possível**: síntese de voz das cenas em paralelo — [ALVO]
+4. **Falha isolada**: falha em 1 cena não bloqueia as outras — [ALVO] hoje a falha derruba o job
+5. **Progresso visível**: [REAL] via `logs[]`/`progress` do job em `.tmp/job_<id>.json`, lidos pelo
+   `GET`. Supabase Realtime é [ALVO], não usado.
+6. **Pré-voo obrigatório antes de gastar** — [REAL] toda execução passa por `/api/sentinel`;
+   vermelho aborta antes do primeiro dólar.
+
+### Deriva — detecção e manutenção [novo em v3.0, doutrina da skill `deriva`]
+1. **Contrato, não disponibilidade**: "respondeu 200" NÃO é prova de saúde. Prova é a resposta
+   *conter o que se depende dela*. Um 200 com campo `undefined` é falso positivo — e falso
+   positivo é pior que erro. *(Origem: 19/07, o workflow mandava `trend` onde a rota lê `topic`;
+   o roteiro saía genérico com HTTP 200 e ninguém perceberia.)*
+2. **Falha silenciosa é mais grave que queda**: saída bem-formada com conteúdo vazio, genérico
+   ou default é severidade ALTA.
+3. **Degradar é permitido; degradar calado, NUNCA**: todo fallback anuncia-se e carimba o
+   artefato como degradado. ⚠️ O fallback de áudio silencioso do `pipeline/run` viola esta regra
+   hoje — gera vídeo MUDO reportando sucesso. É **deriva grave**, não resiliência. A sonda
+   `elevenlabs_voz` existe para pegá-lo.
+4. **Compre informação barata antes do caro**: existe quase sempre uma sonda que revela a maior
+   parte do risco por fração do custo. Daí o **pré-voo** — vermelho cancela a produção das 08h.
+5. **A verificação precede a falha**: só confie em oráculo escrito ANTES de quebrar. Quem escreve
+   o conserto e o teste do conserto não verificou nada — fez os dois concordarem.
+6. **Memória executável > memória escrita**: se um aprendizado pode virar sonda, vira sonda, não
+   parágrafo. Registre **evidência, não conclusão** ("rota X devolveu 400 em 19/07", não "X é instável").
+7. **Vigiar o vigia**: silêncio não é prova de saúde. O hook avisa se a última sonda tem +36h.
+8. **Autonomia v1**: a `deriva` diagnostica e PROPÕE; não aplica nada sozinha. Faixa verde só
+   depois que as sondas provarem, em uso real, que pegam deriva verdadeira.
 
 ### Segurança
 1. **API keys**: NUNCA no frontend
-2. **Social tokens**: via Supabase Vault (criptografia at-rest)
-3. **Webhooks**: validar assinatura Replicate antes de processar
-4. **RLS**: Row Level Security ativo em todas as tabelas Supabase
+2. **RLS**: Row Level Security ativo em TODAS as tabelas Supabase
+3. **Contrato duplo de RLS [REAL, sondado diariamente]**: `service_role` GRAVA e `anon` recebe
+   **401** ao tentar gravar. Se o anon algum dia conseguir gravar, isso é **falha de segurança**,
+   não sucesso — a sonda `supabase_sydney` trata como VERMELHO.
+4. **Segredos**: nunca imprimir, nunca commitar, nunca inventar. Escrever apenas valor fornecido
+   pelo humano. `.env.production` na VPS é `chmod 600`. A `service_role` NÃO sai por API/MCP
+   (só pelo Dashboard) — é propriedade de segurança da plataforma, não limitação a contornar.
+5. **Social tokens**: via Supabase Vault — [ALVO]
+6. **Webhooks**: validar assinatura Replicate — [ALVO], não há webhooks em uso
 
 ---
 
@@ -203,32 +296,58 @@ episodes.status = published
 
 ```
 Camada 1 (architecture/) — POPs em Markdown — O "Como Fazer"
-Camada 2 (Este arquivo)  — Roteamento e Decisão
-Camada 3 (tools/)        — Scripts Python determinísticos e atômicos
+Camada 2 (n8n + este arquivo) — Roteamento e Decisão
+Camada 3 (API routes + tools/) — Código determinístico e atômico
 ```
 
 1. **Dados Primeiro**: schema confirmado aqui antes de qualquer código
-2. **LLMs são probabilísticos**: lógica de negócio é SEMPRE determinística em tools/
+2. **LLMs são probabilísticos**: lógica de negócio é SEMPRE determinística
 3. **Temporários em .tmp/**: nunca commitar arquivos intermediários
 4. **Concluído = publicado na plataforma**: não conta como entregue enquanto não estiver ao vivo
-5. **Autocorreção**: falha → analisar stack trace → corrigir tool → atualizar POP
+5. **Autocorreção**: falha → analisar stack trace → corrigir → atualizar POP
+6. **Três camadas de agentes [novo em v3.0]**: os 26 agentes do `AGENTS.md` são **produção**
+   (consistência é o produto — NÃO se auto-evoluem); a skill `deriva` é **engenharia de manutenção**
+   (centraliza a evolução, versionada e rastreável); Felipe + Claude são a **direção**. Evolução
+   distribuída em 26 prompts mutando sozinhos é entropia com nome bonito.
+7. **Ação cara ou irreversível exige OK explícito**: render (~US$3-6), publicação, exclusão,
+   credenciais. Reversível e barato → age; caro ou irreversível → pergunta.
+8. **Ambiguidade de intenção não se resolve investigando código**: pare e pergunte.
+
+> ⚠️ **Camada 3 diverge do V.L.A.E.G. canônico — e a divergência é LEI aqui:**
+> o protocolo prevê `tools/` em Python; neste projeto a lógica determinística vive nas API routes
+> (TypeScript) e em `tools/assemble.mjs` (JavaScript). O `CLAUDE.md` global já autoriza isso
+> ("projetos Claude+n8n seguem o VLAEG **no espírito**"). O princípio real do VLAEG nunca foi
+> "usar Python" — é "lógica de negócio é determinística, não fica na mão do LLM". Cumprido.
+>
+> 🚫 **`tools/` NESTE PROJETO É NODE-ONLY. Não introduzir Python.**
+> O container de produção (`node:22-alpine`) **não tem Python** — verificado em 2026-07-19:
+> `which python3 → NAO_EXISTE`. Um script `.py` funcionaria no Mac do Felipe e **morreria em
+> produção** (divergência dev/prod, a classe silenciosa de falha).
+> Por isso `tools/verify_gemini.py` e `tools/verify_replicate.py` foram **removidos em 19/07** —
+> eram os ancestrais do `/api/sentinel`, faziam a mesma coisa na linguagem errada e nunca rodavam
+> automatizados. O conhecimento útil deles (403 do Replicate = escopo restrito, não falha;
+> 404 do Gemini → `node find-model.js`) foi **portado para as sondas antes de apagar**.
 
 ---
 
 ## 🔑 VARIÁVEIS DE AMBIENTE NECESSÁRIAS
 
+> **[REAL]** Configuradas em DOIS lugares que precisam ficar em sincronia:
+> `boomer-and-kev-studio/.env.local` (Mac, dev) e `/root/boomer-kev-studio/.env.production`
+> (VPS, produção — `chmod 600`, lido pelo container via `--env-file`).
+> Ao mudar qualquer chave: alterar nos dois e `docker restart boomer_kev`.
+
 ```env
-# Existentes
+# [REAL] — todas verificadas ao vivo em 2026-07-19
 GEMINI_API_KEY=...
 REPLICATE_API_TOKEN=...
-
-# A adicionar
-ELEVENLABS_API_KEY=...
-NEXT_PUBLIC_SUPABASE_URL=...
+ELEVENLABS_API_KEY=...              # key ESCOPADA: /v1/user devolve 401 mesmo com billing OK.
+                                    # Só TTS real prova o contrato.
+NEXT_PUBLIC_SUPABASE_URL=...        # https://ktysmnltubbfbvyjphdq.supabase.co (Sydney)
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...       # sem ela o RLS bloqueia escrita e nada persiste
 
-# Publicação Social (OAuth tokens — via Supabase Vault em prod)
+# [ALVO] Publicação Social (OAuth tokens — via Supabase Vault em prod)
 TIKTOK_CLIENT_KEY=...
 TIKTOK_CLIENT_SECRET=...
 INSTAGRAM_APP_ID=...
@@ -276,4 +395,17 @@ YOUTUBE_CLIENT_SECRET=...
 | 2026-03-28 | 1.0 | Criação inicial via V.L.A.E.G. | Inicialização |
 | 2026-03-28 | 2.0 | Data Schema completo, Pipeline autônomo, integrações sociais | Respostas de Descoberta incorporadas |
 | 2026-07-18 | 2.1 | Inclusão de regras criativas MKBHD | Transcrição de produção incorporada |
+| 2026-07-19 | 3.0 | Convenção [REAL]/[ALVO]; infra de produção (VPS, container `boomer_kev`, n8n, Supabase Sydney); tabela `deriva_runs`; contrato do `pipeline/run`; fluxo real com pré-voo; doutrina Deriva como invariante; contrato duplo de RLS; três camadas de agentes | Auditoria ao vivo revelou que a constituição descrevia pipeline inexistente (LipSync, webhooks, Storage, Realtime). Deriva v1 no ar. |
+
+### Referências rápidas [REAL, 2026-07-19]
+| Recurso | Identificador |
+|---------|---------------|
+| VPS (Hostinger, responde de Boston/EUA) | `2.25.182.106`, SSH root |
+| n8n | `n8n.fgss.io` — creds em `Felipe Portfolio/.env` |
+| Workflow produção | `n6qm9qMxEFvvkU8C` — **inativo** (aguarda 1º run pago) |
+| Workflow vigilância | `CmHQvdzX5Sk23n7y` — **ativo**, cron 07:30 |
+| Container | `boomer_kev`, rede `n8n_default`, sem porta pública |
+| Supabase | `ktysmnltubbfbvyjphdq` (Sydney) |
+| Telegram | chat `6431944169`, cred n8n `xMM0nVZz16NfA8M8` |
+| Política de manutenção | `deriva.yml` na raiz |
 

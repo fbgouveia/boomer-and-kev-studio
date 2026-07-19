@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.tmp
+.env*
+*.png
+tsconfig.tsbuildinfo
+.agent
+.planning
+docs
+00_Legacy_Archives

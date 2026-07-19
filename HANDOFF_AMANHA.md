@@ -31,10 +31,20 @@ Personagens: Boomer (canguru) + Kev (coala). Formato 9:16, 30–60s, p/ TikTok/I
 - ✅ **Compliance, Mitigation, Callback, Video Generate, Cron Agent, Admin Panel, LabsPanel, Cinematic Orchestrator** — todos criados e compilando.
 - ✅ **AGENTS.md** — 26 agentes AI definidos (5 departamentos, system prompts, I/O, critérios).
 
-### 🔴 BLOQUEIOS ATIVOS
-- 🔴 **ElevenLabs billing** — fatura pendente. Pipeline usa fallback silencioso, mas voz real precisa do pagamento.
-- ⚠️ **voiceId de catálogo vs custom** — código usa Charlie/Roger de catálogo, não vozes clonadas. Decisão pendente.
-- ⚠️ **Supabase não deployado** — schema SQL existe mas nunca executado em produção.
+### 🟢 BLOQUEIOS RESOLVIDOS (2026-07-19, Sessão 008/009)
+- ✅ **ElevenLabs billing PAGO** — verificado com TTS real (HTTP 200, MP3 válido, voz Charlie).
+- ✅ **Supabase DEPLOYADO em SYDNEY** — projeto **`boomer-kev-sydney`** (`ktysmnltubbfbvyjphdq`, **ap-southeast-2**), 7 tabelas + RLS aplicados. URL + anon key no `.env.local` (Mac) e no `.env.production` (VPS). Leitura verificada do container da VPS. **Região Sydney é deliberada**: este projeto mira a Austrália (o Felipe Portfolio fica em SP porque atende BR/Europa/EUA — bancos são separados por projeto).
+- ✅ **n8n JÁ EXISTIA na VPS Hostinger** (`n8n.fgss.io`, compartilhado com o projeto Felipe Portfolio/FGSS) — o container Docker local que eu tinha subido no Mac foi **removido** (redundante). O workflow `Boomer & Kev Production Orchestrator` (`n6qm9qMxEFvvkU8C`) já existia lá, criado numa sessão anterior.
+- ✅ **Studio deployado na VPS** — `Dockerfile` (multi-stage, `next.config.ts` com `output: 'standalone'`, ffmpeg no runtime p/ `tools/assemble.mjs`) + container `boomer_kev` rodando na rede Docker `n8n_default` (sem porta pública — só o n8n acessa via `http://boomer_kev:3000`). Código em `/root/boomer-kev-studio` na VPS, env em `.env.production` (mesmas 5 chaves do `.env.local`, exceto service_role).
+- ✅ **Workflow corrigido e testado AO VIVO**: URLs trocadas de `localhost:3000`→`boomer_kev:3000` (7 nós) + bug pré-existente achado (nó "Fetch Google Trends" usava POST, rota é GET) e corrigido. **2 nós testados ponta-a-ponta via n8n**: `/api/trends` (Gemini, retornou trend real de Sydney) e `/api/ai/brainstorm` (retornou hooks reais do Boomer/Kev). `versionCounter` do workflow: 3.
+
+### ⚠️ ATENÇÃO RESTANTE
+- ✅ ~~SUPABASE_SERVICE_ROLE_KEY~~ **RESOLVIDO** — chave do projeto de Sydney aplicada no `.env.local` (Mac) e no `.env.production` (VPS), container reiniciado. **Escrita provada ao vivo**: INSERT em `episodes` via service_role retornou HTTP 200 com a linha criada; INSERT com anon key retornou **401** (RLS protegendo como esperado). Linha de teste removida — banco limpo (0 linhas nas 7 tabelas).
+- ⚠️ **Projeto Supabase órfão em SP** — `boomer-kev` (`fjirjelpkheuflumxbhz`, sa-east-1) ficou vazio e sem uso após a migração p/ Sydney, custando $10/mês. **Só o Felipe apaga** (MCP não tem delete de projeto; pause exige free-tier): [Settings → General → Delete project](https://supabase.com/dashboard/project/fjirjelpkheuflumxbhz/settings/general). Apagar também invalida a service_role dele, que foi exposta em chat.
+- ⚠️ **Workflow RECONSTRUÍDO e INATIVO** (`active: false`, versionCounter 4) — o workflow original era esqueleto de IA com todos os payloads errados (auditoria na Sessão 009e); foi refeito como **n8n fino** em 11 nós usando `/api/pipeline/run`. Lógica dos Code nodes e contratos validados sem custo; **falta a execução real** (~$3–6 Kling). Felipe: `n8n.fgss.io` → workflow `n6qm9qMxEFvvkU8C` → "Execute Workflow" (dispara custo), ou ativar o cron Seg/Qua/Sex 8h.
+- ⚠️ **Decisão da Sessão 007b REVOGADA** — `/api/pipeline/run` **não** será aposentado agora; ele é o motor que o n8n chama. Quebrar em 6 sub-workflows/nós atômicos só depois que 1 vídeo real existir (exigiria loop por cena na voz + criar rota atômica de montagem ffmpeg, que hoje não existe).
+- ⚠️ **voiceId de catálogo vs custom** — código usa Charlie/Roger de catálogo. Decisão pendente (catálogo serve p/ validar o pipeline).
+- ⚠️ **Deploy manual, sem CI/CD** — diferente do Felipe Portfolio (que tem GitHub Actions), o studio foi deployado via `rsync`+`docker build` manual direto na VPS. Não há repo git nem pipeline automática ainda para esse subprojeto.
 
 ---
 
@@ -116,17 +126,19 @@ n8n (CÉREBRO / DIRETOR GERAL)
 
 ---
 
-## ⏳ PENDÊNCIAS TÉCNICAS (atualizado 2026-07-19)
+## ⏳ PENDÊNCIAS TÉCNICAS (atualizado 2026-07-19, Sessão 008)
 
-### 🔴 Bloqueios (ação do Felipe)
-1. **Pagar ElevenLabs** → desbloquear voz real.
-2. **Decidir voiceId** → catálogo (Charlie/Roger) ou treinar custom?
+### ✅ Concluídas na Sessão 008
+1. ~~Pagar ElevenLabs~~ → **PAGO e verificado** (TTS real HTTP 200).
+2. ~~n8n setup (Docker)~~ → **RODANDO** em `localhost:5678`. Falta: conta admin (Felipe) + 6 sub-workflows.
+3. ~~Deploy Supabase~~ → **FEITO** (projeto `boomer-kev`, 7 tabelas, credenciais no `.env.local`).
 
-### 🟠 Implementação (próximas sessões)
-3. **n8n setup** → Docker self-hosted + criar os 6 sub-workflows.
-4. **Deploy Supabase** → criar projeto, rodar `schema.sql`, plugar credenciais.
-5. **Testar pipeline end-to-end** → 1 vídeo real com voz + render + montagem via n8n.
-6. **Merge `restore-engine` → `main`** → quando pipeline testado.
+### 🟠 Próximas (ordem)
+4. **Felipe:** conta admin n8n (`localhost:5678`) + copiar `SUPABASE_SERVICE_ROLE_KEY` p/ `.env.local`.
+5. **Criar WF1 (Pesquisa & Pauta)** → primeiro workflow n8n funcional.
+6. **Decidir voiceId** → catálogo (Charlie/Roger) ou treinar custom (catálogo basta p/ validar pipeline).
+7. **Testar pipeline end-to-end** → 1 vídeo real (~$3–6 de render — precisa OK de gasto).
+8. **Merge `restore-engine` → `main`** → quando pipeline testado.
 
 ### 🟡 Futuro (pós 1º vídeo)
 7. **APIs sociais (TikTok/IG/YT)** → aplicar credenciais (aprovação 1–3 semanas).

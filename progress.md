@@ -338,3 +338,209 @@
 **Resultado:**
 - [x] Projeto 100% documentado e commitado. Pipeline de agentes definida. Arquitetura n8n desenhada. Pronto para implementação.
 
+
+---
+
+## SESSÃO 008 — 2026-07-19 (Desbloqueio de Infra: n8n + Supabase + ElevenLabs)
+
+**Objetivo:** Executar as pendências do handoff (n8n setup, deploy Supabase) e verificar desbloqueios de billing.
+
+**O que foi feito:**
+- [x] **n8n self-hosted no ar**: Docker Desktop iniciado, container `n8n` criado (`docker.n8n.io/n8nio/n8n:latest`, porta 5678, volume `n8n_data`, `--restart unless-stopped`, TZ São Paulo). Health check HTTP 200 em `localhost:5678`.
+- [x] **Limite free do Supabase confirmado na prática**: criação de 3º projeto rejeitada ("2 project limit"). Felipe fez upgrade da org para Pro.
+- [x] **Projeto `boomer-kev` criado** (`fjirjelpkheuflumxbhz`, sa-east-1). Custo: $10/mês (3º projeto, além dos créditos do Pro).
+- [x] **Schema aplicado via migration** (`initial_boomer_kev_schema`): 7 tabelas (episodes, script_lines, render_jobs, publish_jobs, social_accounts, pipeline_events, trends), todas com RLS habilitado. Verificado via list_tables.
+- [x] **`.env.local` atualizado**: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` adicionados.
+- [x] **ElevenLabs verificado DESBLOQUEADO**: Felipe pagou a fatura; TTS real (voz Charlie, `eleven_multilingual_v2`) retornou HTTP 200 com MP3 válido (15KB, 128kbps). Nota: a key é escopada (sem `user_read`), mas TTS — o que o pipeline usa — funciona.
+
+**Erros/Bloqueios encontrados:**
+- ⚠️ `SUPABASE_SERVICE_ROLE_KEY` não disponível via MCP — Felipe precisa copiar do Dashboard (Project Settings → API Keys). Sem ela, INSERT/UPDATE falham (RLS nega mutações anon; fallback silencioso segura o pipeline).
+- ⚠️ n8n exige criação de conta admin no primeiro acesso via browser — só o Felipe pode fazer.
+
+**Custos reais confirmados:** Supabase Pro $25/mês (org) + $10/mês (compute do 3º projeto) + ElevenLabs (plano do Felipe) + ~$3–6/vídeo Kling. n8n $0.
+
+**Resultado:**
+- [x] Todos os bloqueios vermelhos do handoff caíram. Infra pronta. Próximo: conta admin n8n → WF1 → 1º vídeo end-to-end.
+
+---
+
+## SESSÃO 009 — 2026-07-19 (Correção de Arquitetura: Deploy Real na VPS Compartilhada)
+
+**Objetivo:** Felipe corrigiu premissa errada da Sessão 008 — o projeto Boomer & Kev é subprojeto do Felipe Portfolio e usa a MESMA VPS Hostinger (n8n.fgss.io), não uma instância local isolada.
+
+**O que foi feito:**
+- [x] **Descoberto n8n real**: `n8n.fgss.io` na VPS Hostinger (`2.25.182.106`), compartilhado com FGSS/Felipe Portfolio, acesso via API REST (`N8N_API_URL`/`N8N_API_KEY` do `.env` do Portfolio). 25 workflows existentes, incluindo `Boomer & Kev Production Orchestrator` (`n6qm9qMxEFvvkU8C`) já criado numa sessão anterior, mas **inativo** e apontando para `localhost:3000` (não funcionaria em lugar nenhum).
+- [x] **n8n Docker local do Mac REMOVIDO** (container + volume) — era redundante e a decisão do handoff antigo (self-hosted local) foi superada pela VPS já existente.
+- [x] **Studio preparado para deploy**: `next.config.ts` ganhou `output: 'standalone'`; `Dockerfile` multi-stage criado (builder Node 22 + runtime com `ffmpeg` via apk, necessário para `tools/assemble.mjs`/`pipeline/run`); `.dockerignore` criado. Build local validado (`.next/standalone/server.js` gerado).
+- [x] **Deploy na VPS**: `rsync` do código para `/root/boomer-kev-studio` (exclui node_modules/.next/.git), `.env.local` copiado como `.env.production` (5 chaves: Replicate, Gemini, ElevenLabs, Supabase URL+anon). `docker build` na própria VPS (mais simples que cross-compile). Container `boomer_kev` rodando na rede `n8n_default` (mesma do n8n), **sem porta pública exposta** — só acessível internamente por outros containers da rede.
+- [x] **Workflow corrigido via API REST do n8n**: todos os 7 nós HTTP trocaram `http://localhost:3000` → `http://boomer_kev:3000`. **Bug pré-existente achado e corrigido**: nó "Fetch Google Trends" usava método POST, mas a rota real (`/api/trends/route.ts`) só exporta `GET` — teria falhado com 405 em qualquer execução real. `versionCounter` do workflow foi de 1→3.
+- [x] **Smoke test AO VIVO via rede interna do Docker** (simulando as chamadas que o n8n faria): `GET /api/trends` retornou trend real de Sydney (Gemini funcionando); `POST /api/ai/brainstorm` retornou hooks reais do Boomer/Kev. Ambos executados de dentro do container `n8n` via `docker exec`, provando que a rede interna funciona ponta a ponta.
+
+**Erros/Bloqueios encontrados:**
+- ⚠️ `SUPABASE_SERVICE_ROLE_KEY` segue ausente (local e VPS) — pendência que já estava aberta, não resolvida nesta sessão.
+- ⚠️ Workflow **não foi executado via UI/execução real do n8n** (Manual Start/Schedule) — só testei os endpoints via `docker exec + wget`, que prova a conectividade de rede mas não é o mesmo caminho de execução do n8n. Felipe precisa rodar "Execute Workflow" pelo menos uma vez para validar o fluxo real (incluindo os nós pagos: ElevenLabs voz, Kling render).
+- ⚠️ Sem CI/CD para este subprojeto — deploy foi manual (rsync+docker build direto na VPS). O Felipe Portfolio tem GitHub Actions; replicar isso para o studio fica como próximo passo se a cadência de deploys aumentar.
+
+**Decisão corrigida (Karpathy — parar e perguntar antes de assumir infra):** perguntei ao Felipe onde o backend devia viver antes de prosseguir (VPS vs local vs túnel) — resposta: **deploy na VPS**, mesmo padrão do `fgss_admin`.
+
+**Resultado:**
+- [x] Pipeline Boomer & Kev agora vive na infra real de produção (VPS compartilhada), não mais isolado no Mac do Felipe. 2 dos 7 nós do workflow provados funcionando ponta-a-ponta. Falta: service_role key, 1ª execução real via n8n (custo), decisão de voiceId.
+
+### Sessão 009b — Correção de rota (Supabase dedicado vs consolidado)
+
+**O que aconteceu:** Ao pedir para eu buscar as credenciais no Felipe Portfolio, interpretei como "consolidar o banco do Boomer & Kev dentro do Supabase do Portfolio" e apliquei o schema lá (migration `boomer_kev_studio_schema` no projeto `aifgtfwiqodikqhytcuh`), além de repontar o `.env.production` da VPS. Felipe corrigiu: fez upgrade para o Pro justamente para ter **projeto dedicado**.
+
+**Revertido:**
+- [x] `.env.production` da VPS voltou a apontar para o projeto dedicado `boomer-kev` (`fjirjelpkheuflumxbhz`); container reiniciado.
+- [x] As 7 tabelas criadas por engano no Portfolio foram **dropadas** (migration `drop_boomer_kev_tables_wrong_project`, com OK do Felipe). Verificado: Portfolio de volta às suas 15 tabelas originais, dados intactos (671 prospects, 116 approvals_queue, 22 articles).
+
+**Aprendizado registrado:** o ecossistema compartilha VPS e n8n, mas **cada projeto tem seu próprio Supabase**. Compartilhamento de infra ≠ compartilhamento de banco.
+
+**Bloqueio real remanescente:** `SUPABASE_SERVICE_ROLE_KEY` do projeto `boomer-kev`. O MCP do Supabase expõe apenas chaves publicáveis (anon/publishable) — a service_role é secreta por design e **só o Felipe consegue copiar**, pelo Dashboard. Sem ela, o RLS bloqueia INSERT/UPDATE (o client tem fallback silencioso, então nada quebra, mas nada persiste).
+
+### Sessão 009c — Migração do Supabase para Sydney (ap-southeast-2)
+
+**Motivo (Felipe):** o Boomer & Kev é um produto **australiano** — público-alvo, tendências e personagens (canguru/coala). Eu tinha criado o banco em São Paulo por inércia (por ser onde ficam os outros projetos). O Felipe Portfolio fica em SP/Singapura de propósito, porque atende Brasil/Europa/EUA; este projeto não tem relação com aquele escopo.
+
+**O que foi feito:**
+- [x] Criado projeto **`boomer-kev-sydney`** (`ktysmnltubbfbvyjphdq`, **ap-southeast-2 / Sydney**).
+- [x] Schema aplicado (7 tabelas + RLS, migration `initial_boomer_kev_schema`).
+- [x] `.env.local` (Mac) e `.env.production` (VPS) repontados para Sydney; container `boomer_kev` reiniciado.
+- [x] **Leitura verificada ao vivo**: container da VPS fez GET em `/rest/v1/episodes` no projeto de Sydney → `[]` (tabela existe, policy de leitura anon funciona).
+
+**Medição honesta de latência (da VPS, via ping):** Sydney 204ms · Singapura 230ms · São Paulo 118ms. Descoberta relevante: **a VPS da Hostinger não está na Austrália — responde de Boston/EUA**. Como é a VPS que faz as escritas no banco, Sydney é ~86ms mais lento que SP para o pipeline. Isso é **irrelevante nesta carga** (poucas escritas por episódio, enquanto o render do Kling leva 3–6 min), e Sydney ganha em residência de dados e em latência para o público/uso australiano. Se "estar na Austrália" virar requisito real de infra, quem precisa mudar é a VPS — não o banco.
+
+**Pendências criadas por esta migração (ação do Felipe):**
+1. **service_role do projeto de Sydney** — o MCP só expõe chaves publicáveis. Link: `supabase.com/dashboard/project/ktysmnltubbfbvyjphdq/settings/api-keys`.
+2. **Apagar o projeto órfão de SP** (`fjirjelpkheuflumxbhz`) — vazio, $10/mês. Tentei pausar via MCP: rejeitado (`Project is not free-tier`); e o MCP não tem delete de projeto. Só pelo Dashboard.
+
+### Sessão 009d — service_role aplicada, persistência PROVADA
+
+- [x] `SUPABASE_SERVICE_ROLE_KEY` do projeto de Sydney aplicada no `.env.local` (Mac) e `.env.production` (VPS, chmod 600); container `boomer_kev` reiniciado.
+- [x] **Teste de escrita real** (do container da VPS contra o Supabase de Sydney):
+  - INSERT em `episodes` com service_role → **HTTP 200**, linha criada (`746c1096-...`).
+  - INSERT com anon key → **HTTP 401** (RLS bloqueando escrita anônima — comportamento correto e desejado).
+  - Linha de teste removida via SQL; banco de volta a 0 linhas nas 7 tabelas.
+- *Nota operacional: o `wget` do container é BusyBox e não aceita `--method=DELETE`; para limpeza usar SQL direto (MCP `execute_sql`) em vez de REST.*
+
+**Estado da infra: COMPLETA.** Roteiro (Gemini), voz (ElevenLabs), vídeo (Replicate/Kling), banco (Supabase Sydney com leitura E escrita), orquestração (n8n na VPS chamando `boomer_kev` pela rede interna). Falta apenas a 1ª execução real do workflow ponta-a-ponta (custo ~$3–6) e a limpeza do projeto órfão de SP.
+
+### Sessão 009e — Workflow n8n RECONSTRUÍDO (descoberta: o antigo nunca funcionaria)
+
+**Descoberta (auditoria dos contratos antes de gastar dinheiro):** o workflow `n6qm9qMxEFvvkU8C` era um **esqueleto gerado por IA** (`meta.aiBuilderAssisted: true`) cujos payloads não batiam com NENHUMA rota real:
+
+| Nó | Mandava | Rota espera | Efeito |
+|---|---|---|---|
+| Brainstorm | `trend` | `topic` | Degradação silenciosa — `topic` vira `undefined`, Gemini improvisa pelo snippet |
+| Script | `concept` | `topic`,`snippet` | Roteiro genérico |
+| Mitigation | `scriptLines` | `script` | Auditoria sobre undefined |
+| Voice | `lines` | `text`,`characterId` (zod) | **400 — falha dura** |
+| video/generate | `storyboard` | `prompt` | Prompt vazio |
+| "FFmpeg Assembly" | `renderJobId` | `script` (zod) | **400 — falha dura** |
+
+*Provado ao vivo:* mesma trend enviada como `trend` vs `topic` → com o campo errado o roteiro perde o assunto ("some big fella shut down the beach"), com o certo acerta ("wild news from Bondi Beach").
+*Nota:* a 1ª falha dura era na voz, **antes** do Kling — uma execução real teria quebrado sem gastar os $3–6.
+
+**Nomes enganosos descobertos:** o nó "FFmpeg Splicing Assembly" chamava `/api/render`, que **renderiza vídeo no Kling** — não monta nada. Não existe rota atômica de montagem: o ffmpeg só roda dentro de `/api/pipeline/run`.
+
+**Decisão do Felipe (fork apresentado):** *n8n fino* — reaproveitar `/api/pipeline/run` (que já faz script→voz→render→montagem→Supabase, com POST para iniciar e GET `?id=` para status) em vez de aposentá-lo. **Isso revoga a decisão da Sessão 007b** ("pipeline/run será aposentado") — só faz sentido quebrar em nós atômicos depois que 1 vídeo real existir.
+
+**Workflow reconstruído (11 nós, versionCounter 4):**
+`Manual/Cron Seg-Qua-Sex 8h → 1. Buscar Trends (GET) → 2. Escolher Pauta (Code: maior tráfego) → 3. Gerar Roteiro (POST /api/ai/script) → 4. Montar Payload (Code: normaliza os 7 campos do zod) → 5. Disparar Pipeline (POST /api/pipeline/run) → 6. Aguardar 60s → 7. Checar Status (GET ?id=) → 8. Terminou? (IF) → true: 9. Avisar no Telegram / false: volta ao 6 (poll loop)`
+
+Telegram reusa a credencial `FGSS Sentinela Bot` (`xMM0nVZz16NfA8M8`, chat `6431944169`) já existente na VPS.
+
+**Validações feitas (sem custo):**
+- [x] Saída real de `/api/ai/script` conferida contra o `runPipelineSchema`: os 7 campos obrigatórios presentes, `durationEst` numérico → **encaixa**.
+- [x] Lógica do "Escolher Pauta" rodada em Node contra as trends reais: ordena por tráfego corretamente (600K > 500K > 450K > 300K); asserts do parser (`600K+`→600000, `1.2M`→1200000, `undefined`→0) passaram.
+- [x] Estrutura e o laço de polling conferidos via API (IF true→Telegram, false→volta ao Wait).
+
+**NÃO validado (exige gasto):** a execução real ponta-a-ponta. O workflow segue **inativo** de propósito, aguardando OK do Felipe (~$3–6 de Kling).
+
+### Sessão 009f — Skill `deriva` (engenharia de manutenção) criada
+
+**Origem:** discussão de arquitetura sobre um "agente auto-evolutivo" global. Definição do Felipe: auto-evoluir = detectar quando uma dependência externa muda (ex: ElevenLabs atualiza a API) e se reconstruir, em vez de travar o fluxo em silêncio.
+
+**Separações de arquitetura acordadas:**
+- **Mecanismo (global) vs política (projeto).** A skill carrega o protocolo; cada projeto declara suas dependências, contratos e faixas de autonomia num `deriva.yml`. O agente global nunca sabe o que é "ElevenLabs" — sabe o que é "dependência externa com contrato".
+- **Três camadas.** Os 26 agentes do `AGENTS.md` são a produção (consistência é o produto — **não** se auto-evoluem). A skill `deriva` é a engenharia de manutenção. Felipe + Claude são a direção.
+- **Detecção ≠ reparo.** Detecção é barata e vale ~80% do valor; reparo é caro e perigoso. v1 só detecta, diagnostica e propõe — não aplica nada.
+- **Ordem de construção:** v1 sentidos → v2 diagnóstico → v3 faixa verde. Não dá para construir reparo antes de sentinela: sem função de aptidão, o agente corrige e se autoavalia.
+- **Acionamento não pode depender de memória humana.** Detecção vai para a infra (cron/n8n); a skill entra só no raciocínio, invocada pela falha.
+
+**Criado:**
+- `~/.claude/skills/deriva/SKILL.md` — protocolo global. Nome escolhido para não colidir com os agentes "Sentinela" do Felipe Portfolio, e por não prometer reparo (que a v1 não faz).
+- `boomer-and-kev-studio/deriva.yml` — política deste projeto: 5 dependências com contrato, perfil `paranoico`, pré-voo ligado, autonomia v1 (nada aplica sozinho).
+
+**Conceito novo: pré-voo.** As sentinelas rodam 30min antes do cron de produção; vermelho **cancela** a execução. Derivado da cadência de 3-4 vídeos/semana — teria evitado o run que falharia na voz hoje.
+
+**Descobertas incorporadas ao `deriva.yml` (evidência real desta sessão):**
+- `topic` vs `trend`: HTTP 200 com conteúdo genérico = falso positivo, a falha mais perigosa.
+- ElevenLabs: checar via TTS real, nunca via `/v1/user` (key escopada devolve 401 com billing em dia).
+- O fallback de áudio silencioso do pipeline é **deriva grave**, não resiliência: gera vídeo mudo reportando sucesso.
+
+**NÃO feito (aguarda aprovação separada):** hook `SessionStart` no `settings.json`, workflow de sentinelas no n8n, e a linha-ponteiro no `CLAUDE.md` global.
+
+### Sessão 009g — Deriva v1 NO AR (sondas + pré-voo + hook)
+
+**Construído e verificado ao vivo:**
+
+- **`/api/sentinel`** (rota nova, `src/app/api/sentinel/route.ts`) — 4 sondas de contrato rodando em ~15s, sempre HTTP 200 (o corpo carrega o veredito). Afirmam **conteúdo**, não disponibilidade:
+  - `gemini_roteirista`: ≥4 cenas, 7 campos por cena, `durationEst` numérico, **e o texto tem de referenciar o tópico** (pega a deriva silenciosa de 19/07).
+  - `elevenlabs_voz`: TTS real → `audio/mpeg` >5KB (áudio pequeno = fallback mudo disfarçado).
+  - `replicate_kling`: só acesso/schema do modelo. **Nunca renderiza** (US$3-6/render).
+  - `supabase_sydney`: contrato duplo — service_role grava E anon leva 401 (se anon gravar, é falha de segurança).
+  - A 5ª dependência (`container_studio`) é implícita: se a chamada HTTP não completa, o container/rede é o problema.
+- **Tabela `deriva_runs`** no Supabase (leitura anon liberada) — histórico das execuções.
+- **Workflow n8n `Deriva · Sentinelas de Contrato (boomer-kev)`** (`CmHQvdzX5Sk23n7y`, **ATIVO**): cron 07:30 diário → roda sondas → grava histórico → Telegram **só se vermelho**. Verde não notifica: ruído mata vigilância.
+- **Pré-voo na produção** (`n6qm9qMxEFvvkU8C`, versionCounter 5): os gatilhos agora entram pelas sondas; verde segue para as trends, vermelho cai em `stopAndError` e **cancela a execução antes de gastar**.
+- **Hook `SessionStart`** (`.claude/settings.json` + `.claude/deriva-status.sh`): lê a última execução no Supabase e injeta o estado no início de toda sessão. 0,15s, falha em silêncio. Inclui **vigilância do vigia**: se a última sonda tiver mais de 36h, avisa que a vigilância pode ter parado (silêncio não é prova de saúde).
+- **Ponteiro no `CLAUDE.md` global** — 4 linhas mandando invocar `deriva` nos gatilhos, sem esperar pedido.
+
+**A sonda encontrou um bug nela mesma na 1ª execução:** o probe do ElevenLabs vinha `RED` com "Body has already been read" — a mensagem do `assert` era avaliada **antes** da checagem, então o `await res.text()` inline consumia o body sempre. Corrigido (lê o corpo só no caminho de erro). Após o fix: **4/4 verdes**.
+
+**Divergência de modelo registrada:** `/api/pipeline/run` usa `kwaivgi/kling-v2.6` (correto, é o caminho ativo), mas `/api/render` ainda aponta para `kwaivgi/kling-v2.1`. Confirmado via API do Replicate que **ambos existem e são públicos** (2.6: 898.672 execuções; 2.1: 4.138.517) — o Felipe não achava o 2.6 na busca da UI. Não mexi no `/api/render` (fora do caminho ativo); fica anotado.
+
+**Estado:** a vigilância está de pé e autônoma. Continua faltando só a 1ª execução real de produção (~US$3-6), agora protegida por pré-voo.
+
+### Sessão 009h — `gemini.md` elevado a v3.0 (constituição sincronizada com a realidade)
+
+**Problema:** a constituição do projeto descrevia um pipeline que **nunca existiu** — LipSync via Replicate, webhooks via Supabase Edge Functions, Supabase Storage, Supabase Realtime. Um agente lendo o `gemini.md` como lei tomaria decisões sobre infraestrutura imaginária.
+
+**Convenção introduzida:** toda afirmação agora é marcada **[REAL]** (verificada ao vivo) ou **[ALVO]** (intenção não construída). Estado atual: 21 marcações [REAL], 9 [ALVO]. Aviso no topo: *"Documento não é prova de estado — reverifique no sistema vivo."*
+
+**Atualizado:**
+- **Stack**: acrescentado deploy (container `boomer_kev`, rede `n8n_default`), orquestração (n8n), Supabase Sydney, camada de manutenção (`deriva`); Kling corrigido para `kwaivgi/kling-v2.6`; LipSync/Storage/Edge Functions/Realtime/Publicação rebaixados a [ALVO]. Nota fixando que **infra é compartilhada entre projetos, banco nunca é**.
+- **Schemas**: tabela `deriva_runs` documentada; contrato completo de `POST/GET /api/pipeline/run`; divergência registrada (o DDL real usa `script_json`, cenas vivem em `script_lines`).
+- **Fluxo**: substituído o diagrama fictício pelo fluxo real de 14 nós com pré-voo, mais o fluxo de vigilância. Registrada a revogação da decisão da Sessão 007b.
+- **Regras de Pipeline**: "webhooks > polling" reescrita para "polling, não webhooks" (o real); falha isolada e paralelismo rebaixados a [ALVO]; pré-voo obrigatório adicionado.
+- **Nova seção "Deriva"** com 8 invariantes de detecção (contrato ≠ disponibilidade; falha silenciosa é mais grave que queda; degradar calado nunca; comprar informação barata antes da cara; verificação precede a falha; memória executável; vigiar o vigia; autonomia v1 só propõe). O fallback de áudio silencioso está explicitamente marcado como **violação** desta doutrina.
+- **Segurança**: contrato duplo de RLS (service_role grava, anon leva 401 — anon gravando = falha de segurança); regra de segredos; nota de que a `service_role` não sai por API/MCP por design.
+- **Invariantes A.N.T.**: três camadas de agentes (produção não se auto-evolui / `deriva` centraliza evolução / humano dirige); ação cara exige OK; ambiguidade de intenção não se resolve investigando código. Registrada a divergência consciente do V.L.A.E.G. canônico (Camada 3 é TypeScript/Node, não Python).
+- **Env vars**: marcadas [REAL] com a nota de que vivem em dois lugares (`.env.local` no Mac e `.env.production` na VPS) que precisam ficar em sincronia.
+- **Log de manutenção** + tabela de **referências rápidas** (IDs de VPS, workflows, container, Supabase, Telegram).
+
+### Sessão 009i — Limpeza: `tools/` vira Node-only (armadilha dev/prod removida)
+
+**Divergência investigada (dúvida do Felipe: "o projeto é Python ou TypeScript?"):**
+O projeto é **TypeScript** — 44 arquivos `.ts`/`.tsx` na aplicação, zero Python no código do produto. Os 16 `.py` estavam em `.agent/` (ferramental de agente) e **2 em `tools/`**.
+
+O V.L.A.E.G. canônico prevê `tools/` em Python, mas o princípio real nunca foi "usar Python" — é "lógica de negócio determinística, fora da mão do LLM", que está 100% cumprido. E o `CLAUDE.md` global **já autorizava** a adaptação ("projetos Claude+n8n seguem o VLAEG no espírito"). Divergência na letra, não no espírito.
+
+**Risco REAL encontrado (o inverso do temido):** o perigo não é usar TypeScript — é alguém seguir o protocolo ao pé da letra e escrever Python aqui. Verificado no container de produção:
+```
+docker exec boomer_kev which python3 python  →  NAO_EXISTE
+node --version → v22.23.1 | ffmpeg → 8.1.2
+```
+`tools/verify_gemini.py` e `tools/verify_replicate.py` rodavam no Mac (Python 3.9) e **morreriam em produção**. Nada os chamava (grep confirmou), então não quebravam nada hoje — mas eram armadilha para uma sessão futura ("já temos verificação pronta, é só agendar").
+
+**Consolidar antes de apagar** — os dois scripts eram os *ancestrais* do `/api/sentinel` e sabiam duas coisas que as sondas não sabiam:
+1. **Replicate 403 = escopo restrito do token** (não lista modelos, mas AINDA cria predictions). A sonda dava `RED` nesse caso → teria **cancelado a produção todo dia por falso positivo**. Corrigido: 403 agora retorna verde com aviso explícito de "contrato NÃO verificado"; 401 (token inválido) segue vermelho.
+2. **Gemini 404 → `node find-model.js`; 403 → key sem acesso ao modelo.** Dicas incorporadas às mensagens de erro da sonda.
+
+**Removidos** (local + VPS): `tools/verify_gemini.py`, `tools/verify_replicate.py`.
+**`gemini.md`**: `tools/` declarado **NODE-ONLY** como lei, com a evidência do container sem Python e o registro de que o conhecimento foi portado antes da exclusão.
+
+**Verificado após o deploy:** `tsc --noEmit` limpo, 4/4 sondas verdes.
+
+**Mencionado, não apagado** (Ponytail — código morto se menciona, não se deleta sem pedir): `tools/n8n_boomer_kev_orchestrator.ts` e `tools/run_real_pipeline.js` também não são chamados por nada. O primeiro é provavelmente a origem do workflow n8n quebrado que foi reconstruído hoje.
