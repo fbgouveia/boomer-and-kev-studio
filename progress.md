@@ -643,3 +643,10 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - [x] `./deploy_studio.sh` rodado: build verde, rsync, PM2 restart (↺1, online).
 - [x] **Verificado ao vivo em https://boomerandkev.fgss.io**: desktop 1440px sem sidebar lateral; mobile 390px com `scrollWidth == clientWidth` (overflow horizontal ZERO, medido via JS); menu hambúrguer abre drawer com as 6 abas (Director/Production/Library/Engine DNA/Studio Labs/Radar).
 - ⚠️ **Bug menor novo (desktop 1440px)**: a aba "STUDIO LABS" do header aparece truncada ("STUDI...") — o HUD de GPU comprime a nav. Vai para o backlog do plano.
+
+### Sessão 011c — Plano Mestre de Produção (Fable 5)
+
+- [x] **Plano mestre em cascata publicado**: https://claude.ai/code/artifact/7e32cc32-4b8b-4033-b7fb-259f7247270c
+- Estrutura: Waterfall com gates, 6 fases (F0 Fundação ✅ → F1 Estabilização → F2 Validação Financeira [gate $] → F3 Radar → F4 Neuro-Retenção → F5 Cadência & Publicação), 15 pacotes de trabalho, cada um com tarefas + critério de aceite verificável + executor (Fable=arquitetura, Opus=execução, Felipe=gates) + custo/risco.
+- Identidade visual do próprio estúdio (Brutalist Neural Glass), dropdowns nativos `<details>`, cascata literal com degraus.
+- Decisão em destaque no topo do plano: **cron de produção ATIVO → render real segunda 08h** (manter = F2 acontece sozinha; desativar = F2 espera OK manual).
