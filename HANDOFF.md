@@ -51,6 +51,16 @@
 
 ---
 
+## ▶️ RETOMADA IMEDIATA (sessão Claude interrompida por cota, 19/07 noite)
+
+**Onde parou:** F1 do Plano Mestre (artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`, conversa Claude Code).
+Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 4×4 + two-shot master_wide + sonda de duo).
+**Commit `4a430ad` tem 1.6 (last-frame chaining) + 1.7 (xfade) IMPLEMENTADOS com build verde, mas:**
+1. **NÃO deployados** — produção roda sem eles. Deploy = `./deploy_studio.sh`.
+2. **Teste $0 pendente:** rodar local sem `REPLICATE_API_TOKEN` (sandbox usa pilotos) p/ validar a montagem xfade e o risco (a): full-sandbox monta pilotos CRUS — se algum piloto não tiver stream de áudio, `acrossfade` falha. Detalhes: `progress.md` §011h.
+3. F1 restante: WP 1.1 (double-fire brainstorm) e 1.4 (pm2 startup + `N8N_RADAR_SECRET` + arquivar HANDOFF_AMANHA.md + tools mortos).
+**Contexto de decisões:** balanceamento provado 5/5 gerações 4×4; encadeamento SÓ entre cenas do mesmo personagem (troca = corte, correto); B-Roll = prints de notícias reais via HyperFrames (WP 4.2, v1 prova de estilo pendente).
+
 ## 🔴 PENDÊNCIAS ABERTAS (por prioridade)
 
 ### P1 — Automação n8n → Radar (🔴 ALTA)
