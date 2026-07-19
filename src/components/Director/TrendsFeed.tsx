@@ -94,12 +94,12 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
             <div className="flex-1 2xl:w-80 2xl:flex-none border-r border-white/5 flex flex-col h-full bg-[#080808] min-h-0 max-h-full">
                 <div className="p-8 border-b border-white/5 flex flex-col gap-6">
                     <div className="flex flex-col gap-4">
-                        <div className="flex rounded-md overflow-hidden border border-white/10 w-fit">
+                        <div className="flex rounded-none overflow-hidden border-2 border-white/20 w-fit">
                             <button
                                 onClick={() => setFeedMode('LIVE')}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFeedMode('LIVE'); } }}
-                                className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all",
-                                    feedMode === 'LIVE' ? "bg-[#FF5F1F] text-white" : "bg-white/5 text-white/40 hover:text-white")}
+                                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
+                                    feedMode === 'LIVE' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/40 hover:text-white")}
                             >
                                 <TrendingUp size={12} className="inline mr-2 mb-0.5" />
                                 LIVE WIRE
@@ -114,8 +114,8 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                         // logic will be in render
                                     }
                                 }}
-                                className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all",
-                                    feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-white" : "bg-white/5 text-white/40 hover:text-white")}
+                                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
+                                    feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/40 hover:text-white")}
                             >
                                 <CalendarIcon size={12} className="inline mr-2 mb-0.5" />
                                 2026 PLANNER
@@ -124,16 +124,17 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
 
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">
+                                <span className="text-[9px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">
                                     {feedMode === 'LIVE' ? 'Global Signal' : 'Future Events'}
                                 </span>
-                                <h3 className="text-xl font-black tracking-tighter uppercase">Aggregator</h3>
+                                <h3 className="text-xl font-black tracking-tighter uppercase italic">Aggregator</h3>
                             </div>
                             {feedMode === 'LIVE' && (
                                 <button
                                     onClick={() => fetchTrends()}
                                     disabled={isLoading}
-                                    className="p-2 border border-white/10 hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all disabled:opacity-20 translate-y-1"
+                                    aria-label="Refresh trends"
+                                    className="border-2 border-white/20 bg-black/40 hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all disabled:opacity-20 translate-y-1 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
                                 >
                                     <RefreshCcw size={14} className={cn(isLoading && "animate-spin")} />
                                 </button>

@@ -12,6 +12,14 @@ export const renderSchema = z.object({
         studioReference: z.string().optional(),
         emotion: z.string().optional(),
         action: z.string().optional(),
+        cameraPreset: z.string().optional(),
+        motionWeight: z.number().optional(),
+        soulId: z.string().optional(),
+        motionRefUrl: z.string().optional(),
+        visualPrompt: z.string().optional(),
+        cameraMovement: z.string().optional(),
+        compositionNotes: z.string().optional(),
+        storyboardSketch: z.string().optional(),
     })),
     studioDNA: z.object({
         name: z.string(),
@@ -26,7 +34,9 @@ export const renderSchema = z.object({
     apiKeys: z.object({
         replicate: z.string().optional(),
         elevenlabs: z.string().optional(),
+        higgsfield: z.string().optional(),
     }).optional(),
+    engine: z.enum(['kling', 'higgsfield']).optional().default('kling'),
 });
 
 export const voiceSchema = z.object({

@@ -343,7 +343,11 @@ export class ScriptEngine {
                 action: motion.action,
                 durationEst: index === 1 ? 8 : (index === 0 ? 6 : (index === 3 ? 7 : 5)), // Hype is longest
                 emotion: motion.emotion,
-                status: 'IDLE'
+                status: 'IDLE',
+                visualPrompt: "",
+                cameraMovement: "STATIC",
+                compositionNotes: "",
+                storyboardSketch: ""
             };
         });
     }
@@ -395,7 +399,11 @@ export class ScriptEngine {
             action: motion.action,
             durationEst: 5,
             emotion: motion.emotion,
-            status: 'IDLE'
+            status: 'IDLE',
+            visualPrompt: "",
+            cameraMovement: "STATIC",
+            compositionNotes: "",
+            storyboardSketch: ""
         };
     }
 }

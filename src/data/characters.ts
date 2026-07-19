@@ -45,7 +45,7 @@ export const CHARACTERS: Character[] = [
         imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, gold chain necklace, black singlet option, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
-        referenceImage: 'https://drive.google.com/file/d/160ZOQOxYsAzk6-ftW6rRVccQbBVR8jn1/view?usp=sharing'
+        referenceImage: '/assets/master_boomer.png'
     },
     {
         id: 'kev',
@@ -76,7 +76,7 @@ export const CHARACTERS: Character[] = [
         imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
         voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Laid-Back, Casual, Resonant
-        referenceImage: 'https://drive.google.com/file/d/1Msb2xa_rbAeMlzvuKh9Hi8zCdzw15bQh/view?usp=sharing'
+        referenceImage: '/assets/master_kev.png'
     }
 ];
 
@@ -115,16 +115,23 @@ export const STUDIO_SETTING = {
     promptContext: "professional podcast studio, orange and black acoustic foam, SPONSORS led screens, Down Under Discourse neon, cinematic lighting, 8k, highly detailed fur"
 };
 
-export const DEFAULT_STUDIO_REFERENCE = 'https://drive.google.com/file/d/1tqQAsVev8OV2LZ01FkkfQ1Sag94K-IjY/view?usp=sharing';
+export const DEFAULT_STUDIO_REFERENCE = '/assets/master_wide.png';
 export const DEFAULT_DNA_FOLDER_URL = 'https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf';
 
 export const GUIDE_IMAGES: Record<string, string> = {
-    WIDE: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800', // Wide Studio
-    BOOMER_MCU: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800', // Mid shot
-    KEV_CU: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800', // Close up
-    OTS_BOOMER: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800', // OTS
-    LOW_ANGLE_BOOMER: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800', // Low angle
-    GOPRO_FISHEYE: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800' // Fisheye
+    main: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800', // Mid shot (main)
+    wide: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800', // Wide Studio
+    side: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800', // Side angle
+    close: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800', // Close up
+    profile: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800', // Profile
+    detail: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800', // Detail
+    // Keep legacy uppercase keys for safety
+    WIDE: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800',
+    BOOMER_MCU: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800',
+    KEV_CU: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800',
+    OTS_BOOMER: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800',
+    LOW_ANGLE_BOOMER: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800',
+    GOPRO_FISHEYE: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800'
 };
 
 export const ANGLE_SPECS: Record<string, { label: string, desc: string, requirements: string[] }> = {

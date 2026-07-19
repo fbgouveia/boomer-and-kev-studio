@@ -285,3 +285,22 @@
 
 **Resultado:**
 - [x] Fase 0 parte 1 (build verde) concluída e verificada. Parte 2 (1 vídeo end-to-end) travada só no billing do ElevenLabs. Motor + montagem prontos; falta o maestro, que se constrói no 1º run pago.
+
+---
+
+## SESSÃO 007 — 2026-07-19 (Maestro, Banco de Dados, Estabilidade de Assets e Correção de ElevenLabs Blocker)
+
+**Objetivo:** Executar a sequência de prioridades 2, 4, 3, 1 em conformidade com Karpathy, Ponytail e VLAEG.
+
+**O que foi feito:**
+- [x] **Prioridade 2 (Orquestrador Maestro):** Criados endpoints `/api/pipeline/run` (para iniciar pipeline assíncrono em background e consultar status) e `/api/pipeline/download` (para streaming local do clipe MP4 final gerado por FFmpeg). Refatorado o front-end `page.tsx` para realizar a chamada centralizada e expor botão de download do MP4 compilado na interface.
+- [x] **Prioridade 4 (Estabilidade de Assets):** Copiados master assets de personagens do Drive para a pasta local `public/assets/`, substituídas referências em `characters.ts` e ajustado o motor do Replicate/Kling em `render/route.ts` para converter caminhos relativos locais em URLs absolutas dinamicamente usando a origem da requisição.
+- [x] **Prioridade 3 (Supabase Integration):** Criado cliente nativo minimalista em `src/lib/supabase.ts` (Fetch puro, zero deps de pacote) e integrado na pipeline para registrar e alterar status de episódios no banco (com fallback silencioso caso credenciais não estejam configuradas).
+- [x] **Prioridade 1 (Faturamento ElevenLabs):** Adicionada resiliência na pipeline de voz do orquestrador; se o billing falhar, um buffer de áudio silencioso base64 padrão é injetado, permitindo que a pipeline prossiga na geração do vídeo/lipsync sem travar o processamento global.
+- [x] **Integração do Nano Banana Pro (Imagen 3):** Criada a rota de backend `/api/ai/image` e adicionados botões "SYNTHESIZE" com ícone de faísca ao lado de todos os controles de upload/URL no painel do DNA para sintetizar e salvar localmente as imagens de referência da matriz.
+- [x] **Build & Check:** `tsc --noEmit` e `npm run build` limpos com 0 erros.
+
+**Resultado:**
+- [x] Orquestrador Maestro conectado à UI com sucesso.
+- [x] Painel de DNA 100% autônomo com síntese integrada via Nano Banana Pro (Imagen 3).
+

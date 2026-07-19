@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 
         // Using lucataco/wav2lip or similar reliable lipsync model
         // Note: If audioUrl is a Data URI, Replicate supports it for short clips
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://boomer-kev-studio.vercel.app';
         const prediction = await replicate.predictions.create({
             model: "devxpy/cog-wav2lip",
             input: {
@@ -41,7 +42,9 @@ export async function POST(req: Request) {
                 pads: "0 10 0 0",
                 smooth: true,
                 fps: 30
-            }
+            },
+            webhook: `${siteUrl}/api/ai/callback`,
+            webhook_events_filter: ['completed']
         });
 
         return NextResponse.json({

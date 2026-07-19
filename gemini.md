@@ -3,7 +3,7 @@
 # Criado: 2026-03-28 | Versão: 2.0 (Respostas de Descoberta Incorporadas)
 
 > ⚖️ Este arquivo é a LEI do projeto. Atualiza-se ANTES do código.
-> Hierarquia: gemini.md > task_plan.md > findings.md > progress.md
+> Hierarquia: [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md) > gemini.md > task_plan.md > findings.md > progress.md
 
 ---
 
@@ -239,9 +239,41 @@ YOUTUBE_CLIENT_SECRET=...
 
 ---
 
+## 🎨 REGRAS CRIATIVAS E DE PRODUÇÃO (FILOSOFIA MKBHD)
+
+### ✍️ 1. Roteirização e Storytelling
+1. **Ter uma Tese:** Cada episódio deve ter um ponto central claro. Toda linha e piada deve apoiar essa tese.
+2. **Contexto Completo:** Dar contexto suficiente para que a audiência se importe tanto quanto os criadores.
+3. **Detalhes Ricos:** A narrativa vive nos detalhes primários. Usar dados reais de tendências em vez de generalismos.
+
+### 🎙️ 2. Engenharia de Áudio (Diálogo)
+1. **Sempre em Mono:** Diálogos de podcast/vídeo devem ser estritamente gravados/mixados em MONO. Áudio estéreo para falas confunde a mente do ouvinte.
+2. **Efeito de Proximidade:** Microfones de proximidade para voz encorpada/quente (estilo NPR/Boomer agressivo).
+3. **Direcionalidade Frequencial:** Frequências altas direcionam em feixe; frequências baixas se espalham. Ajustar o ângulo do microfone (off-axis) para controlar sibilo e aspereza.
+
+### 📐 3. Iluminação, Cenário e Enquadramento
+1. **Esquema de Cores Bow House:** Utilizar a tríade de cores primárias (Vermelho, Azul, Amarelo) nos elementos do cenário como marca registrada.
+2. **Exposição em Xadrez:** Compor o plano mesclando hotspots (zonas claras) e dark zones (zonas escuras) distribuídas para guiar o olhar.
+3. **Flags para Controle:** Usar flags físicas ou virtuais para evitar vazamento (spill) de luzes coloridas RGB sobre o rosto dos personagens.
+
+### 🎬 4. Edição e Transições
+1. **Livre de Distrações:** Edições limpas, música leve, sem abuso de legendas piscantes ou efeitos frenéticos.
+2. **Marcação de Capítulos:** Usar transições visuais claras para definir capítulos e gerenciar as expectativas do público.
+3. **Saída Subliminar:** No final de um capítulo ou cena, o elemento em destaque (ex: carro ou personagem) deve sair fisicamente do quadro para sinalizar o fim daquele bloco.
+
+### 🖼️ 5. Thumbnails e Identidade Visual
+1. **Foco no Centro/Terços:** O objeto principal deve estar centralizado ou nos terços para reduzir o esforço ocular.
+2. **Paleta Limitada e Complementar:** Usar cores complementares puras (ex: fundo violeta se o produto é amarelo).
+3. **Contraste Fore/Back:** Bordas de contraste bem definidas separando primeiro plano do plano de fundo.
+4. **Flechas e Preços:** Flechas indicativas e etiquetas de preço em destaque geram maior engajamento.
+
+---
+
 ## 📋 LOG DE MANUTENÇÃO
 
 | Data | Versão | O que mudou | Motivo |
 |------|--------|-------------|--------|
 | 2026-03-28 | 1.0 | Criação inicial via V.L.A.E.G. | Inicialização |
 | 2026-03-28 | 2.0 | Data Schema completo, Pipeline autônomo, integrações sociais | Respostas de Descoberta incorporadas |
+| 2026-07-18 | 2.1 | Inclusão de regras criativas MKBHD | Transcrição de produção incorporada |
+

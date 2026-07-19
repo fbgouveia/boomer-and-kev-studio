@@ -5,8 +5,9 @@
 
 ---
 
-> ⚖️ **ESTE ARQUIVO É LEI.** Gemini 3.1 deve ler este handoff ANTES de tocar qualquer arquivo.
-> Hierarquia: gemini.md > HANDOFF_VLAEG.md > task_plan.md > progress.md
+> ⚖️ **ESTE ARQUIVO É LEI.** Qualquer Agente (Gemini, Claude, etc.) deve ler este handoff ANTES de tocar qualquer arquivo.
+> **Diretrizes Globais:** Karpathy, VLAEG e Ponytail estão definidos em [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md) e são ativos por padrão.
+> Hierarquia: [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md) > gemini.md > HANDOFF_VLAEG.md > task_plan.md > progress.md
 > **Ler também:** `findings.md` (inventário de assets e APIs)
 
 ---
@@ -261,6 +262,7 @@ FASE FUTURA — LUXO (quando Felipe pedir):
 8. **Falha isolada** — falha em 1 cena não bloqueia as outras
 9. **Idempotência** — qualquer step pode ser re-executado sem duplicar
 10. **Build DEVE compilar** — zero erros TypeScript após cada tarefa
+11. **Filosofia/Diretrizes (Karpathy, VLAEG, Ponytail):** Cumprir rigorosamente as regras descritas no [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md).
 
 ---
 

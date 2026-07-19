@@ -299,3 +299,39 @@ body::after {
     transform: translateY(-10px) rotate(1deg);
   }
 }
+
+/* Cyber-cockpit Tech Grid Background */
+.tech-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 95, 31, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 95, 31, 0.03) 1px, transparent 1px);
+}
+
+/* Premium Glow Accent */
+.premium-glow-orange {
+  box-shadow: 0 0 25px rgba(255, 95, 31, 0.25), inset 0 0 10px rgba(255, 95, 31, 0.1);
+}
+
+.premium-glow-green {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.25), inset 0 0 10px rgba(34, 197, 94, 0.1);
+}
+
+/* Custom Glass Morphism */
+.premium-glass {
+  background: rgba(8, 8, 10, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Cyber Terminal Focus Inputs */
+.cyber-input {
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cyber-input:focus {
+  border-color: var(--signal-orange);
+  box-shadow: 0 0 15px rgba(255, 95, 31, 0.15);
+  background: #151515;
+}

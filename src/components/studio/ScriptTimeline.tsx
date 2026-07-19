@@ -207,6 +207,69 @@ export function ScriptTimeline({
                 </div>
               </div>
 
+              {/* HIGGSFIELD CINEMATIC DIRECTORY */}
+              <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Camera Motion Preset</span>
+                    <select
+                      value={line.cameraPreset || ''}
+                      onChange={(e) => updateLine(line.id, 'cameraPreset', e.target.value)}
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                    >
+                      <option value="" className="bg-[#0d0d0d]">-- DEFAULT STATIC --</option>
+                      <option value="pan_left" className="bg-[#0d0d0d]">Pan Left</option>
+                      <option value="pan_right" className="bg-[#0d0d0d]">Pan Right</option>
+                      <option value="tilt_up" className="bg-[#0d0d0d]">Tilt Up</option>
+                      <option value="tilt_down" className="bg-[#0d0d0d]">Tilt Down</option>
+                      <option value="zoom_in" className="bg-[#0d0d0d]">Zoom In</option>
+                      <option value="zoom_out" className="bg-[#0d0d0d]">Zoom Out</option>
+                      <option value="dolly_in" className="bg-[#0d0d0d]">Dolly In (Push)</option>
+                      <option value="dolly_out" className="bg-[#0d0d0d]">Dolly Out (Pull)</option>
+                      <option value="handheld" className="bg-[#0d0d0d]">Handheld Shakiness</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Motion Weight</span>
+                      <span className="text-[10px] font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1.0"
+                      step="0.05"
+                      value={line.motionWeight ?? 0.5}
+                      onChange={(e) => updateLine(line.id, 'motionWeight', parseFloat(e.target.value))}
+                      className="w-full accent-[#FF5F1F] cursor-pointer bg-white/10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Character Soul ID</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. boomer_master_v3"
+                      value={line.soulId || ''}
+                      onChange={(e) => updateLine(line.id, 'soulId', e.target.value)}
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Motion Ref Video (URL)</span>
+                    <input
+                      type="text"
+                      placeholder="Upload MP4 motion reference..."
+                      value={line.motionRefUrl || ''}
+                      onChange={(e) => updateLine(line.id, 'motionRefUrl', e.target.value)}
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {line.status === 'COMPLETED' || line.status === 'PROCESSING' || previewLineId === line.id ? (
                 <div
                   onClick={() => line.status === 'COMPLETED' && setCinemaLineId(line.id)}

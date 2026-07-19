@@ -46,6 +46,80 @@ export function DNAPanel({
   handleImageUpload,
   downloadPromptPDF
 }: DNAPanelProps) {
+  const [generating, setGenerating] = React.useState<string | null>(null);
+
+  const generateWithBanana = async (charId: string, angle: string) => {
+    const char = CHARACTERS.find(c => c.id === charId);
+    if (!char) return;
+
+    const key = `${charId}-${angle}`;
+    setGenerating(key);
+
+    try {
+      const basePrompt = `${char.name}, ${char.visualDescription}, ${char.defaultOutfit}, ${STUDIO_SETTING.promptContext}`;
+      
+      let angleModifier = '';
+      let aspectRatio = '1:1';
+
+      if (angle === 'wide') {
+        angleModifier = 'wide shot showing full body in setting,';
+        aspectRatio = '16:9';
+      } else if (angle === 'side') {
+        angleModifier = 'side angle shot, 45 degree lateral profile,';
+        aspectRatio = '4:3';
+      } else if (angle === 'close') {
+        angleModifier = 'tight close-up shot focusing on face,';
+        aspectRatio = '1:1';
+      } else if (angle === 'profile') {
+        angleModifier = 'pure lateral profile view from the side,';
+        aspectRatio = '1:1';
+      } else if (angle === 'detail') {
+        angleModifier = 'macro detail shot showing textures close up,';
+        aspectRatio = '1:1';
+      } else {
+        angleModifier = 'front-facing master reference portrait,';
+        aspectRatio = '1:1';
+      }
+
+      const finalPrompt = `${angleModifier} ${basePrompt}`;
+
+      const res = await fetch('/api/ai/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          aspectRatio
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.imageUrl) {
+        setCharReferences(prev => {
+          const updated = {
+            ...prev,
+            [charId]: {
+              ...prev[charId],
+              [angle]: data.imageUrl
+            }
+          };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('BK_CHAR_REFERENCES', JSON.stringify(updated));
+          }
+          return updated;
+        });
+      }
+    } catch (e) {
+      console.error('BANANA_GEN_FAIL', e);
+      alert(`Synthesis Failed: ${e instanceof Error ? e.message : 'Unknown Error'}`);
+    } finally {
+      setGenerating(null);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth animate-in fade-in duration-700">
       <div className="mb-20 flex justify-between items-end">
@@ -89,6 +163,22 @@ export function DNAPanel({
               <div className="text-right">
                 <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.5em] block mb-1">BIOLOGICAL UNIT</span>
                 <h3 className="text-4xl font-black tracking-tighter uppercase">{char.name}</h3>
+              </div>
+            </div>
+
+            {/* Appearance Guide & Visual DNA */}
+            <div className="p-6 bg-white/[0.02] border border-white/5 space-y-4">
+              <div className="space-y-1">
+                <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest block">Appearance Spec (Visual DNA)</span>
+                <p className="text-xs font-bold text-white/80 leading-relaxed uppercase">{char.visualDescription}</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest block">Default Outfit Specification</span>
+                <p className="text-xs font-bold text-white/60 leading-relaxed uppercase italic">{char.defaultOutfit}</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest block">Biological Genus</span>
+                <p className="text-xs font-bold text-white/60 leading-relaxed uppercase">{char.species}</p>
               </div>
             </div>
 
@@ -160,6 +250,20 @@ export function DNAPanel({
                         onChange={(e) => handleImageUpload(e, char.id, 'main')}
                       />
                     </label>
+
+                    <button
+                      type="button"
+                      onClick={() => generateWithBanana(char.id, 'main')}
+                      disabled={generating !== null}
+                      className="px-6 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors group/gen flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="SYNTHESIZE WITH NANO BANANA PRO"
+                    >
+                      <Sparkles size={12} className={cn("group-hover/gen:animate-spin", generating === `${char.id}-main` && "animate-spin text-[#FF5F1F]")} />
+                      <span className="text-[9px] font-black uppercase tracking-widest hidden xl:block">
+                        {generating === `${char.id}-main` ? 'SYNTHESIZING...' : 'SYNTHESIZE'}
+                      </span>
+                    </button>
+
                     <div className="flex-1 relative">
                       <input
                         type="text"
@@ -285,6 +389,15 @@ export function DNAPanel({
                               onChange={(e) => handleImageUpload(e, char.id, angle)}
                             />
                           </label>
+                          <button
+                            type="button"
+                            onClick={() => generateWithBanana(char.id, angle)}
+                            disabled={generating !== null}
+                            className="p-3 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-colors group/gen flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="SYNTHESIZE ANGLE WITH NANO BANANA PRO"
+                          >
+                            <Sparkles size={10} className={cn("group-hover/gen:animate-spin", generating === `${char.id}-${angle}` && "animate-spin text-[#FF5F1F]")} />
+                          </button>
                           <div className="flex-1 relative">
                             <input
                               type="text"

@@ -107,7 +107,11 @@ CREATE TABLE public.pipeline_events (
 );
 
 -- ROW LEVEL SECURITY (RLS)
--- Future-proofing the setup for web clients. Currently allowing anon access for prototyping.
+-- Production Security Standard: All tables have RLS enabled.
+-- Anon users can only SELECT (read) non-sensitive public views (episodes, script_lines, trends).
+-- All mutations (INSERT, UPDATE, DELETE) and sensitive tables (social_accounts, render_jobs, publish_jobs)
+-- are locked down from client access and must be processed server-side using the service_role client (bypasses RLS).
+
 ALTER TABLE public.episodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.script_lines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.render_jobs ENABLE ROW LEVEL SECURITY;
@@ -115,16 +119,17 @@ ALTER TABLE public.publish_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.social_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pipeline_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow anonymous read access on episodes" ON public.episodes FOR SELECT USING (true);
-CREATE POLICY "Allow anonymous insert access on episodes" ON public.episodes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anonymous update access on episodes" ON public.episodes FOR UPDATE USING (true);
-CREATE POLICY "Allow anonymous delete access on episodes" ON public.episodes FOR DELETE USING (true);
+-- 1. EPISODES POLICIES
+CREATE POLICY "Allow anonymous read access on public episodes" ON public.episodes FOR SELECT USING (true);
 
--- Repeat simplistic policies for local/sandbox dev:
-CREATE POLICY "Allow ALL on script_lines" ON public.script_lines FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow ALL on render_jobs" ON public.render_jobs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow ALL on publish_jobs" ON public.publish_jobs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow ALL on pipeline_events" ON public.pipeline_events FOR ALL USING (true) WITH CHECK (true);
+-- 2. SCRIPT_LINES POLICIES
+CREATE POLICY "Allow anonymous read access on public script_lines" ON public.script_lines FOR SELECT USING (true);
+
+-- 3. SENSITIVE TABLES (No policies defined for anon/authenticated = DENY ALL by default)
+-- * public.render_jobs
+-- * public.publish_jobs
+-- * public.social_accounts (protects sensitive oauth tokens)
+-- * public.pipeline_events
 
 -- 7. TRENDS (For the Trend Hunter Agent)
 -- Maps to `Trend` type in frontend
@@ -141,4 +146,4 @@ CREATE TABLE public.trends (
 );
 
 ALTER TABLE public.trends ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow ALL on trends" ON public.trends FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anonymous read access on trends" ON public.trends FOR SELECT USING (true);

@@ -16,6 +16,14 @@ export interface ScriptLine {
   technicalPrompt?: string;
   characterReference?: string;
   studioReference?: string;
+  cameraPreset?: string;
+  motionWeight?: number;
+  soulId?: string;
+  motionRefUrl?: string;
+  visualPrompt?: string;
+  cameraMovement?: string;
+  compositionNotes?: string;
+  storyboardSketch?: string;
 }
 
 export type EpisodeStatus =

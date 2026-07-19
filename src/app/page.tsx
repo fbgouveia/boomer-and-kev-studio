@@ -42,6 +42,8 @@ import { ScriptLine } from '@/types';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
 import { DNAPanel } from '@/components/studio/DNAPanel';
+import LabsPanel from '@/components/studio/LabsPanel';
+import { FlaskConical } from 'lucide-react';
 
 
 export default function Home() {
@@ -50,7 +52,7 @@ export default function Home() {
     { id: '2', characterId: 'kev', text: "Yeah, nah. I just want to know when we're finished.", shotType: 'KEV_CU', action: 'Slowly chewing on a gum leaf', durationEst: 2, emotion: 'Deadpan', status: 'IDLE' },
   ]);
 
-  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'dna'>('director');
+  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'dna' | 'labs'>('director');
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -60,15 +62,24 @@ export default function Home() {
   const [sharingLineId, setSharingLineId] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isRenderingProject, setIsRenderingProject] = useState(false);
+  const [renderEngine, setRenderEngine] = useState<'kling' | 'higgsfield'>('kling');
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
+  const [assembledVideoUrl, setAssembledVideoUrl] = useState<string | null>(null);
   const [cinemaLineId, setCinemaLineId] = useState<string | null>(null);
   const [charReferences, setCharReferences] = useState<Record<string, { main: string, wide: string, side: string, close: string, profile: string, detail: string }>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('BK_CHAR_REFERENCES');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          // Migrate old Google Drive references to stable local paths
+          CHARACTERS.forEach(char => {
+            if (parsed[char.id] && (!parsed[char.id].main || parsed[char.id].main.includes('drive.google.com'))) {
+              parsed[char.id].main = char.referenceImage || '';
+            }
+          });
+          return parsed;
         } catch (e) { console.error("DNA_LOAD_FAIL", e); }
       }
     }
@@ -121,7 +132,22 @@ export default function Home() {
   });
   const [studioReference, setStudioReference] = useState(DEFAULT_STUDIO_REFERENCE);
   const [dnaFolderUrl, setDnaFolderUrl] = useState(DEFAULT_DNA_FOLDER_URL);
-  const [activeFooterModal, setActiveFooterModal] = useState<'docs' | 'keys' | 'support' | null>(null);
+  const [activeFooterModal, setActiveFooterModal] = useState<'docs' | 'keys' | 'support' | 'legal' | null>(null);
+  const [complianceReport, setComplianceReport] = useState<{
+    overallRisk: 'LOW' | 'MEDIUM' | 'HIGH';
+    flags: { category: string; riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'; description: string; recommendation: string; targetCountry: string }[];
+    watermarkingRequired: boolean;
+    suggestedDisclaimer: string;
+  } | null>(null);
+  const [isScanningCompliance, setIsScanningCompliance] = useState(false);
+  const [complianceCountries, setComplianceCountries] = useState<string[]>(['AU', 'US', 'EU', 'BR']);
+  const [mitigationReport, setMitigationReport] = useState<{
+    platformStrikeRisk: { tiktok: number, youtube: number, instagram: number };
+    loopholeStrategy: string;
+    requiredProductionTricks: string[];
+    modifiedScript: ScriptLine[];
+  } | null>(null);
+  const [isMitigatingRisk, setIsMitigatingRisk] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     replicate: typeof window !== 'undefined' ? localStorage.getItem('BK_REPLICATE_KEY') || '' : '',
     elevenlabs: typeof window !== 'undefined' ? localStorage.getItem('BK_ELEVENLABS_KEY') || '' : '',
@@ -140,6 +166,7 @@ export default function Home() {
   const [currentAnswers, setCurrentAnswers] = useState<string[]>(["", "", ""]);
   const [isRefiningBlueprint, setIsRefiningBlueprint] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [storyboardMode, setStoryboardMode] = useState<'classic' | 'ekonte'>('classic');
 
   const refreshBalance = useCallback(async (keys = apiKeys) => {
     if (!keys.replicate && !keys.elevenlabs) return;
@@ -761,28 +788,91 @@ export default function Home() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const runComplianceScan = async () => {
+    setIsScanningCompliance(true);
+    setComplianceReport(null);
+    try {
+      const response = await fetch('/api/ai/compliance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: script.map(line => ({ characterId: line.characterId, text: line.text })),
+          countries: complianceCountries,
+          apiKey: apiKeys.gemini || undefined
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Falha na varredura jurídica');
+      setComplianceReport(data);
+      setMitigationReport(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Falha na varredura de compliance');
+    } finally {
+      setIsScanningCompliance(false);
+    }
+  };
+
+  const runRiskMitigation = async () => {
+    if (!complianceReport) return;
+    setIsMitigatingRisk(true);
+    setMitigationReport(null);
+    try {
+      const response = await fetch('/api/ai/mitigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: script.map(line => ({ 
+            id: line.id,
+            characterId: line.characterId, 
+            text: line.text,
+            shotType: line.shotType,
+            action: line.action,
+            durationEst: line.durationEst,
+            emotion: line.emotion
+          })),
+          complianceReport,
+          apiKey: apiKeys.gemini || undefined
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Falha na mitigação de risco');
+      setMitigationReport(data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Falha ao rodar agente de risco');
+    } finally {
+      setIsMitigatingRisk(false);
+    }
+  };
+
+  const applyMitigatedScript = () => {
+    if (!mitigationReport || !mitigationReport.modifiedScript) return;
+    const updatedScript = script.map(originalLine => {
+      const matchedLine = mitigationReport.modifiedScript.find(ml => ml.id === originalLine.id);
+      return {
+        ...originalLine,
+        text: matchedLine ? matchedLine.text : originalLine.text
+      };
+    });
+    setScript(updatedScript);
+    alert("Roteiro mitigado e atualizado na linha do tempo!");
+    setActiveFooterModal(null);
+  };
+
   const renderProject = async () => {
     console.log("RENDER_PROJECT_TRIGGERED");
     setIsRenderingProject(true);
     setRenderProgress(0);
-    setRenderLogs(["🚀 INITIALIZING_PRODUCTION_PIPELINE v2.6...", "CONNECTING_TO_REPLICATE_CORE...", "VALIDATING_NEUROMARKETIC_PAYLOAD..."]);
-
-    // Add Balance Diagnostic to logs
-    if (balanceData) {
-      if (balanceData.elevenlabs?.status === 'AUTHENTICATED') {
-        setRenderLogs(prev => [`SYSTEM_FUEL_STATUS: ${balanceData.elevenlabs?.balance}`, ...prev]);
-      }
-      if (balanceData.replicate?.status === 'AUTHENTICATED') {
-        setRenderLogs(prev => [`REPLICATE_SIGNAL: ${balanceData.replicate?.balance}`, ...prev]);
-      }
-    }
+    setAssembledVideoUrl(null);
+    setRenderLogs([
+      "🚀 INITIALIZING_PRODUCTION_PIPELINE...",
+      renderEngine === 'higgsfield' ? "CONNECTING_TO_HIGGSFIELD_CORE..." : "CONNECTING_TO_REPLICATE_CORE...",
+      "VALIDATING_NEUROMARKETIC_PAYLOAD..."
+    ]);
 
     // Prepare Data for API
     const productionData = {
       script: script.map(line => {
-        // Intelligent Shot Mapping: Select the best anchor based on shot type
         let selectedReference = charReferences[line.characterId]?.main || '';
-
         const charRef = charReferences[line.characterId];
         if (charRef) {
           if (line.shotType === 'WIDE' && charRef.wide) selectedReference = charRef.wide;
@@ -790,244 +880,87 @@ export default function Home() {
           else if (line.shotType.includes('OTS') || line.shotType.includes('LOW')) selectedReference = charRef.side || charRef.main;
           else if (line.shotType.includes('PROFILE') && charRef.profile) selectedReference = charRef.profile;
           else if (line.shotType.includes('DETAIL') && charRef.detail) selectedReference = charRef.detail;
-          // Fallback to main if specific shot type reference is not available
           else selectedReference = charRef.main;
         }
 
         return {
-          ...line,
-          technicalPrompt: getDetailedPrompt(line, directorIdea, directorSnippet),
+          id: line.id,
+          characterId: line.characterId,
+          text: line.text,
+          shotType: line.shotType,
+          action: line.action,
+          emotion: line.emotion,
+          durationEst: line.durationEst,
           characterReference: selectedReference,
           studioReference: studioReference
         };
       }),
-      studioDNA: STUDIO_SETTING
+      directorIdea,
+      directorSnippet,
+      engine: renderEngine
     };
 
     try {
-      // Step 1: Simulated Preparation Logs
       setRenderLogs(prev => ["ENCRYPTING_NEUROMORPHIC_PAYLOAD...", ...prev]);
-      setRenderProgress(15);
+      setRenderProgress(10);
       await new Promise(r => setTimeout(r, 800));
 
-      // Step 2: Real API Handshake
-      console.log("FETCHING_API_RENDER...");
-      const response = await fetch('/api/render', {
+      console.log("TRIGGERING_PIPELINE_RUN...");
+      const runRes = await fetch('/api/pipeline/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productionData)
       });
 
-      const data = await response.json() as {
-        mode: 'REAL' | 'SANDBOX',
-        results?: { sceneId: string, predictionId?: string, status?: string }[],
-        error?: string,
-        suggestion?: string
-      };
-      console.log("RENDER_API_RESPONSE:", data);
-      setRenderMode(data.mode);
+      const runData = await runRes.json();
 
-      if (!response.ok) {
-        setRenderLogs(prev => [`ERROR: ${data.error || 'PIPELINE_CRASH'}`, data.suggestion || "Check terminal for crash data.", ...prev]);
-        setRenderProgress(0);
-        setTimeout(() => setIsRenderingProject(false), 4000);
-        return;
+      if (!runRes.ok) {
+        throw new Error(runData.error || "Failed to start background orchestrator.");
       }
 
-      if (data.mode === 'SANDBOX') {
-        setRenderLogs(prev => [
-          "⚠️ WARNING: NO_API_KEY_DETECTED. RUNNING_IN_SANDBOX_MODE.",
-          "SIMULATING_NEUROMORPHIC_ENCODING...",
-          ...prev
-        ]);
-      } else {
-        setRenderLogs(prev => ["HANDSHAKE_SUCCESSFUL. PIPELINE: REAL_TIME_KLING_V2.6", ...prev]);
-      }
+      const jobId = runData.jobId;
+      setRenderLogs(prev => [`HANDSHAKE_SUCCESSFUL. JOB_ID: ${jobId}`, ...prev]);
 
-      setRenderLogs(prev => ["QUEUING_SCENES_FOR_SYNTHESIS...", ...prev]);
-
-      // Step 3: Progressive Scene Updates & Real-Time Polling
-      const sceneResults = data.results || [];
-
-      // Link backend prediction IDs to frontend script lines
-      setScript(prev => prev.map(line => {
-        const result = sceneResults.find((r: { sceneId: string; predictionId?: string; status?: string }) => r.sceneId === line.id);
-        return {
-          ...line,
-          status: result?.status === 'FAILED' ? 'FAILED' : 'QUEUED',
-          predictionId: result?.predictionId
-        };
-      }));
-
-      // SONIC_SYNTHESIS: Generate Voices in parallel
-      sceneResults.forEach(async (res: { sceneId: string }) => {
-        const line = script.find(l => l.id === res.sceneId);
-        if (line) {
-          try {
-            setRenderLogs(prev => [`SYNTHESIZING_VOICE: ${line.characterId.toUpperCase()}...`, ...prev]);
-            const voiceRes = await fetch('/api/ai/voice', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: line.text,
-                characterId: line.characterId,
-                apiKey: apiKeys.elevenlabs
-              })
-            });
-            if (voiceRes.ok) {
-              const audioBlob = await voiceRes.blob();
-              const audioUrl = URL.createObjectURL(audioBlob);
-
-              // Frontend storage of audio for the preview button
-              // We also need the base64 for the Replicate LipSync input
-              const reader = new FileReader();
-              reader.readAsDataURL(audioBlob);
-              reader.onloadend = () => {
-                const audioDataUri = reader.result as string;
-                setScript(prev => {
-                  const updated = prev.map(l => l.id === res.sceneId ? { ...l, audioUrl, audioDataUri } : l);
-                  const line = updated.find(l => l.id === res.sceneId);
-                  // If video finished polling already, trigger sync now
-                  if (line?.videoUrl && line?.audioDataUri && line.status === 'COMPLETED' && (!line.syncStatus || line.syncStatus === 'IDLE')) {
-                    triggerLipsync(line.id, line.videoUrl, line.audioDataUri);
-                  }
-                  return updated;
-                });
-              };
-            }
-          } catch (e) {
-            console.error("SONIC_FAIL", e);
-          }
-        }
-      });
-
-      // Internal LipSync Orchestrator
-      const triggerLipsync = async (sceneId: string, videoUrl: string, audioDataUri: string) => {
+      // Polling loop
+      const pollInterval = setInterval(async () => {
         try {
-          setRenderLogs(prev => [`NEURAL_LIPSYNC_INITIATED: SCENE_${sceneId}`, ...prev]);
-          const res = await fetch('/api/ai/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sceneId, videoUrl, audioUrl: audioDataUri })
-          });
-          const data = await res.json();
-
-          if (data.mode === 'REAL') {
-            setScript(prev => prev.map(l => l.id === sceneId ? { ...l, syncPredictionId: data.predictionId, syncStatus: 'QUEUED' } : l));
-
-            const pollSync = setInterval(async () => {
-              const pollRes = await fetch(`/api/render/status?id=${data.predictionId}`);
-              const pollData = await pollRes.json();
-              if (pollData.status === 'succeeded' || pollData.status === 'failed') {
-                clearInterval(pollSync);
-                setScript(prev => prev.map(l => l.id === sceneId ? {
-                  ...l,
-                  syncStatus: (pollData.status === 'succeeded' ? 'COMPLETED' : 'FAILED') as 'COMPLETED' | 'FAILED',
-                  videoUrl: pollData.status === 'succeeded' ? (Array.isArray(pollData.output) ? pollData.output[0] : pollData.output) : l.videoUrl
-                } : l));
-                if (pollData.status === 'succeeded') setRenderLogs(prev => [`SYNCHRONIZATION_COMPLETE: SCENE_${sceneId}`, ...prev]);
-              } else if (pollData.status === 'processing') {
-                setScript(prev => prev.map(l => l.id === sceneId ? { ...l, syncStatus: 'PROCESSING' } : l));
-              }
-            }, 4000);
+          const pollRes = await fetch(`/api/pipeline/run?id=${jobId}`);
+          if (!pollRes.ok) {
+            console.error("Polling check failed status:", pollRes.status);
+            return;
           }
-        } catch (e) {
-          console.error("SYNC_FAIL", e);
-        }
-      };
-
-      // Start individual polling for real results
-      const realScenes = sceneResults.filter((res: { predictionId?: string }) => res.predictionId && !res.predictionId.startsWith('rep_'));
-
-      realScenes.filter((res: { sceneId: string, predictionId?: string }): res is { sceneId: string, predictionId: string } => !!res.predictionId).forEach((res) => {
-        const poll = setInterval(async () => {
-          try {
-            const pollRes = await fetch(`/api/render/status?id=${res.predictionId}`);
-            const pollData = await pollRes.json();
-
-            if (pollData.status === 'succeeded' || pollData.status === 'failed') {
-              clearInterval(poll);
-              const finalRawVideoUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
-
-              setScript(prev => {
-                const updated = prev.map(l => l.id === res.sceneId ? {
-                  ...l,
-                  status: (pollData.status === 'succeeded' ? 'COMPLETED' : 'FAILED') as 'COMPLETED' | 'FAILED',
-                  videoUrl: finalRawVideoUrl
-                } : l);
-
-                // AUTOMATIC_TRIGGER: If video and audio are both ready, fire the Neural Lipsync
-                const line = updated.find(l => l.id === res.sceneId);
-                if (line?.videoUrl && line?.audioDataUri && pollData.status === 'succeeded') {
-                  triggerLipsync(line.id, line.videoUrl, line.audioDataUri);
-                }
-
-                return updated;
-              });
-            } else if (pollData.status === 'processing') {
-              setScript(prev => prev.map(l => l.id === res.sceneId ? { ...l, status: 'PROCESSING' as const } : l));
-            }
-          } catch (_e) {
-            clearInterval(poll);
+          const jobState = await pollRes.json();
+          
+          // Update logs and progress
+          if (jobState.logs && jobState.logs.length) {
+            setRenderLogs([...jobState.logs].reverse());
           }
-        }, 4000);
-      });
+          setRenderProgress(jobState.progress || 0);
 
-      // Visual Terminal Progress (Aesthetic & Sandbox Logic)
-      let currentProgress = 20;
-      const interval = setInterval(() => {
-        if (data.mode === 'SANDBOX') {
-          currentProgress += Math.random() * 8;
-          if (currentProgress >= 100) {
-            currentProgress = 100;
-            clearInterval(interval);
-            setRenderLogs(prev => ["SUCCESS: PRODUCTION_READY. PIPELINE_IDLE.", ...prev]);
+          if (jobState.status === 'COMPLETED') {
+            clearInterval(pollInterval);
+            setAssembledVideoUrl(jobState.finalVideoUrl);
+            setRenderProgress(100);
+            setRenderLogs(prev => ["🎉 SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prev]);
             setTimeout(() => {
               setIsRenderingProject(false);
-              setRenderMode(null);
-            }, 2500);
+            }, 3000);
+          } else if (jobState.status === 'FAILED') {
+            clearInterval(pollInterval);
+            setRenderProgress(0);
+            setRenderLogs(prev => ["🔴 CRITICAL_PIPELINE_FAILURE.", ...prev]);
+            setTimeout(() => {
+              setIsRenderingProject(false);
+            }, 4000);
           }
-          setRenderProgress(currentProgress);
-
-          setScript(prev => prev.map((line, idx) => {
-            const threshold = (idx / prev.length) * 100;
-            if (currentProgress > threshold && line.status === 'QUEUED') {
-              return {
-                ...line,
-                status: 'COMPLETED',
-                videoUrl: "https://replicate.delivery/pbxt/example/video.mp4"
-              };
-            }
-            return line;
-          }));
-        } else {
-          // REAL MODE PROGRESS: Sync with actual polling statuses
-          setScript(prev => {
-            const total = prev.length;
-            const finalized = prev.filter(l => l.status === 'COMPLETED' || l.status === 'FAILED').length;
-            const syncFinalized = prev.filter(l => l.syncStatus === 'COMPLETED' || l.syncStatus === 'FAILED' || !l.audioDataUri).length;
-
-            // Progress is a mix of video gen and lipsync
-            const progressVal = 20 + ((finalized + syncFinalized) / (total * 2)) * 80;
-            setRenderProgress(Math.min(99, progressVal));
-
-            if (finalized === total && syncFinalized === total) {
-              clearInterval(interval);
-              setRenderProgress(100);
-              setRenderLogs(prevLogs => ["SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prevLogs]);
-              setTimeout(() => {
-                setIsRenderingProject(false);
-                setRenderMode(null);
-              }, 3000);
-            }
-            return prev;
-          });
+        } catch (pollErr: any) {
+          console.error("Error in status polling:", pollErr);
         }
-      }, 1500);
+      }, 4000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("RENDER_PROJECT_ERROR:", error);
-      setRenderLogs(prev => ["CRITICAL_PIPELINE_FAILURE.", "Check network conditions.", ...prev]);
+      setRenderLogs(prev => [`CRITICAL_PIPELINE_FAILURE: ${error.message || 'Unknown Error'}`, ...prev]);
       setRenderProgress(0);
       setTimeout(() => setIsRenderingProject(false), 3000);
     }
@@ -1036,8 +969,8 @@ export default function Home() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#050505] overflow-hidden">
-      <main className="flex-1 flex bg-[#050505] text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden min-h-0">
+    <div className="flex flex-col h-screen bg-[#050505] overflow-hidden tech-grid">
+      <main className="flex-1 flex bg-transparent text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden min-h-0">
         {/* SIDEBAR NAVIGATION */}
         <aside className="w-24 border-r border-white/5 flex flex-col items-center py-10 justify-between bg-[#050505] z-50">
           <div className="flex flex-col gap-12">
@@ -1082,6 +1015,18 @@ export default function Home() {
                 </div>
                 <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Engine_DNA</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab('labs')}
+                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
+                  activeTab === 'labs' ? "text-[#FF5F1F]" : "text-white/20")}
+                style={{ animationDelay: '300ms' }}
+              >
+                <div className={cn("cine-icon mx-auto", activeTab === 'labs' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
+                  <FlaskConical size={20} />
+                </div>
+                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Studio_Labs</span>
+              </button>
             </div>
           </div>
 
@@ -1115,26 +1060,52 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex gap-1 bg-[#111111] p-1 border border-white/5">
+            <div className="flex gap-1 bg-[#111111]/80 backdrop-blur-md p-1 border border-white/5 shadow-inner">
               {[
                 { id: 'director', label: 'DIRECTOR', icon: Wand2 },
                 { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
-                { id: 'dna', label: 'ENGINE DNA', icon: History }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'dna')}
-                  aria-label={`Switch to ${tab.label}`}
-                  aria-pressed={activeTab === tab.id}
-                  className={cn("px-6 py-2 text-[11px] font-black tracking-widest transition-all",
-                    activeTab === tab.id ? "bg-white text-black" : "text-white/30 hover:text-white")}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'dna', label: 'ENGINE DNA', icon: History },
+                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical }
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'dna' | 'labs')}
+                    aria-label={`Switch to ${tab.label}`}
+                    aria-pressed={isActive}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-2 text-[10px] font-black tracking-widest transition-all duration-300 relative overflow-hidden",
+                      isActive 
+                        ? "bg-[#FF5F1F] text-white shadow-[0_0_15px_rgba(255,95,31,0.3)] border-l-2 border-white/40" 
+                        : "text-white/40 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <Icon size={12} className={cn("transition-colors", isActive ? "text-white" : "text-white/30")} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-8">
+              {/* SYSTEM TELEMETRY */}
+              <div className="hidden xl:flex items-center gap-6 border-r border-white/10 pr-8 text-right font-mono text-[9px] text-white/30">
+                <div>
+                  <span className="block text-white/50 font-bold">GPU_PIPELINE</span>
+                  <span className="text-[#FF5F1F] font-black">RTX-4090 // ACTIVE</span>
+                </div>
+                <div>
+                  <span className="block text-white/50 font-bold">VRAM_LOAD</span>
+                  <span className="text-blue-400 font-black">14.8GB / 24GB</span>
+                </div>
+                <div>
+                  <span className="block text-white/50 font-bold">LATENCY</span>
+                  <span className="text-green-400 font-black">18ms // OPTIMAL</span>
+                </div>
+              </div>
+
               <div className="flex items-center gap-10">
                 <div className="hidden lg:flex flex-col items-end border-r border-white/10 pr-8">
                   <span className="text-[10px] text-white/30 tracking-widest uppercase mb-1">Total Duration</span>
@@ -1160,11 +1131,20 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              <select
+                value={renderEngine}
+                onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
+                disabled={isRenderingProject}
+                className="bg-black/80 border-2 border-white/20 text-[10px] font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
+              >
+                <option value="kling">Kling (Replicate)</option>
+                <option value="higgsfield">Higgsfield.ai</option>
+              </select>
               <button
                 onClick={renderProject}
                 disabled={isRenderingProject || script.length === 0}
                 aria-label="Initiate Render Cycle"
-                className="btn-signal flex items-center gap-2 group relative overflow-hidden"
+                className="btn-signal bg-[#FF5F1F] text-black px-6 py-3 text-xs font-black uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center gap-2 group relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
                 <MonitorPlay size={16} fill="currentColor" className="relative z-10" />
@@ -1200,32 +1180,65 @@ export default function Home() {
                 <div className="flex items-baseline justify-between mb-16 px-2">
                   <div className="flex items-center gap-4">
                     <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/20">TIMELINE</span></h2>
+                    
+                    {/* Storyboard View Toggle */}
+                    <div className="flex border-2 border-white/20 rounded-none overflow-hidden ml-4">
+                      <button
+                        onClick={() => setStoryboardMode('classic')}
+                        className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
+                          storyboardMode === 'classic' ? "bg-[#FF5F1F] text-black" : "bg-black text-white/50 hover:text-white")}
+                      >
+                        Estúdio Moderno
+                      </button>
+                      <button
+                        onClick={() => setStoryboardMode('ekonte')}
+                        className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
+                          storyboardMode === 'ekonte' ? "bg-[#FF5F1F] text-black" : "bg-black text-white/50 hover:text-white")}
+                      >
+                        絵コンテ (E-KONTE)
+                      </button>
+                    </div>
+
                     <button
                       onClick={exportToPDF}
-                      className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)]"
+                      className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] ml-4"
                     >
                       <Download size={14} /> DOWNLOAD FULL SCRIPT (PDF)
                     </button>
+
+                    {assembledVideoUrl && (
+                      <a
+                        href={assembledVideoUrl}
+                        download
+                        className="flex items-center gap-2 px-6 py-2 border border-green-500/30 bg-green-500/5 text-green-500 text-[10px] font-black tracking-widest hover:bg-green-500 hover:text-black transition-all shadow-[4px_4px_0_rgba(34,197,94,0.2)] ml-4 animate-bounce"
+                      >
+                        <MonitorPlay size={14} /> DOWNLOAD COMPLETED EPISODE (MP4)
+                      </a>
+                    )}
                   </div>
                   <button onClick={addLine} className="p-4 border border-white/10 hover:bg-white hover:text-black transition-all">
                     <Plus size={24} />
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-[2px] bg-white/5">
+                {storyboardMode === 'classic' ? (
+                  <div className="flex flex-col gap-[2px] bg-white/5">
                   {script.map((line, index) => (
                     <div
                       key={line.id}
                       style={{ animationDelay: `${index * 100}ms` }}
-                      className={cn("bg-[#080808] flex min-h-[300px] border-l-4 transition-all duration-500 hover:z-10 group stagger-item",
-                        line.characterId === 'boomer' ? "border-[#FF5F1F]" : "border-white/20")}
+                      className={cn("bg-[#080808]/95 backdrop-blur-md flex min-h-[300px] border-l-4 transition-all duration-500 hover:z-10 group stagger-item",
+                        line.characterId === 'boomer' 
+                          ? "border-[#FF5F1F] hover:border-l-[6px] hover:shadow-[0_0_30px_rgba(255,95,31,0.1)]" 
+                          : "border-white/20 hover:border-l-[6px] hover:border-white hover:shadow-[0_0_30px_rgba(255,255,255,0.03)]"
+                      )}
                       onMouseEnter={() => setPreviewLineId(line.id)}
                       onMouseLeave={() => setPreviewLineId(null)}
                     >
                       <div className="w-64 p-8 border-r border-white/5 flex flex-col justify-between">
                         <div className="space-y-6">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Shot {index + 1}</span>
+                            <span className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Cena {index + 1}</span>
                             <div className={cn("w-1.5 h-1.5 rounded-full transition-all duration-500",
                               line.status === 'COMPLETED' ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" :
                                 line.status === 'PROCESSING' ? "bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.8)]" :
@@ -1239,11 +1252,11 @@ export default function Home() {
 
                           <div className="space-y-4">
                             <div className="space-y-1">
-                              <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">LENS OPTIC</label>
+                              <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Enquadramento / Lente</label>
                               <select
                                 value={line.shotType}
                                 onChange={(e) => updateLine(line.id, 'shotType', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[10px] font-black outline-none cursor-pointer"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-[10px] font-black outline-none cursor-pointer text-white/90"
                               >
                                 {SHOT_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                               </select>
@@ -1260,14 +1273,14 @@ export default function Home() {
                             <button
                               onClick={() => downloadScenePromptPDF(line, index)}
                               className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
-                              title="DOWNLOAD INDIVIDUAL PROMPT CARD"
+                              title="BAIXAR PROMPT DA CENA (PDF)"
                             >
                               <FileText size={18} />
                             </button>
                             <button
                               onClick={() => setSharingLineId(line.id)}
                               className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
-                              title="SHARE SCENE"
+                              title="COMPARTILHAR CENA"
                             >
                               <Share2 size={18} />
                             </button>
@@ -1304,7 +1317,7 @@ export default function Home() {
                               {line.status}
                             </div>
                             <div className="text-[10px] font-black text-white/20 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
-                              {line.emotion || 'Neutral'}
+                              {line.emotion || 'Neutro'}
                             </div>
                             {line.audioUrl && (
                               <button
@@ -1315,7 +1328,7 @@ export default function Home() {
                                 className="flex items-center gap-2 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-3 py-1 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all group/audio ml-2"
                               >
                                 <Volume2 size={12} className="group-hover/audio:animate-pulse" />
-                                <span className="text-[8px] font-black tracking-widest uppercase">Sonic_Preview</span>
+                                <span className="text-[8px] font-black tracking-widest uppercase">Ouvir Voz</span>
                               </button>
                             )}
                           </div>
@@ -1326,13 +1339,14 @@ export default function Home() {
                           onChange={(e) => updateLine(line.id, 'text', e.target.value)}
                           className="w-full bg-transparent border-none text-4xl p-0 font-black italic tracking-tighter leading-[0.9] uppercase focus:ring-0 outline-none resize-none mb-10 text-white/90"
                           rows={2}
+                          placeholder="DIGITE O DIÁLOGO DO PERSONAGEM AQUI..."
                         />
 
                         <div className="grid grid-cols-2 gap-10 opacity-40 group-hover:opacity-100 transition-opacity">
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Physical Motion</span>
-                              <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">DNA_SOURCE_ACTIVE</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Ação do Personagem</span>
+                              <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">DNA_ATIVO</span>
                             </div>
                             <select
                               value={line.action}
@@ -1344,7 +1358,7 @@ export default function Home() {
                               }}
                               className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
                             >
-                              <option value={line.action} className="bg-[#0d0d0d]">{line.action || "-- SELECT MOTION --"}</option>
+                              <option value={line.action} className="bg-[#0d0d0d]">{line.action || "-- SELECIONE UMA AÇÃO --"}</option>
                               {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
                                 <option key={i} value={mb.action} className="bg-[#0d0d0d] text-white">
                                   {mb.emotion.toUpperCase()}: {mb.action}
@@ -1353,10 +1367,111 @@ export default function Home() {
                             </select>
                           </div>
                           <div className="space-y-2">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Lighting Logic</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Lógica de Iluminação</span>
                             <p className="text-[10px] font-bold text-white/30 italic">
                               {CHARACTERS.find(c => c.id === line.characterId)?.lightingKey}
                             </p>
+                          </div>
+                        </div>
+
+                        {/* HIGGSFIELD CINEMATIC DIRECTORY */}
+                        <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Movimento de Câmera (Preset)</span>
+                              <select
+                                value={line.cameraPreset || ''}
+                                onChange={(e) => updateLine(line.id, 'cameraPreset', e.target.value)}
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                              >
+                                <option value="" className="bg-[#0d0d0d]">-- CÂMERA FIXA --</option>
+                                <option value="pan_left" className="bg-[#0d0d0d]">Pan Esquerda</option>
+                                <option value="pan_right" className="bg-[#0d0d0d]">Pan Direita</option>
+                                <option value="tilt_up" className="bg-[#0d0d0d]">Tilt Cima</option>
+                                <option value="tilt_down" className="bg-[#0d0d0d]">Tilt Baixo</option>
+                                <option value="zoom_in" className="bg-[#0d0d0d]">Zoom Aproximar</option>
+                                <option value="zoom_out" className="bg-[#0d0d0d]">Zoom Afastar</option>
+                                <option value="dolly_in" className="bg-[#0d0d0d]">Dolly Zoom (Entrar)</option>
+                                <option value="dolly_out" className="bg-[#0d0d0d]">Dolly Zoom (Sair)</option>
+                                <option value="handheld" className="bg-[#0d0d0d]">Câmera na Mão (Tremor)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Força da Ação (IA)</span>
+                                <span className="text-[10px] font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0.1"
+                                max="1.0"
+                                step="0.05"
+                                value={line.motionWeight ?? 0.5}
+                                onChange={(e) => updateLine(line.id, 'motionWeight', parseFloat(e.target.value))}
+                                className="w-full accent-[#FF5F1F] cursor-pointer bg-white/10"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">ID do Avatar (Soul ID)</span>
+                              <input
+                                type="text"
+                                placeholder="ex: boomer_master_v3"
+                                value={line.soulId || ''}
+                                onChange={(e) => updateLine(line.id, 'soulId', e.target.value)}
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Vídeo de Referência (URL)</span>
+                              <input
+                                type="text"
+                                placeholder="Coloque o link do MP4 de referência..."
+                                value={line.motionRefUrl || ''}
+                                onChange={(e) => updateLine(line.id, 'motionRefUrl', e.target.value)}
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* STORYBOARD PRE-VIS BLOCK */}
+                        <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <div className="space-y-2">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Como a Cena Deve Parecer (Prompt)</span>
+                            <textarea
+                              value={line.visualPrompt || ''}
+                              onChange={(e) => updateLine(line.id, 'visualPrompt', e.target.value)}
+                              placeholder="Descreva o visual, as roupas, a iluminação e o cenário..."
+                              className="w-full bg-[#111111] border border-white/10 p-2.5 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20 h-20 resize-none font-sans"
+                            />
+                          </div>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Dinâmica de Câmera (Storyboard)</span>
+                              <select
+                                value={line.cameraMovement || 'STATIC'}
+                                onChange={(e) => updateLine(line.id, 'cameraMovement', e.target.value)}
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                              >
+                                <option value="STATIC">CÂMERA ESTÁTICA</option>
+                                <option value="PAN_LEFT">PAN PARA ESQUERDA</option>
+                                <option value="PAN_RIGHT">PAN PARA DIREITA</option>
+                                <option value="TILT_UP">TILT PARA CIMA</option>
+                                <option value="TILT_DOWN">TILT PARA BAIXO</option>
+                                <option value="DOLLY_IN">DOLLY ZOOM (APROXIMAR)</option>
+                                <option value="DOLLY_OUT">DOLLY ZOOM (AFASTAR)</option>
+                                <option value="ZOOM_IN">ZOOM IN</option>
+                                <option value="ZOOM_OUT">ZOOM OUT</option>
+                                <option value="CRANE_UP">CRANE (SUBIR CÂMERA)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block">Alinhamento de Enquadramento</span>
+                              <span className="text-[9px] font-bold text-white/30 uppercase block">Regra dos Terços Ativa (Margem 9:16)</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1368,7 +1483,7 @@ export default function Home() {
                               line.status === 'PROCESSING' && "animate-pulse"
                             )}
                           >
-                            {line.videoUrl && (
+                            {line.videoUrl ? (
                               <video
                                 src={line.videoUrl}
                                 className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale hover:grayscale-0 transition-all duration-700"
@@ -1377,7 +1492,13 @@ export default function Home() {
                                 onMouseEnter={(e) => e.currentTarget.play()}
                                 onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
                               />
-                            )}
+                            ) : GUIDE_IMAGES[line.shotType] ? (
+                              <img
+                                src={GUIDE_IMAGES[line.shotType]}
+                                alt="Storyboard concept sketch"
+                                className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale group-hover/thumb:grayscale-0 group-hover/thumb:scale-105 transition-all duration-700"
+                              />
+                            ) : null}
                             <div className="absolute inset-0 bg-gradient-to-br from-[#FF5F1F]/20 to-transparent opacity-50 pointer-events-none" />
                             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2">
                               {line.status === 'COMPLETED' ? (
@@ -1398,10 +1519,16 @@ export default function Home() {
                                     </a>
                                   )}
                                 </>
-                              ) : (
+                              ) : line.status === 'PROCESSING' ? (
                                 <>
                                   <Zap size={20} className="text-[#FF5F1F] animate-bounce" />
                                   <span className="text-[7px] font-black text-[#FF5F1F] tracking-[0.2em] uppercase">SYNTHESIZING...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={20} className="text-yellow-400 group-hover/thumb:rotate-12 transition-transform" />
+                                  <span className="text-[7px] font-black text-yellow-400 tracking-[0.2em] uppercase">STORYBOARD_STILL</span>
+                                  <span className="text-[5px] font-black text-white/40 uppercase">Pre-vis Concept Still</span>
                                 </>
                               )}
                             </div>
@@ -1420,6 +1547,187 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                ) : (
+                  /* E-KONTE STORYBOARD SHEET */
+                  <div className="border-2 border-white/20 bg-black/60 backdrop-blur-3xl overflow-hidden rounded-none p-6 shadow-[12px_12px_0_rgba(255,95,31,0.1)]">
+                    <div className="grid grid-cols-12 border-b-2 border-white/20 pb-4 text-[10px] font-black text-[#FF5F1F] uppercase tracking-[0.2em] italic">
+                      <div className="col-span-1 text-center">カット (CUT)</div>
+                      <div className="col-span-3">画面 (PICTURE)</div>
+                      <div className="col-span-4">内容 (ACTION / CAM)</div>
+                      <div className="col-span-3">台詞 (AUDIO)</div>
+                      <div className="col-span-1 text-center">時間 (TIME)</div>
+                    </div>
+
+                    <div className="divide-y divide-white/10">
+                      {script.map((line, index) => {
+                        const seconds = line.durationEst;
+                        const frames = seconds * 24; // 24fps standard anime timing
+                        return (
+                          <div key={line.id} className="grid grid-cols-12 gap-4 py-6 items-start relative hover:bg-white/[0.02] transition-all">
+                            
+                            {/* CUT COLUMN */}
+                            <div className="col-span-1 flex flex-col items-center justify-center pt-2">
+                              <span className="text-3xl font-black italic tracking-tighter text-[#FF5F1F]">
+                                #{String(index + 1).padStart(2, '0')}
+                              </span>
+                              <span className="text-[7px] text-white/30 uppercase mt-1 tracking-widest font-mono">SC_{line.shotType}</span>
+                              {script.length > 1 && (
+                                <button
+                                  onClick={() => removeLine(line.id)}
+                                  className="mt-6 text-red-500/40 hover:text-red-500 transition-all p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                                  title="DELETAR CENA"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* PICTURE COLUMN */}
+                            <div className="col-span-3 pr-4 relative">
+                              <div className="aspect-video bg-black border border-white/10 overflow-hidden relative group/ek">
+                                {line.videoUrl ? (
+                                  <video
+                                    src={line.videoUrl}
+                                    className="w-full h-full object-cover"
+                                    muted
+                                    loop
+                                    onMouseEnter={(e) => e.currentTarget.play()}
+                                    onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full relative">
+                                    <img
+                                      src={GUIDE_IMAGES[line.shotType] || DEFAULT_STUDIO_REFERENCE}
+                                      alt="E-konte sketch"
+                                      className="w-full h-full object-cover opacity-45 grayscale"
+                                    />
+                                    {/* Traditional Japanese grid overlay mapping */}
+                                    <div className="absolute inset-0 border border-dashed border-[#FF5F1F]/20 pointer-events-none" />
+                                    <div className="absolute top-1/2 left-0 right-0 h-px border-t border-dashed border-[#FF5F1F]/30 pointer-events-none" />
+                                    <div className="absolute left-1/2 top-0 bottom-0 w-px border-l border-dashed border-[#FF5F1F]/30 pointer-events-none" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-dashed border-[#FF5F1F]/30 pointer-events-none" />
+                                  </div>
+                                )}
+                                <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 border border-white/10 text-[6px] font-black text-white/50 uppercase tracking-widest">
+                                  {line.status}
+                                </div>
+                              </div>
+                              <select
+                                value={line.shotType}
+                                onChange={(e) => updateLine(line.id, 'shotType', e.target.value)}
+                                className="w-full bg-[#111111] border border-white/10 mt-2 p-1.5 text-[8px] font-black uppercase outline-none cursor-pointer text-white/60 text-center"
+                              >
+                                {SHOT_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                              </select>
+                            </div>
+
+                            {/* ACTION & CAM COLUMN */}
+                            <div className="col-span-4 space-y-4 pr-2">
+                              <div>
+                                <span className="text-[7px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">Como a Cena Deve Parecer (Prompt)</span>
+                                <textarea
+                                  value={line.visualPrompt || ''}
+                                  onChange={(e) => updateLine(line.id, 'visualPrompt', e.target.value)}
+                                  className="w-full bg-[#111111]/80 border border-white/10 p-2 text-[9px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 h-16 resize-none font-sans"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block mb-1">Dinâmica de Câmera</span>
+                                  <select
+                                    value={line.cameraMovement || 'STATIC'}
+                                    onChange={(e) => updateLine(line.id, 'cameraMovement', e.target.value)}
+                                    className="w-full bg-[#111111] border border-white/10 p-1 text-[8px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
+                                  >
+                                    <option value="STATIC">CÂMERA ESTÁTICA</option>
+                                    <option value="PAN_LEFT">PAN ESQUERDA</option>
+                                    <option value="PAN_RIGHT">PAN DIREITA</option>
+                                    <option value="TILT_UP">TILT CIMA</option>
+                                    <option value="TILT_DOWN">TILT BAIXO</option>
+                                    <option value="DOLLY_IN">DOLLY ZOOM (IN)</option>
+                                    <option value="DOLLY_OUT">DOLLY ZOOM (OUT)</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block mb-1">Ação do Personagem</span>
+                                  <select
+                                    value={line.action}
+                                    onChange={(e) => {
+                                      const selectedChar = CHARACTERS.find(c => c.id === line.characterId);
+                                      const behavior = selectedChar?.motionBehaviors.find(b => b.action === e.target.value);
+                                      updateLine(line.id, 'action', e.target.value);
+                                      if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
+                                    }}
+                                    className="w-full bg-[#111111] border border-white/10 p-1 text-[8px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
+                                  >
+                                    <option value={line.action}>{line.action || "-- SELECIONE --"}</option>
+                                    {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
+                                      <option key={i} value={mb.action}>{mb.emotion.toUpperCase()}: {mb.action}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* DIALOGUE/AUDIO COLUMN */}
+                            <div className="col-span-3 space-y-4">
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={line.characterId}
+                                  onChange={(e) => updateLine(line.id, 'characterId', e.target.value)}
+                                  className={cn("px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border-none outline-none cursor-pointer",
+                                    line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white" : "bg-white text-black")}
+                                >
+                                  {CHARACTERS.map(c => (
+                                    <option key={c.id} value={c.id} className="bg-[#0d0d0d] text-white">{c.name.toUpperCase()}</option>
+                                  ))}
+                                </select>
+                                {line.audioUrl && (
+                                  <button
+                                    onClick={() => {
+                                      const audio = new Audio(line.audioUrl);
+                                      audio.play();
+                                    }}
+                                    className="flex items-center gap-1 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-2 py-0.5 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all min-h-[30px] cursor-pointer"
+                                  >
+                                    <Volume2 size={10} />
+                                    <span className="text-[6px] font-black tracking-widest uppercase">VOZ</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              <textarea
+                                value={line.text}
+                                onChange={(e) => updateLine(line.id, 'text', e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 p-0 text-xs font-bold uppercase focus:ring-0 outline-none resize-none text-white/80 h-16 leading-relaxed font-mono"
+                                placeholder="DIGITE O DIÁLOGO DO ANIME..."
+                              />
+                            </div>
+
+                            {/* TIME COLUMN */}
+                            <div className="col-span-1 flex flex-col items-center justify-center pt-2 font-mono">
+                              <div className="text-xl font-black text-white/90">{seconds}s</div>
+                              <div className="text-[7px] text-white/40 uppercase tracking-widest mt-1">({frames}f)</div>
+                              <div className="mt-4 w-full flex items-center justify-center">
+                                <input
+                                  type="range"
+                                  min="2"
+                                  max="12"
+                                  step="1"
+                                  value={seconds}
+                                  onChange={(e) => updateLine(line.id, 'durationEst', parseInt(e.target.value))}
+                                  className="w-12 h-1 accent-[#FF5F1F] cursor-pointer bg-white/10 rotate-90 mt-4"
+                                />
+                              </div>
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1439,6 +1747,10 @@ export default function Home() {
                 handleImageUpload={handleImageUpload}
                 downloadPromptPDF={downloadPromptPDF}
               />
+            )}
+
+            {activeTab === 'labs' && (
+              <LabsPanel />
             )}
           </div>
         </div>
@@ -1564,6 +1876,12 @@ export default function Home() {
           )}
         </div>
         <div className="flex gap-6 uppercase">
+          <button
+            onClick={() => setActiveFooterModal('legal')}
+            className={cn("hover:text-white transition-colors text-yellow-400 font-bold", activeFooterModal === 'legal' && "text-white")}
+          >
+            ⚠️ Compliance Scan
+          </button>
           <button
             onClick={() => setActiveFooterModal('docs')}
             className={cn("hover:text-white transition-colors", activeFooterModal === 'docs' && "text-white")}
@@ -1976,6 +2294,257 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeFooterModal === 'legal' && (
+                <div className="flex flex-col h-full overflow-hidden text-[#FAFAFA] font-['Space_Grotesk']">
+                  <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <ShieldCheck size={24} className="text-[#FF5F1F]" />
+                        <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Tactical_Legal_Compliance_Agent</span>
+                      </div>
+                      <h2 className="text-5xl font-black tracking-tighter uppercase italic">Scenario Compliance Scanner</h2>
+                    </div>
+                    <div className="flex items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
+                      <div className="flex gap-4">
+                        {['AU', 'US', 'EU', 'BR'].map(country => (
+                          <label key={country} className="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 px-3 py-1.5 hover:border-[#FF5F1F] transition-all">
+                            <input
+                              type="checkbox"
+                              checked={complianceCountries.includes(country)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setComplianceCountries(prev => [...prev, country]);
+                                } else {
+                                  setComplianceCountries(prev => prev.filter(c => c !== country));
+                                }
+                              }}
+                              className="accent-[#FF5F1F]"
+                            />
+                            <span className="text-[10px] font-black text-white">{country}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        onClick={runComplianceScan}
+                        disabled={isScanningCompliance || script.length === 0}
+                        className="bg-[#FF5F1F] text-black font-black px-6 py-3 text-xs uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed"
+                      >
+                        {isScanningCompliance ? "Analyzing..." : "Run Scanner"}
+                      </button>
+                      {complianceReport && (
+                        <button
+                          onClick={runRiskMitigation}
+                          disabled={isMitigatingRisk || isScanningCompliance}
+                          className="bg-yellow-400 text-black font-black px-6 py-3 text-xs uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(234,179,8,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed"
+                        >
+                          {isMitigatingRisk ? "Bypassing..." : "⚡ Mitigate & Bypass"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto pr-4 space-y-8 min-h-0">
+                    {!complianceReport && !isScanningCompliance && (
+                      <div className="p-12 border-2 border-dashed border-white/10 text-center space-y-4">
+                        <p className="text-sm font-bold text-white/40 uppercase">Ready to scan the active script for defamation, right of publicity, and brand trademark risks.</p>
+                        <p className="text-[10px] text-white/20 font-bold uppercase leading-relaxed">
+                          Checks against: Australian Defamation Act, US right of publicity (unauthorized synthetic likeness), EU AI Act transparency/watermarking obligations, and global trademark protections.
+                        </p>
+                      </div>
+                    )}
+
+                    {isScanningCompliance && (
+                      <div className="p-12 border border-white/5 bg-white/[0.01] text-center space-y-4 animate-pulse">
+                        <div className="w-10 h-10 border-4 border-[#FF5F1F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <p className="text-sm font-black text-white uppercase tracking-widest">Scanning scripts against international laws...</p>
+                        <p className="text-[10px] text-white/40 font-mono uppercase">Evaluating 2026 court precedents & synthetic media guidelines</p>
+                      </div>
+                    )}
+
+                    {complianceReport && (
+                      <div className="space-y-8">
+                        {/* Overall Risk Banner */}
+                        <div className={cn(
+                          "p-6 border-2 flex items-center justify-between",
+                          complianceReport.overallRisk === 'HIGH' ? "bg-red-500/10 border-red-500 text-red-500" :
+                          complianceReport.overallRisk === 'MEDIUM' ? "bg-yellow-500/10 border-yellow-500 text-yellow-500" :
+                          "bg-green-500/10 border-green-500 text-green-500"
+                        )}>
+                          <div>
+                            <span className="text-[8px] font-black uppercase tracking-[0.4em] block mb-1">Overall_Litiation_Risk</span>
+                            <span className="text-3xl font-black italic tracking-tighter uppercase">{complianceReport.overallRisk} RISK LEVEL</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[9px] font-black uppercase tracking-widest block mb-1">EU AI Act Labeling:</span>
+                            <span className={cn(
+                              "px-3 py-1 text-xs font-black uppercase border",
+                              complianceReport.watermarkingRequired ? "bg-red-500 text-black border-red-500" : "bg-green-500/10 text-green-500 border-green-500/30"
+                            )}>
+                              {complianceReport.watermarkingRequired ? "WATERMARK_REQUIRED" : "CLEAR_OF_EU_LABEL"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* List of Flags */}
+                        <div className="space-y-4">
+                          <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Compliance Flags & Warnings</span>
+                          {complianceReport.flags.length === 0 ? (
+                            <div className="p-6 bg-white/[0.01] border border-white/5 text-center text-xs font-bold text-white/40 uppercase">
+                              🎉 No compliance flags detected! The script appears clean of target litigation risks.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2">
+                              {complianceReport.flags.map((flag, idx) => (
+                                <div key={idx} className="p-6 bg-[#0c0c0e] border border-white/5 flex gap-6 items-start">
+                                  <div className={cn(
+                                    "px-3 py-1.5 text-[10px] font-black uppercase border text-center min-w-[120px]",
+                                    flag.riskLevel === 'HIGH' ? "border-red-500 text-red-500 bg-red-500/5" :
+                                    flag.riskLevel === 'MEDIUM' ? "border-yellow-500 text-yellow-500 bg-yellow-500/5" :
+                                    "border-green-500 text-green-500 bg-green-500/5"
+                                  )}>
+                                    {flag.category}
+                                    <span className="block text-[8px] font-bold opacity-60">RISK: {flag.riskLevel}</span>
+                                  </div>
+                                  <div className="flex-1 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-black text-white uppercase">{flag.description}</span>
+                                      <span className="px-2 py-0.5 bg-white/5 border border-white/15 text-[8px] font-black text-[#FF5F1F] uppercase">{flag.targetCountry}</span>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-white/40 leading-relaxed uppercase">
+                                      💡 <span className="text-white/60">Recommendation:</span> {flag.recommendation}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Suggested Disclaimer */}
+                        {complianceReport.suggestedDisclaimer && (
+                          <div className="space-y-3 bg-[#111] border border-white/10 p-6">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">Required Video Satire / AI Disclaimer</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(complianceReport.suggestedDisclaimer);
+                                  alert("Disclaimer copiado com sucesso!");
+                                }}
+                                className="text-[8px] font-black text-[#FF5F1F] uppercase hover:underline"
+                              >
+                                [Copy Disclaimer]
+                              </button>
+                            </div>
+                            <p className="text-xs font-mono text-white/70 italic bg-black/40 p-4 border border-white/5">
+                              &quot;{complianceReport.suggestedDisclaimer}&quot;
+                            </p>
+                          </div>
+                        )}
+
+                        {/* LOADING MITIGATION STATE */}
+                        {isMitigatingRisk && (
+                          <div className="p-12 border border-white/5 bg-white/[0.01] text-center space-y-4 animate-pulse">
+                            <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                            <p className="text-sm font-black text-white uppercase tracking-widest">Risk Agent Communicating with Attorney Agent...</p>
+                            <p className="text-[10px] text-white/40 font-mono uppercase">Negotiating fine print & drafting platform strike bypasses</p>
+                          </div>
+                        )}
+
+                        {/* MITIGATION REPORT */}
+                        {mitigationReport && (
+                          <div className="border-2 border-yellow-400 p-6 bg-yellow-400/5 space-y-8 animate-in fade-in duration-300">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
+                              <div>
+                                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] block mb-1">Risk_Mitigation_Bypass_Strategy</span>
+                                <h3 className="text-2xl font-black uppercase italic text-yellow-400">Tactical Safe-Pass Blueprint</h3>
+                              </div>
+                              <button
+                                onClick={applyMitigatedScript}
+                                className="bg-yellow-400 text-black font-black px-6 py-3 text-xs uppercase hover:bg-white hover:scale-[1.02] transition-all shadow-[4px_4px_0_rgba(0,0,0,0.8)]"
+                              >
+                                Aplicar Roteiro Corrigido
+                              </button>
+                            </div>
+
+                            {/* Platform Strike Risk Meters */}
+                            <div className="space-y-4">
+                              <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Estudo de Risco por Plataforma (Strikes)</span>
+                              <div className="grid grid-cols-3 gap-6">
+                                {[
+                                  { label: 'TikTok', risk: mitigationReport.platformStrikeRisk.tiktok, color: '#00f2fe' },
+                                  { label: 'YouTube', risk: mitigationReport.platformStrikeRisk.youtube, color: '#ff0055' },
+                                  { label: 'Instagram', risk: mitigationReport.platformStrikeRisk.instagram, color: '#f99f1b' }
+                                ].map((p, i) => (
+                                  <div key={i} className="bg-black/60 border border-white/5 p-4 flex flex-col justify-between">
+                                    <div className="flex justify-between items-baseline mb-2">
+                                      <span className="text-[10px] font-black text-white">{p.label.toUpperCase()}</span>
+                                      <span className="text-xs font-black font-mono" style={{ color: p.color }}>{p.risk}%</span>
+                                    </div>
+                                    <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full transition-all duration-1000" style={{ backgroundColor: p.color, width: `${p.risk}%` }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Loophole Strategy & Tricks */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                              <div className="space-y-3">
+                                <span className="text-[9px] font-black text-white/40 tracking-widest uppercase block">Loophole / Fine Print Analysis</span>
+                                <p className="text-xs font-bold leading-relaxed text-white/80 uppercase">
+                                  {mitigationReport.loopholeStrategy}
+                                </p>
+                              </div>
+                              <div className="space-y-3">
+                                <span className="text-[9px] font-black text-white/40 tracking-widest uppercase block">Required Audio/Visual Hacks</span>
+                                <div className="grid grid-cols-1 gap-1">
+                                  {mitigationReport.requiredProductionTricks.map((trick, i) => (
+                                    <div key={i} className="p-3 bg-black/40 border border-white/5 text-[10px] font-bold text-yellow-400 uppercase">
+                                      ⚠️ {trick}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Modified script comparison preview */}
+                            <div className="space-y-4 pt-4 border-t border-white/10">
+                              <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Surgical Script Bypass Changes</span>
+                              <div className="space-y-2">
+                                {mitigationReport.modifiedScript.map((line, idx) => {
+                                  const originalText = script.find(ol => ol.id === line.id)?.text || '';
+                                  const isChanged = originalText !== line.text;
+                                  return (
+                                    <div key={line.id} className={cn(
+                                      "p-4 border text-[11px] font-mono leading-tight",
+                                      isChanged ? "bg-yellow-400/10 border-yellow-400 text-yellow-200" : "bg-black/30 border-white/5 text-white/40"
+                                    )}>
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="font-black text-[#FF5F1F]">{line.characterId.toUpperCase()}</span>
+                                        {isChanged && <span className="text-[8px] font-black uppercase text-yellow-400 border border-yellow-400 px-1 py-0.5 animate-pulse">MODIFIED FOR BYPASS</span>}
+                                      </div>
+                                      {isChanged && (
+                                        <div className="text-red-400 line-through mb-1 opacity-60">
+                                          OLD: &quot;{originalText}&quot;
+                                        </div>
+                                      )}
+                                      <div>
+                                        NEW: &quot;{line.text}&quot;
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

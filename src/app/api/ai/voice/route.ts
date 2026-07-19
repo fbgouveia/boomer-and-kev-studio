@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { voiceSchema } from '@/lib/validations';
 import { CHARACTERS } from '@/data/characters';
+import { fetchWithRetry } from '@/lib/fetch-retry';
 
 export async function POST(req: Request) {
     try {
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Character Sonic Profile Missing' }, { status: 404 });
         }
 
-        const response = await fetch(
+        const { response } = await fetchWithRetry(
             `https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`,
             {
                 method: 'POST',

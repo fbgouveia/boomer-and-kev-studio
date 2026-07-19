@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-tools/verify_replicate.py
-V.L.A.E.G. Fase 2 -- Link Check: Replicate API
-Testa o modelo real usado no projeto: kwaivgi/kling-v2.6
-"""
-import sys, json, urllib.request, urllib.error
+# /// script
+# dependencies = [
+#   "httpx",
+# ]
+# ///
+import asyncio
+import json
+import sys
 from pathlib import Path
-
-sys.stdout.reconfigure(encoding='utf-8')
+import httpx
 
 def load_env():
     env_path = Path(__file__).parent.parent / ".env.local"
     if not env_path.exists():
-        print("[ERR] .env.local nao encontrado"); sys.exit(1)
+        print("[ERR] .env.local nao encontrado")
+        sys.exit(1)
     env = {}
     for line in env_path.read_text(encoding='utf-8').splitlines():
         line = line.strip()
@@ -23,83 +24,82 @@ def load_env():
     return env
 
 HEADERS = {
-    "Authorization": "",  # filled per-call
     "Content-Type": "application/json",
     "Accept": "application/json",
     "User-Agent": "replicate-python/1.0.0",
 }
 
-def api_get(url, token):
+async def api_get(client, url, token):
     h = {**HEADERS, "Authorization": f"Token {token}"}
-    req = urllib.request.Request(url, headers=h)
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read()), r.status
+    resp = await client.get(url, headers=h, timeout=15.0)
+    return resp.json(), resp.status_code
 
-def api_post(url, token, data):
-    payload = json.dumps(data).encode("utf-8")
-    h = {**HEADERS, "Authorization": f"Token {token}"}
-    req = urllib.request.Request(url, data=payload, headers=h, method="POST")
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read()), r.status
-
-def verify_replicate():
+async def verify_replicate():
     print("=" * 50)
-    print("[LINK] V.L.A.E.G. -- Replicate API")
+    print("[LINK] V.L.A.E.G. -- Replicate API (Async HTTPX)")
     print("=" * 50)
 
     env = load_env()
     token = env.get("REPLICATE_API_TOKEN")
     if not token:
-        print("[ERR] REPLICATE_API_TOKEN ausente"); sys.exit(1)
+        print("[ERR] REPLICATE_API_TOKEN ausente")
+        sys.exit(1)
 
     print(f"[OK ] Token: {token[:8]}...{token[-4:]}")
     results = {}
 
-    # 1. Verificar modelo Kling v2.6 (modelo real do projeto)
-    print("\n[...] Verificando kwaivgi/kling-v2.6 (modelo do projeto)...")
-    try:
-        data, status = api_get("https://api.replicate.com/v1/models/kwaivgi/kling-v2.6", token)
-        ver = data.get("latest_version", {}).get("id", "N/A")
-        print(f"[OK ] kwaivgi/kling-v2.6 encontrado")
-        print(f"      Latest version: {ver[:16] if ver != 'N/A' else 'N/A'}...")
-        results["kling_v2_6"] = {"status": "ok", "version": ver[:16]}
-        results["auth"] = "ok"
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f"[ERR] HTTP {e.code}: {body[:150]}")
-        if e.code == 401:
-            print("[TIP] Token invalido"); sys.exit(1)
-        elif e.code == 404:
-            print("[WARN] Modelo nao encontrado via /models -- pode estar em /deployments")
-            results["kling_v2_6"] = {"status": "not_found_via_models"}
-            results["auth"] = "ok"  # 404 != auth fail
-        elif e.code == 403:
-            print("[WARN] Token sem permissao para listar modelos (scope limitado)")
-            print("[INFO] Token valido para criar predicoes -- testando via POST...")
-            results["kling_v2_6"] = {"status": "restricted_scope"}
-            results["auth"] = "restricted"
+    async with httpx.AsyncClient() as client:
+        # 1. Verificar modelo Kling v2.6 (modelo real do projeto)
+        print("\n[...] Verificando kwaivgi/kling-v2.6 (modelo do projeto)...")
+        try:
+            data, status = await api_get(client, "https://api.replicate.com/v1/models/kwaivgi/kling-v2.6", token)
+            if status == 200:
+                ver = data.get("latest_version", {}).get("id", "N/A")
+                print(f"[OK ] kwaivgi/kling-v2.6 encontrado")
+                print(f"      Latest version: {ver[:16] if ver != 'N/A' else 'N/A'}...")
+                results["kling_v2_6"] = {"status": "ok", "version": ver[:16]}
+                results["auth"] = "ok"
+            elif status == 401:
+                print("[TIP] Token invalido")
+                sys.exit(1)
+            elif status == 403:
+                print("[WARN] Token sem permissao para listar modelos (scope limitado)")
+                print("[INFO] Token valido para criar predicoes")
+                results["kling_v2_6"] = {"status": "restricted_scope"}
+                results["auth"] = "restricted"
+            elif status == 404:
+                print("[WARN] Modelo nao encontrado via /models -- pode estar em /deployments")
+                results["kling_v2_6"] = {"status": "not_found_via_models"}
+                results["auth"] = "ok"
+            else:
+                print(f"[ERR] Status {status}: {data}")
+                results["auth"] = "error"
+        except Exception as e:
+            print(f"[ERR] {e}")
+            results["auth"] = "error"
 
-    # 2. Verificar conta (GET /account) -- mais permissivo
-    print("\n[...] Verificando conta Replicate...")
-    try:
-        data, status = api_get("https://api.replicate.com/v1/account", token)
-        username = data.get("username", "N/A")
-        plan = data.get("type", "N/A")
-        print(f"[OK ] Conta: @{username} (tipo: {plan})")
-        results["account"] = {"username": username, "type": plan}
-        results["auth"] = "ok"
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f"[ERR] /account HTTP {e.code}: {body[:100]}")
-        if e.code == 401:
-            print("[TIP] Token invalido ou expirado")
-            results["auth"] = "invalid"
-            sys.exit(1)
+        # 2. Verificar conta (GET /account)
+        print("\n[...] Verificando conta Replicate...")
+        try:
+            data, status = await api_get(client, "https://api.replicate.com/v1/account", token)
+            if status == 200:
+                username = data.get("username", "N/A")
+                plan = data.get("type", "N/A")
+                print(f"[OK ] Conta: @{username} (tipo: {plan})")
+                results["account"] = {"username": username, "type": plan}
+                if results.get("auth") != "restricted":
+                    results["auth"] = "ok"
+            elif status == 401:
+                print("[TIP] Token invalido ou expirado")
+                results["auth"] = "invalid"
+                sys.exit(1)
+        except Exception as e:
+            print(f"[ERR] /account: {e}")
 
     # 3. Resumo
     tmp = Path(__file__).parent.parent / ".tmp"
     tmp.mkdir(exist_ok=True)
-    (tmp / "verify_replicate.json").write_text(json.dumps(results, indent=2))
+    (tmp / "verify_replicate.json").write_text(json.dumps(results, indent=2), encoding='utf-8')
 
     print("\n" + "=" * 50)
     ok = results.get("auth") in ("ok", "restricted")
@@ -110,4 +110,4 @@ def verify_replicate():
     return ok
 
 if __name__ == "__main__":
-    verify_replicate()
+    asyncio.run(verify_replicate())
