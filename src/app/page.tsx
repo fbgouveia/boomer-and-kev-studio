@@ -55,6 +55,7 @@ export default function Home() {
   ]);
 
   const [activeTab, setActiveTab] = useState<'director' | 'script' | 'library' | 'dna' | 'labs' | 'radar'>('director');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -973,110 +974,83 @@ export default function Home() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#050505] overflow-hidden tech-grid">
-      <main className="flex-1 flex bg-transparent text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden min-h-0">
-        {/* SIDEBAR NAVIGATION */}
-        <aside className="w-24 border-r border-white/5 flex flex-col items-center py-10 justify-between bg-[#050505] z-50">
-          <div className="flex flex-col gap-12">
-            <div className="w-12 h-12 bg-[#FF5F1F] flex items-center justify-center rotate-45 hover:rotate-90 transition-all duration-700 cursor-none group">
-              <div className="-rotate-45 group-hover:-rotate-90 transition-all duration-700">
-                <span className="text-black font-black text-xs">BK</span>
+    <div className="flex flex-col h-screen bg-[#050505] overflow-hidden tech-grid max-w-[100vw]">
+      <main className="flex-1 flex bg-transparent text-white selection:bg-[#FF5F1F] selection:text-white font-sans overflow-hidden min-h-0 max-w-full">
+        {/* MOBILE SIDEBAR OVERLAY — hidden on lg+, visible on mobile/tablet */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[200] lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <aside
+              className="absolute left-0 top-0 bottom-0 w-64 bg-[#0a0a0a] border-r border-[#FF5F1F]/20 flex flex-col py-8 px-4 gap-2 animate-in slide-in-from-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6 px-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#FF5F1F] flex items-center justify-center">
+                    <span className="text-black font-black text-xs">BK</span>
+                  </div>
+                  <span className="text-white font-black text-sm tracking-tight">MENU</span>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/40 hover:text-white p-1">
+                  <X size={20} />
+                </button>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-[2px] bg-white/5">
-              <button
-                onClick={() => setActiveTab('director')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
-                  activeTab === 'director' ? "text-[#FF5F1F]" : "text-white/20")}
-              >
-                <div className={cn("cine-icon mx-auto", activeTab === 'director' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
-                  <MonitorPlay size={20} />
-                </div>
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Director_Terminal</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('script')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
-                  activeTab === 'script' ? "text-[#FF5F1F]" : "text-white/20")}
-                style={{ animationDelay: '100ms' }}
-              >
-                <div className={cn("cine-icon mx-auto", activeTab === 'script' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
-                  <Clapperboard size={20} />
-                </div>
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Production_Timeline</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('dna')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
-                  activeTab === 'dna' ? "text-[#FF5F1F]" : "text-white/20")}
-                style={{ animationDelay: '200ms' }}
-              >
-                <div className={cn("cine-icon mx-auto", activeTab === 'dna' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
-                  <Dna size={20} />
-                </div>
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Engine_DNA</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('labs')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
-                  activeTab === 'labs' ? "text-[#FF5F1F]" : "text-white/20")}
-                style={{ animationDelay: '300ms' }}
-              >
-                <div className={cn("cine-icon mx-auto", activeTab === 'labs' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
-                  <FlaskConical size={20} />
-                </div>
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Studio_Labs</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('radar')}
-                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
-                  activeTab === 'radar' ? "text-[#FF5F1F]" : "text-white/20")}
-                style={{ animationDelay: '350ms' }}
-              >
-                <div className={cn("cine-icon mx-auto", activeTab === 'radar' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
-                  <Target size={20} />
-                </div>
-                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Radar</span>
-              </button>
-            </div>
+              {[
+                { id: 'director', label: 'DIRECTOR', icon: MonitorPlay },
+                { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
+                { id: 'library', label: 'LIBRARY', icon: Tv },
+                { id: 'dna', label: 'ENGINE DNA', icon: Dna },
+                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
+                { id: 'radar', label: 'RADAR', icon: Target },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id as typeof activeTab); setIsMobileMenuOpen(false); }}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 text-xs font-black tracking-widest transition-all",
+                      isActive
+                        ? "bg-[#FF5F1F] text-white"
+                        : "text-white/40 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <Icon size={18} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </aside>
           </div>
+        )}
 
-          <div className="flex flex-col gap-6 items-center">
-            <div className="group relative cursor-help">
-              <Layers size={20} className={cn("transition-colors", activeTab === 'director' ? "text-[#FF5F1F]" : "text-white/20")} />
-            </div>
-            <div className="group relative cursor-help">
-              <Zap size={20} className={cn("transition-colors", activeTab === 'script' ? "text-[#FF5F1F]" : "text-white/20")} />
-            </div>
-            <div className="group relative cursor-help">
-              <History size={20} className={cn("transition-colors", activeTab === 'dna' ? "text-[#FF5F1F]" : "text-white/20")} />
-            </div>
-          </div>
-        </aside>
-
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-hidden">
           {/* TOP NAVIGATION */}
           <nav
             role="navigation"
             aria-label="Master Console Navigation"
-            className="w-full px-8 py-4 flex flex-col md:flex-row justify-between items-center bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 z-50 gap-4"
+            className="w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col md:flex-row justify-between items-center bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 z-50 gap-3 sm:gap-4 max-w-full overflow-hidden"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)] neural-sparkle">
-                <BrainCircuit size={22} className="text-white" />
+            <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+              {/* Hamburger menu — mobile/tablet only */}
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 text-white/40 hover:text-[#FF5F1F] transition-colors"
+                aria-label="Open menu"
+              >
+                <Layers size={22} />
+              </button>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)] neural-sparkle shrink-0">
+                <BrainCircuit size={20} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-black tracking-tighter leading-none">BOOMER & KEV <span className="text-[#FF5F1F]">STUDIO</span></h1>
-                <p className="text-[10px] text-white/40 tracking-[0.3em] font-bold">CINEMATIC ENGINE v2.8 [HOTFIX]</p>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-lg font-black tracking-tighter leading-none truncate">BOOMER & KEV <span className="text-[#FF5F1F]">STUDIO</span></h1>
+                <p className="text-[9px] sm:text-[10px] text-white/40 tracking-[0.2em] sm:tracking-[0.3em] font-bold truncate">CINEMATIC ENGINE v3.1</p>
               </div>
             </div>
 
-            <div className="flex gap-1 bg-[#111111]/80 backdrop-blur-md p-1 border border-white/5 shadow-inner">
+            <div className="hidden md:flex gap-1 bg-[#111111]/80 backdrop-blur-md p-1 border border-white/5 shadow-inner overflow-x-auto max-w-full scrollbar-hide">
               {[
                 { id: 'director', label: 'DIRECTOR', icon: Wand2 },
                 { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
@@ -1094,7 +1068,7 @@ export default function Home() {
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
                     className={cn(
-                      "flex items-center gap-2 px-5 py-2 text-[10px] font-black tracking-widest transition-all duration-300 relative overflow-hidden",
+                      "flex items-center gap-2 px-3 lg:px-5 py-2 text-[9px] lg:text-[10px] font-black tracking-widest transition-all duration-300 relative overflow-hidden whitespace-nowrap shrink-0",
                       isActive 
                         ? "bg-[#FF5F1F] text-white shadow-[0_0_15px_rgba(255,95,31,0.3)] border-l-2 border-white/40" 
                         : "text-white/40 hover:text-white hover:bg-white/5"
@@ -1107,7 +1081,7 @@ export default function Home() {
               })}
             </div>
 
-            <div className="flex items-center gap-8">
+            <div className="hidden lg:flex items-center gap-8">
               {/* SYSTEM TELEMETRY */}
               <div className="hidden xl:flex items-center gap-6 border-r border-white/10 pr-8 text-right font-mono text-[9px] text-white/30">
                 <div>
@@ -1172,7 +1146,8 @@ export default function Home() {
           </nav>
 
           {/* MAIN CONTENT AREA */}
-          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0 bg-[#050505]">
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0 bg-[#050505] max-w-full">
             {activeTab === 'director' && (
               <DirectorTerminal
                 directorIdea={directorIdea}
