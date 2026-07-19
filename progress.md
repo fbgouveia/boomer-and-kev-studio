@@ -304,3 +304,37 @@
 - [x] Orquestrador Maestro conectado à UI com sucesso.
 - [x] Painel de DNA 100% autônomo com síntese integrada via Nano Banana Pro (Imagen 3).
 
+---
+
+## SESSÃO 007b — 2026-07-19 (Definição dos 26 Agentes + Arquitetura n8n)
+
+**Objetivo:** Consolidar todas as mudanças pendentes da Sessão 007, definir os agentes de produção e decidir a arquitetura de orquestração.
+
+**O que foi feito:**
+- [x] **AGENTS.md criado** — 26 agentes AI definidos em 5 departamentos (Direção: 6, Conteúdo: 3, Técnica: 7, Apoio: 8, Pós: 2). Cada agente tem: ID, função, rotina, LLM, input, output, critério de aprovação e system prompt.
+- [x] **Descoberta arquitetural: n8n como cérebro central** — o `/api/pipeline/run` monolítico será substituído por 6 sub-workflows n8n (Pesquisa, Roteiro, Decupagem, Pré-Prod, Geração, Pós-Prod). As API routes Next.js permanecem como funções atômicas chamadas pelo n8n via HTTP.
+- [x] **HANDOFF_AMANHA.md reescrito** — estado real, pendências, decisões travadas e arquitetura n8n documentados.
+- [x] **Commit e push** — `e530c7e` na branch `restore-engine` (76 arquivos, +7.449/-585 linhas). Push para `origin/restore-engine` confirmado.
+
+**Descobertas:**
+- n8n self-hosted (Docker) = custo $0, execuções ilimitadas. Ideal para 3-5 vídeos/semana.
+- 16 dos 26 agentes usam LLM (14 Flash + 2 Pro). 10 são determinísticos (código puro).
+- Custo LLM estimado por episódio: ~$0.05-0.10 (Flash é barato). Total com vídeo: $3-6.
+- Branches paralelos do n8n resolvem o gargalo vídeo/áudio (hoje sequencial).
+
+**Decisões travadas:**
+- Orquestração = **n8n self-hosted** (6 sub-workflows).
+- API routes Next.js = **funções atômicas** (não mudam, n8n chama via HTTP).
+- `/api/pipeline/run` = **será aposentado** quando n8n estiver funcional.
+- Agentes LLM = **n8n AI Agent nodes** com Gemini Flash/Pro nativos.
+
+**Pendências para próxima sessão:**
+1. 🔴 Pagar ElevenLabs (ação do Felipe).
+2. 🟠 n8n Docker setup → subir instância local.
+3. 🟠 Criar WF1 (Pesquisa & Pauta) → primeiro workflow funcional.
+4. 🟠 Deploy Supabase → persistência real.
+5. 🟡 1º vídeo end-to-end via n8n.
+
+**Resultado:**
+- [x] Projeto 100% documentado e commitado. Pipeline de agentes definida. Arquitetura n8n desenhada. Pronto para implementação.
+

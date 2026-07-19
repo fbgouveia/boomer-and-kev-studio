@@ -1,8 +1,9 @@
 # 🌅 HANDOFF — PRÓXIMA SESSÃO
-# Boomer & Kev Studio | Atualizado: 2026-07-19 (pós Sessão 007)
+# Boomer & Kev Studio | Atualizado: 2026-07-19 (pós Sessão 007 + descoberta n8n)
 
 > ⚠️ **LEIA ISTO PRIMEIRO. Este é o ponto de partida autoritativo.**
 > As diretrizes globais do projeto (Karpathy, VLAEG, Ponytail) estão consolidadas em [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md).
+> Os 26 agentes de produção estão definidos em [AGENTS.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/AGENTS.md).
 
 ---
 
@@ -22,31 +23,116 @@ Personagens: Boomer (canguru) + Kev (coala). Formato 9:16, 30–60s, p/ TikTok/I
 - ✅ **Montagem (ffmpeg)** — `tools/assemble.mjs` concat → 1 MP4 9:16 1080×1920 30fps.
 
 ### Novidades da Sessão 007
-- ✅ **Orquestrador Maestro** (`/api/pipeline/run` + `/api/pipeline/download`) — encadeia script→voz→render→montagem em background. UI integrada com botão de download do MP4 final.
-- ✅ **Assets locais** — master images copiadas do Drive para `public/assets/` (Boomer, Kev, Wide). `characters.ts` atualizado. Render converte paths relativos em URLs absolutas via `req.headers.origin`.
-- ✅ **Supabase client** (`src/lib/supabase.ts`) — fetch puro, zero deps. Fallback silencioso se credenciais ausentes.
-- ✅ **Fallback de voz** — se ElevenLabs billing falhar, injeta buffer de áudio silencioso e a pipeline continua.
-- ✅ **Síntese de imagem** (`/api/ai/image`) — Nano Banana Pro (Imagen 3). Botão SYNTHESIZE no DNA Panel.
-- ✅ **Compliance & Mitigation** (`/api/ai/compliance`, `/api/ai/mitigation`) — verificação de conteúdo.
-- ✅ **Callback system** (`/api/ai/callback`) — tracking de renders em background.
-- ✅ **Video generate** (`/api/video/generate`) — rota alternativa com suporte a Higgsfield + Replicate.
-- ✅ **Cron Agent** (`/api/cron/agent`) — auto-redação de scripts a partir de trends.
-- ✅ **Admin panel** (`/admin`) — storyboard view com `StoryboardView.tsx`.
-- ✅ **LabsPanel** (`LabsPanel.tsx`) — componente experimental com Three.js.
-- ✅ **Cinematic orchestrator** (`cinematic-orchestrator.ts`) — lib de composição de cenas.
-- ✅ **12 imagens geradas** em `public/assets/generated/`.
+- ✅ **Orquestrador Maestro** (`/api/pipeline/run` + `/api/pipeline/download`) — encadeia script→voz→render→montagem. UI com botão de download.
+- ✅ **Assets locais** — master images em `public/assets/`. `characters.ts` atualizado.
+- ✅ **Supabase client** (`src/lib/supabase.ts`) — fetch puro, zero deps. Fallback silencioso.
+- ✅ **Fallback de voz** — ElevenLabs billing falha → áudio silencioso → pipeline continua.
+- ✅ **Síntese de imagem** (`/api/ai/image`) — Imagen 3. Botão SYNTHESIZE no DNA Panel.
+- ✅ **Compliance, Mitigation, Callback, Video Generate, Cron Agent, Admin Panel, LabsPanel, Cinematic Orchestrator** — todos criados e compilando.
+- ✅ **AGENTS.md** — 26 agentes AI definidos (5 departamentos, system prompts, I/O, critérios).
 
 ### 🔴 BLOQUEIOS ATIVOS
 - 🔴 **ElevenLabs billing** — fatura pendente. Pipeline usa fallback silencioso, mas voz real precisa do pagamento.
 - ⚠️ **voiceId de catálogo vs custom** — código usa Charlie/Roger de catálogo, não vozes clonadas. Decisão pendente.
-- ⚠️ **Supabase não deployado** — schema SQL existe (`supabase/schema.sql`) mas nunca foi executado em produção.
+- ⚠️ **Supabase não deployado** — schema SQL existe mas nunca executado em produção.
 
-### ⏳ PENDÊNCIAS TÉCNICAS
-1. **Merge da branch `restore-engine` na `main`** — quando Felipe aprovar.
-2. **APIs sociais (TikTok/IG/YT)** — aplicar credenciais no Dia 1 (aprovação leva 1–3 semanas).
-3. **Testes E2E** — nenhum teste automatizado existe ainda.
-4. **Deploy Supabase** — criar projeto e rodar o schema.
-5. **n8n workflow** — desenhado mas não implementado (existe `tools/n8n_boomer_kev_orchestrator.ts` como referência).
+---
+
+## 🧠 DESCOBERTA: n8n COMO CÉREBRO CENTRAL DOS 26 AGENTES
+
+> Decisão arquitetural discutida em 2026-07-19. n8n substitui o `/api/pipeline/run`
+> monolítico como orquestrador. As API routes do Next.js permanecem como funções atômicas.
+
+### Por que n8n
+| Problema atual | Solução n8n |
+|----------------|-------------|
+| Pipeline monolítica — falha 1 cena = tudo morre | Error handling + retry por nó individual |
+| Vídeo + áudio são sequenciais | Branches paralelos nativos |
+| Sem visibilidade do fluxo | Canvas visual — cada agente é um nó |
+| Mudar fluxo exige rewrite de código | Drag-and-drop de nós |
+| Cron do trend hunter é gambiarra Next.js | Schedule trigger nativo do n8n |
+| Sem estado entre etapas | Variáveis de workflow + Supabase |
+
+### Arquitetura: 6 Sub-Workflows
+
+```
+n8n (CÉREBRO / DIRETOR GERAL)
+├── WF1: 🔍 Pesquisa & Pauta (cron 4x/dia)
+│   ├── Pesquisador → HTTP /api/trends + AI Agent (Flash)
+│   ├── Diretor de Produção → Code node (budget)
+│   └── Diretor Geral → AI Agent (Pro) → GO/NO-GO → trigger WF2
+│
+├── WF2: 📝 Roteiro (sub-workflow)
+│   ├── Roteirista → AI Agent (Flash) → 6 cenas draft
+│   ├── Roteirista Chefe → AI Agent (Pro) → review/approve
+│   └── IF aprovado → WF3 / Não → loop
+│
+├── WF3: 🎬 Decupagem (sub-workflow)
+│   ├── Diretor de TV → AI Agent → shot list
+│   ├── Diretor de Palco → AI Agent → timing sheet
+│   ├── Diretor de Foto → AI Agent → visual spec
+│   └── Diretor de Arte → AI Agent → art direction
+│
+├── WF4: 🎨 Pré-Produção (sub-workflow)
+│   ├── Cenógrafo + Figurinista + Maquiador + Produtor Objetos (4 nós PARALELOS)
+│   ├── Contrarregra → prop placement
+│   ├── Iluminador → Code node (lookup)
+│   ├── Produtor de Elenco → Code node (cast)
+│   └── Camareiro → AI Agent → continuity check
+│
+├── WF5: ⚡ Geração (sub-workflow)
+│   ├── Cinegrafista → AI Agent → 6 prompts finais
+│   ├── Branch A (PARALELO): 6× HTTP /api/render (Kling) + Wait
+│   ├── Branch B (PARALELO): 6× HTTP /api/ai/voice (ElevenLabs)
+│   └── Merge → espera ambos → WF6
+│
+└── WF6: 🎞️ Pós-Produção & Publicação (sub-workflow)
+    ├── Sonoplasta → AI Agent → SFX map
+    ├── Operador de TP → Code node → captions
+    ├── Operador de Switcher → Code node → timeline
+    ├── Editor de Vídeo → HTTP ffmpeg concat
+    ├── Finalizador → AI Agent (multimodal) → QA score
+    ├── IF score ≥ 7 → publicar / Não → flag revisão
+    └── Assistente de Produção → cleanup + log Supabase
+```
+
+### Custo n8n
+| Opção | Preço | Execuções |
+|-------|-------|-----------|
+| **Self-hosted (Docker)** | **$0** | ∞ |
+| n8n Cloud Starter | $24/mês | 2.500 |
+| n8n Cloud Pro | $60/mês | 10.000 |
+
+**Recomendação:** Self-hosted via Docker. Para 3–5 vídeos/semana = ~30 execuções de sub-workflow/semana.
+
+### O que muda no código
+| Item | Antes | Depois |
+|------|-------|--------|
+| `/api/pipeline/run` | Orquestrador monolítico | **Morre** — n8n assume |
+| API routes (`/api/ai/*`, `/api/render`) | Chamadas internas | n8n chama via HTTP Request nodes |
+| Estado do episódio | In-memory / `.tmp/` | **Supabase** (n8n grava via HTTP) |
+| Cron trend hunter | Next.js API route | n8n Schedule Trigger |
+| Agentes LLM | Inline no pipeline code | n8n AI Agent nodes (Gemini nativo) |
+
+---
+
+## ⏳ PENDÊNCIAS TÉCNICAS (atualizado 2026-07-19)
+
+### 🔴 Bloqueios (ação do Felipe)
+1. **Pagar ElevenLabs** → desbloquear voz real.
+2. **Decidir voiceId** → catálogo (Charlie/Roger) ou treinar custom?
+
+### 🟠 Implementação (próximas sessões)
+3. **n8n setup** → Docker self-hosted + criar os 6 sub-workflows.
+4. **Deploy Supabase** → criar projeto, rodar `schema.sql`, plugar credenciais.
+5. **Testar pipeline end-to-end** → 1 vídeo real com voz + render + montagem via n8n.
+6. **Merge `restore-engine` → `main`** → quando pipeline testado.
+
+### 🟡 Futuro (pós 1º vídeo)
+7. **APIs sociais (TikTok/IG/YT)** → aplicar credenciais (aprovação 1–3 semanas).
+8. **Testes E2E** → automação de QA.
+9. **SFX library** → gravar/comprar efeitos sonoros para o Sonoplasta.
+10. **Caption burn-in** → ffmpeg ASS com estilo Brutalist (#FF5F1F bold).
 
 ---
 
@@ -54,28 +140,27 @@ Personagens: Boomer (canguru) + Kev (coala). Formato 9:16, 30–60s, p/ TikTok/I
 | Tema | Decisão |
 |------|---------|
 | Diretrizes Globais | **Karpathy, VLAEG, Ponytail** (em CLAUDE.md) |
-| Orquestração | **Maestro interno** (`/api/pipeline/run`) + n8n futuro |
-| Backend | Next.js API Routes atômicas |
-| Banco/Estado | **Supabase** (client fetch puro criado) |
+| Orquestração | **n8n self-hosted** como cérebro central (6 sub-workflows) |
+| Agentes | **26 agentes** definidos em AGENTS.md (16 LLM + 10 determinísticos) |
+| Backend | Next.js API Routes = funções atômicas chamadas pelo n8n via HTTP |
+| Banco/Estado | **Supabase** (client fetch puro criado, deploy pendente) |
 | Provedor de vídeo | **Kling 2.6 via Replicate** (Higgsfield como alternativa) |
 | Voz | **ElevenLabs** (com fallback silencioso) |
-| Roteiro | Gemini 2.5 Flash (`v1beta`) |
+| Roteiro | Gemini 2.5 Flash (draft) + Pro (review) |
 | Montagem | ffmpeg (`tools/assemble.mjs`) |
-| Assets | **Locais** em `public/assets/` (saiu do Google Drive) |
-| Síntese de imagem | **Nano Banana Pro (Imagen 3)** via `/api/ai/image` |
+| Assets | **Locais** em `public/assets/` |
+| Síntese de imagem | **Imagen 3** via `/api/ai/image` |
 | Estilo | Brutalist Neural Glass (`#FF5F1F`, preto, ZERO roxo) |
-
----
-
-## 💸 NÚMEROS (referência rápida)
-- Custo por vídeo: **~$3–6** (Kling domina o custo).
-- Burn mensal a 3–5/sem: **~$150–210**.
+| Custo por vídeo | **~$3–6** (Kling domina) |
+| Burn mensal | **~$150–210** a 3–5/semana |
 
 ---
 
 ## 🧭 PRÓXIMOS PASSOS (por prioridade)
-1. **Pagar ElevenLabs** → desbloquear voz real.
-2. **Testar pipeline end-to-end** com voz + render + montagem.
-3. **Deploy Supabase** → persistência real.
-4. **Merge `restore-engine` → `main`**.
-5. **1º vídeo REAL publicado**.
+1. 🔴 **Pagar ElevenLabs** → desbloquear voz real.
+2. 🟠 **n8n Docker setup** → subir instância local.
+3. 🟠 **Criar WF1 (Pesquisa & Pauta)** → primeiro workflow n8n funcional.
+4. 🟠 **Deploy Supabase** → persistência real.
+5. 🟡 **1º vídeo end-to-end via n8n** → prova de conceito completa.
+6. 🟡 **Merge `restore-engine` → `main`**.
+7. ⚪ **Publicação automatizada** → APIs sociais + WF6 completo.
