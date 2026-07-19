@@ -42,7 +42,7 @@ export const CHARACTERS: Character[] = [
         ],
         defaultOutfit: "Wearing large red boxing gloves (NO fingers), gold chain, and a tight black singlet shirt with 'BOOMER' written on the chest. Never shirtless. Always wears large professional studio headphones.",
         voiceStyle: 'Deep, booming Queensland accent. Fast-paced, high energy.',
-        imagePromptContext: 'anthropomorphic muscular kangaroo, large red padded boxing gloves (no fingers), gold chain necklace, wearing a tight black singlet shirt with BOOMER written on the chest, professional studio headphones, detailed fur texture, strong studio lighting',
+        imagePromptContext: 'anthropomorphic muscular kangaroo, acting exactly like a human podcast host, human posture, large red padded boxing gloves (no fingers), gold chain necklace, wearing a tight black singlet shirt with BOOMER written on the chest, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
         referenceImage: '/assets/master_boomer.png'
@@ -73,7 +73,7 @@ export const CHARACTERS: Character[] = [
         ],
         defaultOutfit: 'No shirt, just natural fur. Always wears large professional studio headphones. Sometimes holds a tablet or a stubby holder.',
         voiceStyle: 'Slow, nasally, relaxed, deadpan Queensland accent.',
-        imagePromptContext: 'anthropomorphic cute koala, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
+        imagePromptContext: 'anthropomorphic cute koala, acting exactly like a human podcast host, human posture, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
         voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Laid-Back, Casual, Resonant
         referenceImage: '/assets/master_kev.png'
@@ -99,20 +99,20 @@ export const SHOT_TYPES: ShotType[] = [
 
 export const STUDIO_SETTING = {
     name: "Down Under Discourse Studio",
-    visualDescription: "A high-end, modern podcast studio tailored for an alpha kangaroo and a cynical koala.",
+    visualDescription: "A high-end but chaotic modern podcast studio tailored for an alpha kangaroo and a cynical koala. It looks like a real, heavy-duty production set with visible equipment.",
     acousticPanels: "Geometric acoustic foam panels in periodic orange and charcoal grey, creating a high-contrast cinematic backdrop.",
-    sponsorScreens: "Dual vertical LED monitors flanking the set, displaying high-contrast 'SPONSORS' logic and dynamic performance metrics.",
+    sponsorScreens: "Dual vertical LED monitors flanking the set, displaying absurd, satirical, or funny 'SPONSOR' logos that contrast with the serious lighting.",
     props: [
-        "Professional Shure-style boom microphones",
-        "Wooden master podcast desk with natural grain",
+        "Heavy-duty overhead boom microphones on massive C-stands",
+        "Tangled thick XLR audio cables running across the desk",
+        "Camera rigs and holders visible at the edge of the frame",
         "Coffee mugs emitting volumetric steam",
         "Digital mixing console with glowing faders",
-        "Tablet device (Kev's reference interface)",
-        "Down Under Discourse logo on a central 4K monitor"
+        "Tablet device (Kev's reference interface)"
     ],
     lighting: "Cinematic teal and orange 'teal-and-orange' color grade. Volumetric rim lighting on fur, dramatic key light, and moody ambient fill.",
-    ambience: "Energetic, professional, and slightly chaotic 'Dingo-Logic' podcast atmosphere.",
-    promptContext: "professional podcast studio, orange and black acoustic foam, SPONSORS led screens, Down Under Discourse neon, cinematic lighting, 8k, highly detailed fur"
+    ambience: "Energetic, professional, yet delightfully chaotic 'Dingo-Logic' podcast atmosphere, filled with heavy studio recording gear.",
+    promptContext: "professional podcast studio set, orange and black acoustic foam, hilarious satirical SPONSORS led screens, heavy C-stands and overhead boom microphones, camera rigs visible, chaotic cables, cinematic lighting, 8k, highly detailed fur"
 };
 
 export const DEFAULT_STUDIO_REFERENCE = '/assets/master_wide.png';

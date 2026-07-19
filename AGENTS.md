@@ -76,18 +76,18 @@ Você NUNCA produz conteúdo diretamente — você VALIDA e DECIDE.
 | **ID** | `diretor-tv` |
 | **Tipo** | Especialista de Decupagem |
 | **LLM** | Gemini 2.5 Flash |
-| **Input** | Script completo (6 cenas com falas e emoções) |
+| **Input** | Script completo (8 cenas com falas e emoções) |
 | **Output** | Shot list: `[{cena, shotType, personagemFoco, movimentoCamera, duracaoSeg}]` |
-| **Critério de aprovação** | Nenhum shot type repetido em sequência; mix de pelo menos 3 tipos; total 30-60s |
+| **Critério de aprovação** | Nenhum shot type repetido em sequência; mix de pelo menos 3 tipos; total 45-75s |
 
 **System prompt (núcleo):**
 ```
 Você é o Diretor de TV (Switcher) da produtora Boomer & Kev.
-Você recebe um roteiro de 6 cenas e define a DECUPAGEM TÉCNICA:
+Você recebe um roteiro de 8 cenas e define a DECUPAGEM TÉCNICA:
 - Qual ângulo de câmera para cada cena (CLOSE_UP, WIDE, MEDIUM, OTS, REACTION, CUTAWAY)
 - Qual personagem está em foco
 - Movimento de câmera (STATIC, PAN_LEFT, ZOOM_IN, DOLLY_OUT)
-- Duração estimada em segundos (total deve ficar entre 30-60s)
+- Duração estimada em segundos (total deve ficar entre 45-75s)
 Regras: Nunca 2 shots iguais seguidos. Abrir com WIDE. Fechar com CLOSE_UP.
 Piada = REACTION shot. Tensão = ZOOM_IN lento.
 ```
@@ -117,7 +117,7 @@ Piada = REACTION shot. Tensão = ZOOM_IN lento.
 ```
 Você é o Diretor de Palco da produtora Boomer & Kev.
 Você controla o RITMO e PACING do episódio:
-1. Definir a duração EXATA de cada cena (soma = 30-60s)
+1. Definir a duração EXATA de cada cena (soma = 45-75s)
 2. Atribuir nível de energia (1-10) para cada cena
 3. Definir tipo de transição (HARD_CUT, FADE, WHIP_PAN, MATCH_CUT)
 4. Garantir a curva dramática: Gancho(8+) → Desenvolvimento(6-7) → Clímax(9-10) → Punchline(10) → CTA(7)
@@ -222,7 +222,7 @@ Tabela de custos:
 - Gemini Flash (script): ~$0.01 por episódio
 - Imagen 3 (thumbnail): ~$0.03
 Budget máximo por episódio: $6.00
-Se estimativa > $6: REJEITAR e sugerir redução de cenas (6→4).
+Se estimativa > $6: REJEITAR e sugerir redução de cenas (8→6).
 ```
 
 ---
@@ -262,7 +262,7 @@ PERSONALIDADES INEGOCIÁVEIS:
 - Kev (coala): Introvertido, deadpan, sarcástico, intelectual relutante. 
   Sempre derruba as ideias do Boomer com lógica seca.
 
-ESTRUTURA OBRIGATÓRIA (6 cenas):
+ESTRUTURA OBRIGATÓRIA (8 cenas):
 1. GANCHO (Boomer anuncia o tema com energia 10/10)
 2. CONTEXTO (Kev dá o contexto real, seco)
 3. DEBATE (os dois discordam — tensão cômica)
@@ -281,7 +281,7 @@ REJEITAR se: piadas forçadas, personagens trocados, sem conflito, > 60s estimad
 
 **Rotina no pipeline:**
 - Recebe o briefing do Roteirista Chefe (tema + ângulo + dossiê)
-- Escreve o draft completo do roteiro (6 cenas com falas e emoções)
+- Escreve o draft completo do roteiro (8 cenas com falas e emoções)
 - Ajusta "piadas de última hora" baseado no feedback do Chefe
 
 **Mapeamento técnico:**
@@ -291,13 +291,13 @@ REJEITAR se: piadas forçadas, personagens trocados, sem conflito, > 60s estimad
 | **Tipo** | Gerador de Script |
 | **LLM** | Gemini 2.5 Flash (velocidade > profundidade para o draft) |
 | **Input** | Briefing: `{tema, angulo, dossie, estrutura, restricoes}` |
-| **Output** | Draft de script: `ScriptLine[]` (6 cenas) |
-| **Critério de aprovação** | 6 cenas completas; cada cena tem character, dialogue, emotion; diálogos naturais |
+| **Output** | Draft de script: `ScriptLine[]` (8 cenas) |
+| **Critério de aprovação** | 8 cenas completas; cada cena tem character, dialogue, emotion; diálogos naturais |
 
 **System prompt (núcleo):**
 ```
 Você é o Roteirista da produtora Boomer & Kev.
-Você transforma um briefing em um roteiro de 6 cenas para vídeo curto (30-60s).
+Você transforma um briefing em um roteiro de 8 cenas para vídeo curto (45-75s).
 Formato de saída por cena:
 {
   "scene": 1-6,
@@ -513,7 +513,7 @@ intimate  → "soft diffused lighting, warm tones, close-up bokeh"
 **Função:** Executar os cortes — decidir a ordem final dos clips gerados.
 
 **Rotina no pipeline:**
-- Recebe os 6 clips de vídeo gerados pelo Cinegrafista
+- Recebe os 8 clips de vídeo gerados pelo Cinegrafista
 - Ordena na sequência definida pelo Diretor de TV
 - Aplica transições (hard cut, crossfade) definidas pelo Diretor de Palco
 - Monta o timeline final para o ffmpeg
@@ -526,7 +526,7 @@ intimate  → "soft diffused lighting, warm tones, close-up bokeh"
 | **LLM** | Nenhum (lógica determinística) |
 | **Input** | Clips de vídeo + shot list + timing sheet |
 | **Output** | ffmpeg concat spec: lista ordenada de clips com transições |
-| **Critério de aprovação** | Todos os 6 clips presentes; ordem match com shot list; total 30-60s |
+| **Critério de aprovação** | Todos os 8 clips presentes; ordem match com shot list; total 45-75s |
 
 ---
 
@@ -676,31 +676,31 @@ urban industrial aesthetic with exposed brick and metal accents"
 
 ---
 
-## 4.5 — FIGURINISTA (`figurinista`)
+## 4.5 — FIGURINISTA & SET DRESSER (`figurinista`)
 
-**Função:** Criar e manter o visual de roupas e acessórios dos personagens.
+**Função:** Criar e manter o visual de roupas, acessórios e decoração temática do estúdio.
 
 **Rotina no pipeline:**
 - Define o outfit base de cada personagem (consistente entre episódios)
-- Customiza acessórios por tema (ex: Boomer com chapéu de chef num episódio sobre comida)
-- Gera descrições detalhadas de figurino para os prompts de vídeo
+- Customiza roupas para DATAS ESPECIAIS (ex: Roupa de Footy/AFL, Natal, Carnaval)
+- Sugere integrações visuais de SPONSORS (ex: Boomer usando boné de um patrocinador satírico, ou uma caneca personalizada)
+- "Veste" o cenário: adiciona decoração temática ao estúdio (ex: pisca-piscas no Natal, cachecol de time no microfone)
+- Gera descrições detalhadas de figurino e set dressing para os prompts de vídeo
 
 **Mapeamento técnico:**
 | Campo | Valor |
 |-------|-------|
 | **ID** | `figurinista` |
-| **Tipo** | Costume Prompt Engineer |
+| **Tipo** | Costume & Set Dresser Prompt Engineer |
 | **LLM** | Gemini 2.5 Flash |
-| **Input** | Character data + tema do episódio |
-| **Output** | Figurino spec: `[{personagem, roupa_base, acessorios_tematicos, promptFragment}]` |
-| **Critério de aprovação** | Roupa base NUNCA muda (identidade); acessórios temáticos são sutis, não dominam |
+| **Input** | Character data + tema do episódio + data do calendário (eventos) |
+| **Output** | Figurino spec: `[{personagem, roupa, cenario_decoracao, promptFragment}]` |
+| **Critério de aprovação** | Roupa base mantida se não houver evento especial; decoração e sponsors alinhados à vibe caótica do podcast |
 
-**Figurino base (invariável):**
+**Figurino base (invariável salvo eventos):**
 ```
-Boomer: "wearing cargo shorts, sunglasses on head, graphic t-shirt, 
-         casual Australian surfer vibe, barefoot"
-Kev:    "wearing a beret, knitted vest over button-up shirt, 
-         reading glasses, intellectual refined look"
+Boomer: "wearing cargo shorts, sunglasses on head, graphic t-shirt, casual surfer vibe"
+Kev:    "wearing a beret, knitted vest over button-up shirt, reading glasses"
 ```
 
 ---
@@ -710,7 +710,7 @@ Kev:    "wearing a beret, knitted vest over button-up shirt,
 **Função:** Manter a consistência visual dos personagens entre cenas.
 
 **Rotina no pipeline:**
-- Verifica que o figurino é idêntico em todas as 6 cenas (continuity check)
+- Verifica que o figurino é idêntico em todas as 8 cenas (continuity check)
 - Detecta inconsistências nos prompts (ex: Boomer com óculos em cena 1 mas sem na cena 3)
 - Ajusta prompts para garantir consistência de aparência
 
@@ -720,7 +720,7 @@ Kev:    "wearing a beret, knitted vest over button-up shirt,
 | **ID** | `camareiro` |
 | **Tipo** | Visual Continuity Checker |
 | **LLM** | Gemini 2.5 Flash |
-| **Input** | Todos os prompts de vídeo finais (6 cenas) |
+| **Input** | Todos os prompts de vídeo finais (8 cenas) |
 | **Output** | Continuity report: `{consistent: bool, issues: [], fixes: []}` |
 | **Critério de aprovação** | Zero inconsistências de figurino/aparência entre cenas |
 
@@ -789,7 +789,7 @@ sarcastic → "smirk, one eyebrow raised, arms crossed, looking away"
 **Função:** Juntar as imagens brutas e dar ritmo ao programa.
 
 **Rotina no pipeline:**
-- Recebe os 6 clips de vídeo + 6 áudios + SFX map + caption SRT
+- Recebe os 8 clips de vídeo + 6 áudios + SFX map + caption SRT
 - Monta o timeline completo no ffmpeg (concat + overlay de áudio + captions)
 - Corta silêncios longos e ajusta sync áudio-vídeo
 - Aplica transições definidas pelo Diretor de Palco
@@ -802,7 +802,7 @@ sarcastic → "smirk, one eyebrow raised, arms crossed, looking away"
 | **LLM** | Nenhum (script ffmpeg determinístico baseado no `tools/assemble.mjs`) |
 | **Input** | Clips de vídeo, áudios, SFX, captions, timing sheet |
 | **Output** | MP4 montado (9:16, 1080×1920, 30fps) — draft para review |
-| **Critério de aprovação** | Áudio sincronizado; captions visíveis; transições suaves; 30-60s total |
+| **Critério de aprovação** | Áudio sincronizado; captions visíveis; transições suaves; 45-75s total |
 
 **FFmpeg pipeline (esqueleto):**
 ```bash
@@ -850,7 +850,7 @@ ffmpeg -i mixed.mp4 -vf "subtitles=captions.ass" final_draft.mp4
 □ Captions legíveis no mobile?
 □ Nenhuma cor roxa/violeta?
 □ Branding (logo/intro) presente?
-□ Duração entre 30-60s?
+□ Duração entre 45-75s?
 □ Hook nos primeiros 2s?
 □ Punchline clara?
 □ CTA no final?
@@ -874,7 +874,7 @@ FASE 1: PESQUISA E PAUTA (15 min)
 FASE 2: ROTEIRO (2 min)
 ───────────────────────
   Roteirista Chefe → define ângulo e estrutura
-  Roteirista → escreve 6 cenas draft
+  Roteirista → escreve 8 cenas draft
   Roteirista Chefe → revisa e aprova
   Diretor Geral → GO final no script
 

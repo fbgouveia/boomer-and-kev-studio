@@ -65,6 +65,21 @@
 
 ---
 
+## 🚀 EVOLUÇÃO DO PIPELINE (2026-07-19)
+
+### 1. Retention Science & Neuromarketing
+- **Amygdala Hijack**: Roteirista (Gemini) reprogramado para abolir introduções lentas. Cena 1 inicia com gancho agressivo/tensão.
+- **Anticipation Loops**: A resolução do problema foi transferida para a última cena, forçando a audiência a assistir até o fim (combate ao swipe).
+- **The Looping Payoff**: Fim abrupto da última cena logo após a "punchline" para induzir o loop do vídeo nativamente.
+- O estudo completo está documentado em `RETENTION_SCIENCE.md`.
+
+### 2. Expansão de Formato & "Sponsor Break"
+- O formato base foi **ampliado de 6 para 8 cenas**, estendendo a duração para ~60 segundos.
+- **Cenas 4 e 5** agora são obrigatoriamente um *"Fake Sponsor Break"*. Boomer tenta vender um produto falso/patrocínio satírico e Kev rebate. 
+- O DNA do estúdio (`STUDIO_SETTING`) foi atualizado para exibir monitores de LED com "SPONSORS" fictícios e equipamentos pesados (C-stands, cabos XLR soltos) visando aumentar o realismo da produtora.
+
+---
+
 ## 📁 ARQUIVOS-CHAVE PARA REFERÊNCIA
 
 ```

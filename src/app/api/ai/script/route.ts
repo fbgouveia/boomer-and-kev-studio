@@ -29,24 +29,35 @@ export async function POST(req: Request) {
          - Catchphrases: "Yeah, nah", "You're dreaming", "Wrap this up", "Ground control to Boomer".
          - Behavior: Chewing gum leaf, slow blinking, sipping from stubby holder, yawning.
 
-      DYNAMIC RULEBOOK:
+      DYNAMIC RULEBOOK & ANTHROPOMORPHISM:
+      - The characters are animals but they act 100% like human podcast hosts. They have human posture, human hand gestures, and human conversational body language.
+      - The 'action' field MUST describe highly specific human podcasting behaviors (e.g., 'adjusts headphones while leaning into the mic', 'points aggressively like a debater', 'takes a sip from a mug and sighs').
       - The conversation must feel EXTREMELY NATURAL, dripping with AUTHENTIC AUSTRALIAN SLANG.
       - They don't always have to argue. They can agree on something in a "matey" but intelligent way.
       - One can laugh at the other's joke (Kev's laugh is a dry wheeze, Boomer's is a booming roar).
       - Friction should come from their energy levels, not just opposing views.
       - MUST aggressively use authentic Australian slang and idioms (e.g., "Strewth", "No wuckas", "Flat out like a lizard drinking", "Cactus", "Mad as a cut snake", "Fair dinkum", "Bloody oath", "Mate", "Yeah nah"). The script should sound like a true Aussie pub conversation.
 
-      SCRIPT FLOW:
-      1. Scene 1-2: Discovery/Intro. Either Boomer starts with high-energy hype, or Kev opens with a deadpan/lazy observation. Usually 2 blocks to set the scene.
-      2. Scene 3: Response. The other character reacts to the opening premise.
-      3. Scene 4-5: Dynamic Exchange. They interact. They might agree on a detail, share a laugh, or trade barbs.
-      4. Scene 6: Wide Conclusion. A final takeaway or "vibe" moment for the studio.
+      RETENTION & NEUROMARKETING (SHORT-FORM VIDEO):
+      - 3-SECOND AMYGDALA HIJACK: Scene 1 MUST be a high-arousal visual and auditory hook. No "hello" or slow intros. Start mid-sentence with shock, intense curiosity, or immediate tension to stop the scroll.
+      - ANTICIPATION LOOPS: Introduce a high-stakes problem, bold claim, or tension in Scene 1-2, but DELAY the resolution until Scene 8. The brain seeks closure; use this to force them to watch to the end.
+      - PATTERN INTERRUPTS: Every scene must shift visual or emotional pacing. Alternate between high-energy (Boomer MCU) and deadpan (Kev CU) to prevent neural habituation.
+      - MIXED EMOTIONS: Shift rapidly from tension to comedy, or confusion to realization. Do not let the emotional tone stay flat for more than 4 seconds.
+      - PAYOFF ENDING: Scene 8 must deliver the payoff and end abruptly immediately after the punchline or value is delivered to create a perfect looping effect.
+
+      SCRIPT FLOW (8 SCENES):
+      1. Scene 1: The Amygdala Hijack (Aggressive hook, visual pattern interrupt, bold claim).
+      2. Scene 2: The Open Loop (Deepening the tension or curiosity).
+      3. Scene 3: Response (The other character reacts, shifting the emotional tone).
+      4. Scene 4-5: THE FAKE SPONSOR BREAK (A hilarious, self-deprecating fake sponsor read. Boomer pitches an absurd fake product or overtly begs for a real sponsor, Kev shuts him down dryly).
+      5. Scene 6-7: Dynamic Exchange (Fast-paced back-and-forth, returning to the main topic).
+      6. Scene 8: The Payoff (Resolution and abrupt cut for looping).
 
       TOPIC: "${topic}"
       ${snippet ? `ADDITIONAL CONTEXT (Directorial Notes): "${snippet}"` : ''}
 
       OUTPUT FORMAT:
-      You MUST return a JSON array containing exactly 6 objects. Each object must have:
+      You MUST return a JSON array containing exactly 8 objects. Each object must have:
       - id: unique string
       - characterId: "boomer" or "kev"
       - text: the dialogue line

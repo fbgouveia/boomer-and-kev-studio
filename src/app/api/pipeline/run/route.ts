@@ -77,18 +77,20 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
   const directorialOverride = directorSnippet ? ` CRITICAL_DIRECTORIAL_OVERRIDE: ${directorSnippet}. Ensure all visual details like jerseys and text are prioritized.` : '';
   const characterAnchor = `${char.imagePromptContext}. ${outfitBase}${directorialOverride} Visual DNA: ${char.visualDescription}. Physicality: ${char.personality}.`;
 
-  const personalityLogic = line.characterId === 'boomer'
-    ? "hyper-active muscle tension, aggressive shadow boxing stance, intense eye contact"
-    : "deadpan low-energy, slow heavy blinking, subtle ear tuft movement, indifferent expression";
+  const anthropomorphicDirective = `ANTHROPOMORPHIC ACTING: This character is an animal but acts, sits, and gesticulates EXACTLY like a human podcast host. Human-like posture, human-like hand gestures, interacting with the environment like a human.`;
 
-  const actionBlock = `BEHAVIOR: ${line.action}. ${personalityLogic}. EMOTION: ${line.emotion}. Talking, lips moving clearly to: "${line.text.substring(0, 40)}..."`;
+  const personalityLogic = line.characterId === 'boomer'
+    ? "hyper-active muscle tension, leaning aggressively into the microphone, intense eye contact"
+    : "deadpan low-energy, slow heavy blinking, relaxed posture, indifferent expression";
+
+  const actionBlock = `BEHAVIOR: ${line.action}. ${personalityLogic}. EMOTION: ${line.emotion}. Talking actively into the microphone, lips articulating words clearly and naturally.`;
 
   const cameraBlock = `Highly photorealistic, 8k RAW, movie grade textures, cinematic depth, subsurface scattering on fur, ray-traced lighting, masterpiece. CAMERA: ${shot?.label}, ${shot?.cinematicRule}. ${angleSpec.desc}, ${angleSpec.requirements.join(', ')}.`;
 
   const activeProps = STUDIO_SETTING.props.filter(p => !p.includes(line.characterId === 'boomer' ? 'Tablet' : 'Gloves')).slice(0, 4).join(', ');
   const envBlock = `ENVIRONMENT: ${STUDIO_SETTING.promptContext}. Visible props: ${activeProps}. TV screen graphics: ${directorIdea}. Lighting: ${char.lightingKey}. Ambience: ${STUDIO_SETTING.acousticPanels}.`;
 
-  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${actionBlock} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
+  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
 };
 
 // Replicate polling helper
