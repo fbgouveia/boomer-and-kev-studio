@@ -39,11 +39,13 @@ import { TrendsFeed } from '@/components/Director/TrendsFeed';
 import { jsPDF } from 'jspdf';
 import { DraftingTable } from '@/components/Director/DraftingTable';
 import { ScriptLine } from '@/types';
+import { AnimatedAgentList } from '@/components/studio/AnimatedAgentList';
+import { LibraryViewer } from '@/components/studio/LibraryViewer';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
 import { DNAPanel } from '@/components/studio/DNAPanel';
 import LabsPanel from '@/components/studio/LabsPanel';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical, Tv } from 'lucide-react';
 
 
 export default function Home() {
@@ -52,7 +54,7 @@ export default function Home() {
     { id: '2', characterId: 'kev', text: "Yeah, nah. I just want to know when we're finished.", shotType: 'KEV_CU', action: 'Slowly chewing on a gum leaf', durationEst: 2, emotion: 'Deadpan', status: 'IDLE' },
   ]);
 
-  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'dna' | 'labs'>('director');
+  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'library' | 'dna' | 'labs'>('director');
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1064,6 +1066,7 @@ export default function Home() {
               {[
                 { id: 'director', label: 'DIRECTOR', icon: Wand2 },
                 { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
+                { id: 'library', label: 'LIBRARY', icon: Tv },
                 { id: 'dna', label: 'ENGINE DNA', icon: History },
                 { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical }
               ].map(tab => {
@@ -1072,7 +1075,7 @@ export default function Home() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'dna' | 'labs')}
+                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'library' | 'dna' | 'labs')}
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
                     className={cn(
@@ -1731,6 +1734,31 @@ export default function Home() {
               </div>
             )}
 
+            {activeTab === 'library' && (
+              <div className="flex-1 overflow-y-auto px-12 py-12 animate-in fade-in duration-700 min-h-0">
+                <div className="w-full max-w-7xl mx-auto space-y-6 h-full flex flex-col">
+                  <div className="border border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md p-6 relative overflow-hidden group flex flex-col flex-1">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF5F1F]/30 to-transparent"></div>
+                    <h2 className="text-xl font-black mb-4 tracking-tighter uppercase flex items-center gap-3">
+                      <Tv className="text-[#FF5F1F]" size={20} />
+                      EPISODE ARCHIVE <span className="text-[10px] text-[#FF5F1F] bg-[#FF5F1F]/10 px-2 py-0.5 ml-2 font-bold tracking-widest border border-[#FF5F1F]/20">PUBLIC</span>
+                    </h2>
+                    <p className="text-xs text-white/40 mb-8 max-w-2xl font-mono uppercase">
+                      All generated episodes that have successfully passed the cinematic pipeline and assembled. Stored in Supabase.
+                    </p>
+                    <LibraryViewer 
+                      onRemix={(episode) => {
+                        if (episode.director_idea) setDirectorIdea(episode.director_idea);
+                        if (episode.director_snippet) setDirectorSnippet(episode.director_snippet);
+                        if (episode.script_json) setScript(episode.script_json);
+                        setActiveTab('director');
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {activeTab === 'dna' && (
               <DNAPanel
                 charReferences={charReferences}

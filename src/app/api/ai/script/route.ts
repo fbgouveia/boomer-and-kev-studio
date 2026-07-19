@@ -30,11 +30,11 @@ export async function POST(req: Request) {
          - Behavior: Chewing gum leaf, slow blinking, sipping from stubby holder, yawning.
 
       DYNAMIC RULEBOOK:
-      - The conversation must feel NATURAL. They don't always have to argue.
-      - They can agree on something in a "matey" but intelligent way.
+      - The conversation must feel EXTREMELY NATURAL, dripping with AUTHENTIC AUSTRALIAN SLANG.
+      - They don't always have to argue. They can agree on something in a "matey" but intelligent way.
       - One can laugh at the other's joke (Kev's laugh is a dry wheeze, Boomer's is a booming roar).
       - Friction should come from their energy levels, not just opposing views.
-      - Use slang naturally: "Strewth", "No wuckas", "Flat out like a lizard drinking", "Cactus", "Mad as a cut snake".
+      - MUST aggressively use authentic Australian slang and idioms (e.g., "Strewth", "No wuckas", "Flat out like a lizard drinking", "Cactus", "Mad as a cut snake", "Fair dinkum", "Bloody oath", "Mate", "Yeah nah"). The script should sound like a true Aussie pub conversation.
 
       SCRIPT FLOW:
       1. Scene 1-2: Discovery/Intro. Either Boomer starts with high-energy hype, or Kev opens with a deadpan/lazy observation. Usually 2 blocks to set the scene.

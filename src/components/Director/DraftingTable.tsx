@@ -61,7 +61,7 @@ interface DraftingTableProps {
 
 export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: DraftingTableProps) {
     const [brainstorm, setBrainstorm] = useState<BrainstormData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedHook, setSelectedHook] = useState<number | null>(null);
     const [selectedBridge, setSelectedBridge] = useState<number | null>(null);
@@ -83,6 +83,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     const [retryCountdown, setRetryCountdown] = useState<number>(0);
 
     const fetchBrainstorm = React.useCallback(async () => {
+        if (isLoading) return; // Prevent double firing
         setIsLoading(true);
         setError(null);
         try {

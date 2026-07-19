@@ -66,13 +66,17 @@ async function executeRealPipeline() {
 
   // --- STEP 3: Dispatch Video Generation via Kling (Replicate) ---
   console.log(`\n3. Dispatching Kling v2.6 Video Generation...`);
-  const renderInput = {
+    const renderInput = {
     script: [{
       id: scene.id,
       characterId: scene.characterId,
       text: scene.text,
       shotType: scene.shotType,
       durationEst: scene.durationEst,
+      characterReference: scene.characterId === 'boomer' 
+        ? 'https://raw.githubusercontent.com/fbgouveia/boomer-and-kev-studio/restore-engine/public/assets/master_boomer.png' 
+        : 'https://raw.githubusercontent.com/fbgouveia/boomer-and-kev-studio/restore-engine/public/assets/master_kev.png',
+      studioReference: 'https://raw.githubusercontent.com/fbgouveia/boomer-and-kev-studio/restore-engine/public/assets/master_wide.png',
       technicalPrompt: `A photorealistic video of ${scene.characterId === 'boomer' ? 'an older Australian rugged man named Boomer' : 'a deadpan young Australian man named Kev'} sitting at a podcast desk. ${scene.action}. Rembrandt lighting, chessboard contrast, 8k resolution.`
     }],
     engine: 'kling',

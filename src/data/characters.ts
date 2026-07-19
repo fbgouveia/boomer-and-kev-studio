@@ -40,9 +40,9 @@ export const CHARACTERS: Character[] = [
             { emotion: 'Vibe', action: "Throwing a 'Shaka' sign with a gloved hand" },
             { emotion: 'Sweaty', action: "Wiping sweat from brow with a boxing glove" }
         ],
-        defaultOutfit: "Wearing red boxing gloves (often), gold chain, black 'Bonds style' singlet or just shirtless showing muscles. Always wears large professional studio headphones.",
+        defaultOutfit: "Wearing large red boxing gloves (NO fingers), gold chain, and a tight black singlet shirt with 'BOOMER' written on the chest. Never shirtless. Always wears large professional studio headphones.",
         voiceStyle: 'Deep, booming Queensland accent. Fast-paced, high energy.',
-        imagePromptContext: 'anthropomorphic muscular kangaroo, red boxing gloves, gold chain necklace, black singlet option, professional studio headphones, detailed fur texture, strong studio lighting',
+        imagePromptContext: 'anthropomorphic muscular kangaroo, large red padded boxing gloves (no fingers), gold chain necklace, wearing a tight black singlet shirt with BOOMER written on the chest, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
         referenceImage: '/assets/master_boomer.png'

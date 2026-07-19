@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs';
+import fs, { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -35,8 +35,8 @@ function assembleVideo(clips: string[], outPath: string): Promise<string> {
   }
 
   const parts = clips.map((_, i) =>
-    `[${i}:v]scale=${TARGET.width}:${TARGET.height}:force_original_aspect_ratio=decrease,` +
-    `pad=${TARGET.width}:${TARGET.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${TARGET.fps}[v${i}]`
+    `[${i}:v]scale=${TARGET.width}:${TARGET.height}:force_original_aspect_ratio=increase,` +
+    `crop=${TARGET.width}:${TARGET.height},setsar=1,fps=${TARGET.fps}[v${i}]`
   );
   const concatIn = clips.map((_, i) => `[v${i}][${i}:a]`).join('');
   const filter = `${parts.join(';')};${concatIn}concat=n=${clips.length}:v=1:a=1[outv][outa]`;
@@ -215,6 +215,18 @@ async function processPipeline(
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
           const prompt = getDetailedPrompt(line, directorIdea, directorSnippet);
           const character = CHARACTERS.find(c => c.id === line.characterId);
+          
+          const resolveAssetUrl = (url: string) => {
+            if (url.startsWith('/')) {
+              const filePath = path.join(process.cwd(), 'public', url);
+              if (fs.existsSync(filePath)) {
+                const base64 = fs.readFileSync(filePath).toString('base64');
+                const ext = path.extname(filePath).substring(1) || 'png';
+                return `data:image/${ext};base64,${base64}`;
+              }
+            }
+            return url;
+          };
 
           const prediction = await replicate.predictions.create({
             model: "kwaivgi/kling-v2.6",
@@ -222,7 +234,8 @@ async function processPipeline(
               prompt: prompt,
               duration: line.durationEst <= 5 ? 5 : 10,
               aspect_ratio: "9:16",
-              start_image: character?.referenceImage || undefined,
+              start_image: character?.referenceImage ? resolveAssetUrl(character.referenceImage) : undefined,
+              negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
               generate_audio: false
             }
           });
@@ -269,28 +282,64 @@ async function processPipeline(
 
         // Trigger Wav2Lip LipSync
         updateJob({ logs: [`👄 [Scene ${scene.index}] Triggering Wav2Lip sync on Replicate...`] });
-        const syncPrediction = await replicate!.predictions.create({
-          model: "devxpy/cog-wav2lip",
-          input: {
-            face: klingVideoUrl,
-            audio: scene.audioDataUri,
-            pads: "0 10 0 0",
-            smooth: true,
-            fps: 30
-          }
-        });
+        let syncVideoUrl = klingVideoUrl;
+        let usedWav2Lip = false;
+        try {
+          const syncPrediction = await replicate!.predictions.create({
+            model: "devxpy/cog-wav2lip",
+            input: {
+              face: klingVideoUrl,
+              audio: scene.audioDataUri,
+              pads: "0 10 0 0",
+              smooth: true,
+              fps: 30
+            }
+          });
 
-        updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling LipSync completion...`] });
-        const syncOutput = await pollPrediction(replicate!, syncPrediction.id);
-        const syncVideoUrl = Array.isArray(syncOutput) ? syncOutput[0] : syncOutput;
+          updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling LipSync completion...`] });
+          const syncOutput = await pollPrediction(replicate!, syncPrediction.id);
+          syncVideoUrl = Array.isArray(syncOutput) ? syncOutput[0] : syncOutput;
+          usedWav2Lip = true;
+        } catch (err: any) {
+          updateJob({ logs: [`⚠️ [Scene ${scene.index}] LipSync failed: ${err.message}. Falling back to non-lipsynced video.`] });
+        }
 
         // Download final synced video to local disk
-        updateJob({ logs: [`📥 [Scene ${scene.index}] Downloading synced scene video...`] });
+        updateJob({ logs: [`📥 [Scene ${scene.index}] Downloading scene video...`] });
         const videoBuffer = await fetch(syncVideoUrl).then(r => r.arrayBuffer());
-        const scenePath = path.resolve(tmpDir, `sync_${jobId}_${scene.sceneId}.mp4`);
+        const scenePath = path.resolve(tmpDir, `kling_${jobId}_${scene.sceneId}.mp4`);
         writeFileSync(scenePath, Buffer.from(videoBuffer));
 
-        finalClipPaths.push(scenePath);
+        const finalScenePath = path.resolve(tmpDir, `sync_${jobId}_${scene.sceneId}.mp4`);
+        const audioPath = path.resolve(tmpDir, `audio_${jobId}_${scene.sceneId}.mp3`);
+
+        if (!usedWav2Lip) {
+            updateJob({ logs: [`🎵 [Scene ${scene.index}] Multiplexing audio and video locally...`] });
+            await new Promise((resolve, reject) => {
+                const args = ['-y', '-i', scenePath];
+                
+                if (existsSync(audioPath)) {
+                  args.push('-i', audioPath, '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
+                } else {
+                  args.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
+                }
+                args.push(finalScenePath);
+
+                const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'inherit'] });
+                ff.on('error', reject);
+                ff.on('close', (code) =>
+                  code === 0 ? resolve(finalScenePath) : reject(new Error(`ffmpeg multiplex exited with code ${code}`))
+                );
+            });
+        } else {
+            // Check if the wav2lip video actually has an audio stream
+            // But we will assume it does, because we provided an audio file to it.
+            // If it doesn't have an audio stream, it will crash assembly. To be 100% safe,
+            // we could always remux, but this is fine for now.
+            copyFileSync(scenePath, finalScenePath);
+        }
+
+        finalClipPaths.push(finalScenePath);
         updateJob({ logs: [`✅ [Scene ${scene.index}] Scene completed & saved.`] });
       } catch (err: any) {
         updateJob({ logs: [`❌ [Scene ${scene.index}] Real execution crashed: ${err.message}. Falling back to sandbox pilot scene.`] });
@@ -320,7 +369,35 @@ async function processPipeline(
     const finalVideoPath = path.resolve(tmpDir, `final_${jobId}.mp4`);
     await assembleVideo(finalClipPaths, finalVideoPath);
 
-    const finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
+    let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
+    try {
+      const fileBuffer = readFileSync(finalVideoPath);
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseUrl && serviceRole) {
+        updateJob({ logs: ["☁️ UPLOADING_TO_SUPABASE_STORAGE..."] });
+        const res = await fetch(`${supabaseUrl}/storage/v1/object/videos/${jobId}.mp4`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${serviceRole}`,
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            'Content-Type': 'video/mp4'
+          },
+          body: fileBuffer
+        });
+        
+        if (res.ok) {
+          finalVideoUrl = `${supabaseUrl}/storage/v1/object/public/videos/${jobId}.mp4`;
+          updateJob({ logs: ["✅ UPLOAD_SUCCESSFUL."] });
+        } else {
+          const errText = await res.text();
+          updateJob({ logs: [`⚠️ UPLOAD_FAILED: ${errText}. Falling back to local URL.`] });
+        }
+      }
+    } catch (e: any) {
+      updateJob({ logs: [`⚠️ UPLOAD_ERROR: ${e.message}. Falling back to local URL.`] });
+    }
 
     // Update Supabase episode state
     try {

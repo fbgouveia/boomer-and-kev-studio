@@ -15,6 +15,12 @@ const resolveAssetUrl = (url: string | undefined, origin: string) => {
   if (!url) return undefined;
   const cleanUrl = url.trim();
   if (cleanUrl.startsWith('/')) {
+    // [HOTFIX] Se estiver rodando localmente (ou no container n8n_default),
+    // a Replicate não consegue ler 'http://localhost:3000/assets/...'.
+    // Redirecionamos para o branch no Github para a API conseguir baixar a imagem start_image.
+    if (origin.includes('localhost') || origin.includes('boomer_kev')) {
+      return `https://raw.githubusercontent.com/fbgouveia/boomer-and-kev-studio/restore-engine/public${cleanUrl}`;
+    }
     return `${origin}${cleanUrl}`;
   }
   if (cleanUrl.includes('drive.google.com')) {
