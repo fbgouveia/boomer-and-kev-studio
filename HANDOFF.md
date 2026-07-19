@@ -82,6 +82,22 @@
 - **O quê:** Rodar `npx pm2 startup` na VPS para sobreviver a reboots
 - **Comando:** `ssh root@2.25.182.106 "cd /var/www/boomerandkev.fgss.io && npx pm2 startup && npx pm2 save"`
 
+### ✅ P7 — RESOLVIDO (19/07 tarde): infra duplicada Docker vs PM2
+- **Problema:** dois deploys do studio rodavam ao mesmo tempo na VPS — o container Docker
+  `boomer_kev` (rede `n8n_default`, código VELHO, 6 cenas, sem /api/radar) e o PM2
+  `boomer-engine` (produção pública, código novo). Os workflows do n8n (produção
+  `n6qm9qMxEFvvkU8C` e sentinelas `CmHQvdzX5Sk23n7y`) apontavam para o container velho —
+  o pré-voo vigiava código que não era o de produção.
+- **Resolução:** 6 URLs repontadas nos 2 workflows para `https://boomerandkev.fgss.io`
+  (mesmo caminho de usuários reais — nginx+SSL); container removido (imagem
+  `boomer-kev-studio:latest` + `/root/boomer-kev-studio` preservados p/ rollback);
+  sonda verificada 4/4 GREEN contra a produção (confirma código novo: "8 cenas");
+  hairpin n8n→URL pública testado OK.
+- **⚠️ ACHADO NA MESMA VERIFICAÇÃO:** o workflow de produção está **ATIVO** (cron
+  Seg/Qua/Sex 08h). Com pré-voo verde, segunda-feira 08h ele dispara um render REAL
+  (~US$3-6) sozinho. Se a ativação não foi intencional, desativar em n8n.fgss.io.
+  (Regra inviolável nº 4: render exige OK explícito.)
+
 ---
 
 ## ⛔ REGRAS INVIOLÁVEIS (O Felipe disse, está gravado)

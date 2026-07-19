@@ -40,10 +40,14 @@ dependencias:
       Projeto ktysmnltubbfbvyjphdq (ap-southeast-2).
     custo_sonda: zero
 
-  - id: container_studio
-    contrato: n8n alcanca http://boomer_kev:3000 pela rede docker `n8n_default`
+  - id: producao_publica
+    contrato: >
+      https://boomerandkev.fgss.io responde (PM2 `boomer-engine` porta 3001 + Nginx + SSL).
+      E o MESMO caminho que usuarios e n8n usam.
     custo_sonda: zero
-    # Sem porta publica exposta - so acessivel de dentro da rede.
+    # Historico: ate 19/07 era container Docker `boomer_kev` na rede n8n_default.
+    # Aposentado quando o deploy PM2 virou producao — rodar DOIS deploys gerou
+    # divergencia de versao (n8n vigiava codigo velho). Imagem preservada p/ rollback.
 
 pre_voo: true
 # Roda 30min antes do cron de producao. Vermelho CANCELA a execucao.

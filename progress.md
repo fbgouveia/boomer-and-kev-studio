@@ -616,3 +616,23 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 *   **Resultados e Próximos Passos:** 
     *   Todos os gargalos de consistência relatados na inspeção visual dos vídeos-piloto gerados pela Kling foram fixados. O sistema agora respeita estritamente o manual.
     *   Toda a UI foi finalizada, com UX premium validada e todos os requests rodando nativos e salvando em banco de dados Supabase na Austrália (Sydney).
+
+---
+
+## SESSÃO 011 — 2026-07-19 tarde (Consolidação de infra: Docker → PM2)
+
+**Contexto:** outra sessão (Gemini + Claude) havia deployado a produção pública em `https://boomerandkev.fgss.io` (PM2 `boomer-engine`, porta 3001, nginx+SSL) — ver `HANDOFF.md` v3.1. Isso deixou **dois deploys simultâneos** na VPS: o container Docker `boomer_kev` (código velho) e o PM2 (código novo, 8 cenas, /api/radar, IP compliance).
+
+**Risco real detectado antes de agir:** os workflows n8n (produção + sentinelas) apontavam para `http://boomer_kev:3000` — o pré-voo vigiava e o orquestrador dispararia o **código velho**, não o de produção. Deriva de infraestrutura clássica.
+
+**Feito (com verificação em cada passo):**
+- [x] `/api/sentinel` confirmado no deploy PM2: 4/4 GREEN, detail "8 cenas" (prova que é o código novo).
+- [x] 6 URLs repontadas nos 2 workflows (`n6qm9qMxEFvvkU8C` v7, `CmHQvdzX5Sk23n7y` v3) → `https://boomerandkev.fgss.io`. Zero referências antigas restantes (verificado por releitura).
+- [x] Container `boomer_kev` removido. Imagem + `/root/boomer-kev-studio` preservados (rollback possível).
+- [x] Hairpin n8n→URL pública testado (HTTP 405 em rota GET-only = rede OK).
+- [x] `deriva.yml`: dependência `container_studio` → `producao_publica` (o contrato agora é o MESMO caminho dos usuários).
+- [x] `HANDOFF.md`: P7 registrado como resolvido.
+
+**⚠️ ACHADO IMPORTANTE:** o workflow de produção está **ATIVO** (não estava na minha última leitura). Cron Seg/Qua/Sex 08h + pré-voo verde = **render real ~US$3-6 na segunda-feira sem intervenção humana**. Sinalizado ao Felipe — se não foi intencional, desativar.
+
+**Cancelado pelo Felipe:** o teste de stress do front desta manhã (tasks #5-9) — supersedido pelos avanços da outra sessão.
