@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Superplastic (Janky & Guggimon)",
+    "category": "Virtual Influencer",
+    "url": "https://www.instagram.com/superplastic/",
+    "retention_strategy": "Alta qualidade CGI interagindo com cenários e pessoas reais. Uso intenso de quebra de padrão visual a cada 3s.",
+    "why_we_follow": "Eles criaram um império de merchandising e patrocínio (Gucci, Fortnite) usando personagens sintéticos caóticos. O padrão-ouro do nosso modelo de patrocínio.",
+    "status": "active"
+  },
+  {
+    "name": "Nobody Sausage",
+    "category": "VTuber",
+    "url": "https://www.tiktok.com/@nobodysausage",
+    "retention_strategy": "Dança e animação colorida com movimentos físicos perfeitamente capturados. Pacing insano, takes de 2 segundos.",
+    "why_we_follow": "Mestre absoluto em retenção no TikTok e Reels. Mostra que o design simples, aliado a excelente coreografia, prende a atenção.",
+    "status": "active"
+  },
+  {
+    "name": "Flagrant (Andrew Schulz)",
+    "category": "Comedy Podcast",
+    "url": "https://www.youtube.com/@Flagrant",
+    "retention_strategy": "Edição multi-câmera com reações da 'plateia' (o resto do time). Cortes rápidos sempre que a piada 'aterrissa'.",
+    "why_we_follow": "A dinâmica de grupo deles dita o ritmo de engajamento em vídeos curtos de comédia falada. O 'Straight vs Funny man' em tempo real.",
+    "status": "active"
+  },
+  {
+    "name": "Ironmouse / VShojo",
+    "category": "VTuber",
+    "url": "https://www.twitch.tv/ironmouse",
+    "retention_strategy": "Engajamento direto com a comunidade e lore (história) contínua. Mistura de vulnerabilidade com humor caótico.",
+    "why_we_follow": "Como humanizar um avatar que não tem corpo físico. Fundamental para entendermos a antropomorfização e criação de empatia com a audiência.",
+    "status": "active"
+  }
+]

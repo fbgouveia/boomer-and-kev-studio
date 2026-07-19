@@ -43,9 +43,9 @@ import { AnimatedAgentList } from '@/components/studio/AnimatedAgentList';
 import { LibraryViewer } from '@/components/studio/LibraryViewer';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
-import { DNAPanel } from '@/components/studio/DNAPanel';
+import { IntelligenceRadar } from '@/components/studio/IntelligenceRadar';
 import LabsPanel from '@/components/studio/LabsPanel';
-import { FlaskConical, Tv } from 'lucide-react';
+import { FlaskConical, Tv, Target } from 'lucide-react';
 
 
 export default function Home() {
@@ -54,7 +54,7 @@ export default function Home() {
     { id: '2', characterId: 'kev', text: "Yeah, nah. I just want to know when we're finished.", shotType: 'KEV_CU', action: 'Slowly chewing on a gum leaf', durationEst: 2, emotion: 'Deadpan', status: 'IDLE' },
   ]);
 
-  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'library' | 'dna' | 'labs'>('director');
+  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'library' | 'dna' | 'labs' | 'radar'>('director');
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1031,6 +1031,18 @@ export default function Home() {
                 </div>
                 <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Studio_Labs</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab('radar')}
+                className={cn("p-4 transition-all duration-500 hover:bg-white/5 relative group stagger-item translate-y-0 opacity-1",
+                  activeTab === 'radar' ? "text-[#FF5F1F]" : "text-white/20")}
+                style={{ animationDelay: '350ms' }}
+              >
+                <div className={cn("cine-icon mx-auto", activeTab === 'radar' && "border-[#FF5F1F] bg-[#FF5F1F]/10")}>
+                  <Target size={20} />
+                </div>
+                <span className="absolute left-full ml-4 px-2 py-1 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-[100] origin-left shadow-[10px_10px_30px_rgba(0,0,0,0.5)] border-l-2 border-white/20">Radar</span>
+              </button>
             </div>
           </div>
 
@@ -1070,14 +1082,15 @@ export default function Home() {
                 { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
                 { id: 'library', label: 'LIBRARY', icon: Tv },
                 { id: 'dna', label: 'ENGINE DNA', icon: History },
-                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical }
+                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
+                { id: 'radar', label: 'RADAR', icon: Target }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'library' | 'dna' | 'labs')}
+                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'library' | 'dna' | 'labs' | 'radar')}
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
                     className={cn(
@@ -1781,6 +1794,10 @@ export default function Home() {
 
             {activeTab === 'labs' && (
               <LabsPanel />
+            )}
+
+            {activeTab === 'radar' && (
+              <IntelligenceRadar />
             )}
           </div>
         </div>

@@ -19,6 +19,13 @@ export async function POST(req: Request) {
       TOPIC: "${topic}"
       CONTEXT: "${snippet || 'No additional notes'}"
 
+      [COMPLIANCE & BRAND IDENTITY GUARDRAILS]
+      1. NEVER use the names, catchphrases, or exact visual aesthetics of real-world influencers, VTubers, or podcasts (e.g., Theo Von, Joe Rogan, Superplastic, Nobody Sausage, Ironmouse).
+      2. If the TOPIC or CONTEXT references a real-world creator, EXTRACT ONLY the structural pacing (e.g., "fast cuts", "deadpan reaction") and APPLY it to Boomer and Kev.
+      3. Boomer is ALWAYS a kangaroo. Kev is ALWAYS a koala. Never turn them into humans or other IPs.
+      4. Do not include unauthorized third-party trademarked products in the sponsorPitch; always invent a satirized fake product.
+
+
       You MUST generate exactly 3 options for each of these 8 categories (each category maps to a scene):
       1. hooks (Scene 1: High energy hook. Jump straight into the action. AMYGDALA HIJACK.)
       2. bridges (Scene 2: Moving into the core topic details)
