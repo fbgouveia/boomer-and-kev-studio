@@ -129,9 +129,6 @@ async function pollPrediction(replicate: Replicate, predictionId: string, maxAtt
   throw new Error(`Prediction timed out: ${predictionId}`);
 }
 
-// 1-second silence fallback for audio (data URI format)
-const FALLBACK_SILENT_AUDIO_URI = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACQAAcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc/84EQAAAAAAAAAAAAAAAAAAAAAAAAGJpbmcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgSAAAAAAAAAAAAAAAAAAAAAAAAABlaG8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgSgAAAAAAAAAAAAAAAAAAAAAAAABrZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgTgAAAAAAAAAAAAAAAAAAAAAAAABtZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgUgAAAAAAAAAAAAAAAAAAAAAAAABvZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgVgAAAAAAAAAAAAAAAAAAAAAAAABxZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgWgAAAAAAAAAAAAAAAAAAAAAAAAB1ZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgXgAAAAAAAAAAAAAAAAAAAAAAAAB5ZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zgYgAAAAAAAAAAAAAAAAAAAAAAAAB9ZWcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/zhAAAAAAAAAAAAAAAAAAAAAAAAA==';
-
 // Background Job Worker
 async function processPipeline(
   jobId: string,
@@ -180,55 +177,64 @@ async function processPipeline(
 
     updateJob({ progress: 10, logs: ["🧬 INJECTING_CHARACTER_DNA_PROMPTS..."] });
 
-    // Step 1: Voice Generation & Kling Launch
+    // Step 1a: VOICE GATE — TODAS as vozes sintetizadas ANTES de qualquer render.
+    // Decisão Felipe 19/07 (doutrina Deriva: degradar calado, nunca): voz falhou →
+    // o run FALHA aqui, com US$0 gastos em Kling, em vez de gerar vídeo mudo "com sucesso".
+    if (!elevenLabsKey) {
+      throw new Error("VOICE_GATE: ELEVENLABS_API_KEY ausente — run cancelado antes de gastar render.");
+    }
+
+    const audioByScene = new Map<string, string>();
+
+    for (let i = 0; i < script.length; i++) {
+      const line = script[i];
+      const index = i + 1;
+      const character = CHARACTERS.find(c => c.id === line.characterId);
+      if (!character?.voiceId) {
+        throw new Error(`VOICE_GATE: personagem '${line.characterId}' sem voiceId (cena ${index}) — run cancelado antes de gastar render.`);
+      }
+
+      updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio...`] });
+      let response: Response;
+      try {
+        response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': elevenLabsKey,
+            'accept': 'audio/mpeg',
+          },
+          body: JSON.stringify({
+            text: line.text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.5, use_speaker_boost: true },
+          }),
+        });
+      } catch (e: any) {
+        throw new Error(`VOICE_GATE: ElevenLabs inacessível na cena ${index} (${e.message}) — run cancelado antes de gastar render.`);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`VOICE_GATE: ElevenLabs HTTP ${response.status} na cena ${index}: ${errorText.substring(0, 120)} — run cancelado antes de gastar render.`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      audioByScene.set(line.id, `data:audio/mpeg;base64,${Buffer.from(buffer).toString('base64')}`);
+      writeFileSync(path.resolve(tmpDir, `audio_${jobId}_${line.id}.mp3`), Buffer.from(buffer));
+      updateJob({ logs: [`✅ [Scene ${index}] Voice synthesized successfully.`] });
+    }
+
+    updateJob({ progress: 25, logs: ["✅ VOICE_GATE_PASSED: todas as vozes prontas. Liberando renders."] });
+
+    // Step 1b: Kling Launch — só executa com o gate de voz 100% verde
     const scenesToProcess = [];
 
     for (let i = 0; i < script.length; i++) {
       const line = script[i];
       const sceneId = line.id;
       const index = i + 1;
-
-      // 1a. Voice Generation (ElevenLabs)
-      let audioDataUri = FALLBACK_SILENT_AUDIO_URI;
-      let voiceSynthesized = false;
-
-      if (elevenLabsKey) {
-        const character = CHARACTERS.find(c => c.id === line.characterId);
-        if (character && character.voiceId) {
-          try {
-            updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio...`] });
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'xi-api-key': elevenLabsKey,
-                'accept': 'audio/mpeg',
-              },
-              body: JSON.stringify({
-                text: line.text,
-                model_id: 'eleven_multilingual_v2',
-                voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.5, use_speaker_boost: true },
-              }),
-            });
-
-            if (response.ok) {
-              const buffer = await response.arrayBuffer();
-              const base64 = Buffer.from(buffer).toString('base64');
-              audioDataUri = `data:audio/mpeg;base64,${base64}`;
-              writeFileSync(path.resolve(tmpDir, `audio_${jobId}_${sceneId}.mp3`), Buffer.from(buffer));
-              voiceSynthesized = true;
-              updateJob({ logs: [`✅ [Scene ${index}] Voice synthesized successfully.`] });
-            } else {
-              const errorText = await response.text();
-              updateJob({ logs: [`⚠️ [Scene ${index}] ElevenLabs error: ${errorText.substring(0, 100)}. Falling back to silent sync.`] });
-            }
-          } catch (e: any) {
-            updateJob({ logs: [`⚠️ [Scene ${index}] ElevenLabs request failed: ${e.message}. Falling back to silent sync.`] });
-          }
-        }
-      } else {
-        updateJob({ logs: [`⚠️ ElevenLabs key missing. Using silent audio fallback for Scene ${index}.`] });
-      }
+      const audioDataUri = audioByScene.get(line.id)!;
 
       // 1b. Video Generation (Kling)
       let videoUrl = "";

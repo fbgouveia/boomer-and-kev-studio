@@ -659,3 +659,13 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - [x] Build + deploy via `deploy_studio.sh`, PM2 reiniciado.
 - [x] **Aceite verificado em produção** (JS via browser): 1280/1440/1920px → 6 abas visíveis, `abasCortadas: []`, `overflowX: 0`, RENDER SCENE visível na barra; 390px → overflow 0, action bar `display:none` (mobile segue com hambúrguer).
 - Resultado visual: "STUDIO LABS" e "RADAR" agora inteiras no topo — o bug "STUDI…" morreu junto.
+
+### Sessão 011e — WP 1.3 CONCLUÍDO: VOICE_GATE (opção A do Felipe)
+
+**Decisão:** voz falhou → run falha ALTO antes de gastar render (vs. carimbar DEGRADED e pagar Kling mesmo assim). Motivo: perfil paranoico + é a única opção que economiza — a voz vem antes do render, parar ali custa $0.
+
+- [x] `pipeline/run` reestruturado em 2 fases: **Step 1a VOICE_GATE** (TODAS as vozes sintetizadas primeiro; qualquer falha — key ausente, personagem sem voiceId, HTTP != 200, rede — lança erro e o catch existente marca job FAILED + episódio `failed` no Supabase) → **Step 1b Kling** (só roda com gate 100% verde). Antes, o Kling da cena 1 disparava antes da voz da cena 2 — falha no meio já teria queimado renders.
+- [x] Fallback de áudio silencioso **removido** (const + lógica — era a violação da doutrina Deriva apontada no deriva.yml). `voiceSynthesized` morto removido junto.
+- [x] **Aceite testado localmente**: dev server com `ELEVENLABS_API_KEY=invalida` e `REPLICATE_API_TOKEN=` vazio → POST run → job `FAILED` com log `VOICE_GATE: ElevenLabs HTTP 401 na cena 1`, **zero chamadas ao Replicate**, episódio marcado `failed` no Supabase (verificado na linha antes de deletá-la).
+- [x] Deploy em produção via `deploy_studio.sh`.
+- Nota: gate-test deixou claro que o fluxo Supabase→catch→FAILED funciona ponta a ponta.
