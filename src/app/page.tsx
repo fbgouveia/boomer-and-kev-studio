@@ -39,7 +39,6 @@ import { TrendsFeed } from '@/components/Director/TrendsFeed';
 import { jsPDF } from 'jspdf';
 import { DraftingTable } from '@/components/Director/DraftingTable';
 import { ScriptLine } from '@/types';
-import { AnimatedAgentList } from '@/components/studio/AnimatedAgentList';
 import { LibraryViewer } from '@/components/studio/LibraryViewer';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
