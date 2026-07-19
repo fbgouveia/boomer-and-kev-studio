@@ -34,8 +34,9 @@
 | Vídeo | Replicate `kwaivgi/kling-v2.6` | Render de cenas (~US$3-6/vídeo) | [REAL] |
 | Montagem | ffmpeg (dentro de `/api/pipeline/run` e `tools/assemble.mjs`) | Concat 9:16 1080×1920 30fps | [REAL] |
 | **Orquestração** | **n8n self-hosted em `n8n.fgss.io`** (VPS compartilhada com FGSS) | Cron, retry, pré-voo, Telegram | [REAL] |
-| **Deploy** | **Container Docker `boomer_kev`** na rede `n8n_default`, sem porta pública | Runtime de produção | [REAL] |
+| **Deploy** | **Next.js Standalone + PM2** em `/var/www/boomerandkev.fgss.io` porta 3001, Nginx reverse proxy + SSL Let's Encrypt | Runtime de produção | [REAL] |
 | **Persistência** | **Supabase** projeto `boomer-kev-sydney` (`ktysmnltubbfbvyjphdq`, **ap-southeast-2**) | Dados | [REAL] |
+| **Radar** | Rota `/api/radar` (POST, Bearer token) recebe benchmarks via n8n webhook | Intelligence feed | [REAL] |
 | **Manutenção** | **Skill `deriva`** + `/api/sentinel` + `deriva.yml` | Sondas de contrato, pré-voo | [REAL] |
 | LipSync | Replicate (modelo lipsync) | Sincronização boca/áudio | [ALVO] — nunca construído |
 | Supabase Storage / Edge Functions / Realtime | — | Webhooks e progresso ao vivo | [ALVO] — nunca construído |
@@ -395,17 +396,22 @@ YOUTUBE_CLIENT_SECRET=...
 | 2026-03-28 | 1.0 | Criação inicial via V.L.A.E.G. | Inicialização |
 | 2026-03-28 | 2.0 | Data Schema completo, Pipeline autônomo, integrações sociais | Respostas de Descoberta incorporadas |
 | 2026-07-18 | 2.1 | Inclusão de regras criativas MKBHD | Transcrição de produção incorporada |
-| 2026-07-19 | 3.0 | Convenção [REAL]/[ALVO]; infra de produção (VPS, container `boomer_kev`, n8n, Supabase Sydney); tabela `deriva_runs`; contrato do `pipeline/run`; fluxo real com pré-voo; doutrina Deriva como invariante; contrato duplo de RLS; três camadas de agentes | Auditoria ao vivo revelou que a constituição descrevia pipeline inexistente (LipSync, webhooks, Storage, Realtime). Deriva v1 no ar. |
+| 2026-07-19 | 3.0 | Convenção [REAL]/[ALVO]; infra de produção; doutrina Deriva; contrato duplo de RLS; três camadas de agentes | Auditoria ao vivo revelou pipeline inexistente |
+| 2026-07-19 | 3.1 | Deploy de produção: Docker → PM2 standalone; `deploy_studio.sh` criado; Nginx reverse proxy + SSL Let's Encrypt em `boomerandkev.fgss.io`; rota `/api/radar` para n8n webhook; `IntelligenceRadar.tsx` + `radar.json` (benchmark feed); IP compliance guardrails no brainstorm; wardrobe metadata no pipeline; X-Ray modal na Library | Migração para produção pública. Engine acessível via HTTPS. |
 
 ### Referências rápidas [REAL, 2026-07-19]
 | Recurso | Identificador |
 |---------|---------------|
-| VPS (Hostinger, responde de Boston/EUA) | `2.25.182.106`, SSH root |
+| VPS (Hostinger) | `2.25.182.106`, SSH root, Nginx 1.24.0 (Ubuntu) |
+| **Produção** | **https://boomerandkev.fgss.io** — PM2 processo `boomer-engine` porta 3001 |
+| Deploy script | `./deploy_studio.sh` (build + rsync + npx pm2 restart) |
+| Nameservers | `athena.dns-parking.com` / `apollo.dns-parking.com` (Hostinger, sem API de DNS) |
 | n8n | `n8n.fgss.io` — creds em `Felipe Portfolio/.env` |
 | Workflow produção | `n6qm9qMxEFvvkU8C` — **inativo** (aguarda 1º run pago) |
 | Workflow vigilância | `CmHQvdzX5Sk23n7y` — **ativo**, cron 07:30 |
-| Container | `boomer_kev`, rede `n8n_default`, sem porta pública |
+| Radar API | `POST https://boomerandkev.fgss.io/api/radar` (Bearer `N8N_RADAR_SECRET`) |
 | Supabase | `ktysmnltubbfbvyjphdq` (Sydney) |
 | Telegram | chat `6431944169`, cred n8n `xMM0nVZz16NfA8M8` |
 | Política de manutenção | `deriva.yml` na raiz |
+| GitHub | `fbgouveia/boomer-and-kev-studio` branch `restore-engine` |
 
