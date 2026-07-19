@@ -42,6 +42,7 @@ import { ScriptLine } from '@/types';
 import { LibraryViewer } from '@/components/studio/LibraryViewer';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
+import { DNAPanel } from '@/components/studio/DNAPanel';
 import { IntelligenceRadar } from '@/components/studio/IntelligenceRadar';
 import LabsPanel from '@/components/studio/LabsPanel';
 import { FlaskConical, Tv, Target } from 'lucide-react';
