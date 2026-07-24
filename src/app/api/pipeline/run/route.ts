@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs, { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -23,6 +23,7 @@ const runPipelineSchema = z.object({
   directorIdea: z.string().optional(),
   directorSnippet: z.string().optional(),
   engine: z.string().optional().default('kling'),
+  aspect: z.enum(['9:16', '16:9']).optional().default('9:16'), // formato selecionável (Kling + montagem)
   wardrobe: z.object({
     boomer: z.string().optional(),
     kev: z.string().optional(),
@@ -31,17 +32,22 @@ const runPipelineSchema = z.object({
 });
 
 // FFmpeg Video Assembly function
-const TARGET = { width: 1080, height: 1920, fps: 30 };
+type Target = { width: number; height: number; fps: number };
+// Dimensões de saída por formato. Quando os clipes já vêm no aspect escolhido
+// (âncora recortada + aspect_ratio do Kling), o scale/crop abaixo é normalização,
+// não decepa — o crop só gutava quando o aspect do clipe ≠ do alvo (bug antigo).
+const aspectTarget = (aspect: string): Target =>
+  aspect === '16:9' ? { width: 1920, height: 1080, fps: 30 } : { width: 1080, height: 1920, fps: 30 };
 
-async function assembleVideo(clips: string[], outPath: string, transitions?: { type: string; dur: number }[]): Promise<string> {
+async function assembleVideo(clips: string[], outPath: string, target: Target, transitions?: { type: string; dur: number }[]): Promise<string> {
   if (!clips.length) throw new Error('assembleVideo: nenhum clipe fornecido');
   for (const c of clips) {
     if (!existsSync(c)) throw new Error(`clipe não encontrado: ${c}`);
   }
 
   const norm = clips.map((_, i) =>
-    `[${i}:v]scale=${TARGET.width}:${TARGET.height}:force_original_aspect_ratio=increase,` +
-    `crop=${TARGET.width}:${TARGET.height},setsar=1,fps=${TARGET.fps}[v${i}]`
+    `[${i}:v]scale=${target.width}:${target.height}:force_original_aspect_ratio=increase,` +
+    `crop=${target.width}:${target.height},setsar=1,fps=${target.fps}[v${i}]`
   );
 
   let filter: string;
@@ -174,6 +180,24 @@ async function createKlingPrediction(replicate: Replicate, input: any, maxRetrie
   }
 }
 
+// Kling herda o aspect da start_image, não do param aspect_ratio. Para o formato
+// (9:16/16:9) valer de verdade, a âncora local é recortada (centralizada) via
+// ffmpeg pro aspect escolhido e vira data URI. Remoto/ausente → devolve como está.
+async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16' | '16:9', tmpDir: string, tag: string): Promise<string | undefined> {
+  if (!assetUrl) return undefined;
+  if (!assetUrl.startsWith('/')) return assetUrl;
+  const src = path.join(process.cwd(), 'public', assetUrl);
+  if (!existsSync(src)) return undefined;
+  const out = path.resolve(tmpDir, `anchor_${tag}.jpg`);
+  const crop = aspect === '9:16' ? `crop='min(iw,ih*9/16)':ih` : `crop=iw:'min(ih,iw*9/16)'`;
+  await new Promise<void>((resolve, reject) => {
+    const ff = spawn('ffmpeg', ['-y', '-i', src, '-vf', crop, '-frames:v', '1', out], { stdio: ['ignore', 'ignore', 'inherit'] });
+    ff.on('error', reject);
+    ff.on('close', (c) => (c === 0 && existsSync(out)) ? resolve() : reject(new Error(`reframe âncora falhou (${tag})`)));
+  });
+  return `data:image/jpeg;base64,${readFileSync(out).toString('base64')}`;
+}
+
 // WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
 
 // Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
@@ -222,8 +246,10 @@ async function processPipeline(
   directorIdea: string,
   directorSnippet: string,
   engine: string,
+  aspect: '9:16' | '16:9',
   wardrobe?: { boomer?: string, kev?: string, studio?: string }
 ) {
+  const target = aspectTarget(aspect);
   const tmpDir = path.resolve(process.cwd(), '.tmp');
   const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
 
@@ -347,29 +373,20 @@ async function processPipeline(
           const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe);
           const character = CHARACTERS.find(c => c.id === line.characterId);
           
-          const resolveAssetUrl = (url: string) => {
-            if (url.startsWith('/')) {
-              const filePath = path.join(process.cwd(), 'public', url);
-              if (fs.existsSync(filePath)) {
-                const base64 = fs.readFileSync(filePath).toString('base64');
-                const ext = path.extname(filePath).substring(1) || 'png';
-                return `data:image/${ext};base64,${base64}`;
-              }
-            }
-            return url;
-          };
-
-          // WP 1.5: cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master —
-          // antes toda cena ancorava 1 personagem e o Kev nunca aparecia junto.
-          const anchorImage = (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER')
+          // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
+          // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
+          // ponytail: two-shot vertical de verdade (OTS/empilhado) exige arte nova — P0a item 4.
+          const anchorImage = (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER'))
             ? '/assets/master_wide.png'
             : character?.referenceImage;
+
+          const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`);
 
           const prediction = await createKlingPrediction(replicate, {
             prompt: prompt,
             duration: line.durationEst <= 5 ? 5 : 10,
-            aspect_ratio: "9:16",
-            start_image: anchorImage ? resolveAssetUrl(anchorImage) : undefined,
+            aspect_ratio: aspect,
+            start_image: startImage,
             negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
             generate_audio: false
           });
@@ -418,7 +435,7 @@ async function processPipeline(
           const prediction = await createKlingPrediction(replicate!, {
             prompt: scene.launch.prompt,
             duration: scene.launch.duration,
-            aspect_ratio: "9:16",
+            aspect_ratio: aspect,
             start_image: frameUri,
             negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
             generate_audio: false
@@ -530,7 +547,7 @@ async function processPipeline(
       updateJob({ logs: [`🎞️ Transições: ${transitions.map(t => `${t.type}${t.dur >= 0.1 ? '' : '(corte)'}`).join(' → ')}`] });
     }
 
-    await assembleVideo(finalClipPaths, finalVideoPath, transitions);
+    await assembleVideo(finalClipPaths, finalVideoPath, target, transitions);
 
     let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
     try {
@@ -618,7 +635,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_INPUT_SIGNAL", details: validation.error.format() }, { status: 400 });
     }
 
-    const { script, directorIdea = "", directorSnippet = "", engine = "kling", wardrobe } = validation.data;
+    const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe } = validation.data;
 
     // Create .tmp directory
     const tmpDir = path.resolve(process.cwd(), '.tmp');
@@ -641,7 +658,7 @@ export async function POST(req: Request) {
     writeFileSync(jobFilePath, JSON.stringify(initialJobState, null, 2));
 
     // Fire background task
-    processPipeline(jobId, script, directorIdea, directorSnippet, engine, wardrobe).catch(err => {
+    processPipeline(jobId, script, directorIdea, directorSnippet, engine, aspect, wardrobe).catch(err => {
       console.error(`Uncaught background task error for job ${jobId}:`, err);
     });
 
