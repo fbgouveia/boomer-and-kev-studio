@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import Replicate from 'replicate';
 import { z } from 'zod';
-import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS } from '@/data/characters';
+import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
 import { fetchWithRetry } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
 
@@ -318,8 +318,8 @@ async function processPipeline(
           },
           body: JSON.stringify({
             text: line.text,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.5, use_speaker_boost: true },
+            model_id: character.voice.modelId,
+            voice_settings: voiceSettingsFor(character, line.emotion),
           }),
         });
       } catch (e: any) {

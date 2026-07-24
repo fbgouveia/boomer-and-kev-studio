@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { voiceSchema } from '@/lib/validations';
-import { CHARACTERS } from '@/data/characters';
+import { CHARACTERS, voiceSettingsFor } from '@/data/characters';
 import { fetchWithRetry } from '@/lib/fetch-retry';
 
 export async function POST(req: Request) {
@@ -35,13 +35,8 @@ export async function POST(req: Request) {
                 },
                 body: JSON.stringify({
                     text,
-                    model_id: 'eleven_multilingual_v2',
-                    voice_settings: {
-                        stability: 0.5,
-                        similarity_boost: 0.75,
-                        style: 0.5,
-                        use_speaker_boost: true,
-                    },
+                    model_id: character.voice.modelId,
+                    voice_settings: voiceSettingsFor(character, body.emotion),
                 }),
             }
         );

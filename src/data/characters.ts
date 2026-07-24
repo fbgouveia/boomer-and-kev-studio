@@ -14,8 +14,37 @@ export type Character = {
     imagePromptContext: string;
     lightingKey: string;
     voiceId: string;
+    // Direção de voz por personagem (a emoção da cena modula isto em runtime).
+    // Boomer hiperativo → stability baixa + style alto; Kev deadpan → stability alta + style baixo.
+    voice: {
+        modelId: string;
+        stability: number;
+        style: number;
+        similarityBoost: number;
+        speakerBoost: boolean;
+    };
     referenceImage?: string; // URL to the master reference image for I2V
 };
+
+// Emoções "quentes" empurram a entrega (menos estável, mais estilo → mais expressivo/cômico);
+// "frias" achatam (mais estável, menos estilo → deadpan). Nomes vêm do roteiro (script.emotion).
+const HOT_EMOTIONS = ['FURIOUS', 'EXCITED', 'OUTRAGED', 'ANGRY', 'SHOCKED', 'INTENSE', 'EXPLOSIVE', 'ENTHUSIASTIC', 'EXASPERATED', 'SHAMELESS'];
+const COLD_EMOTIONS = ['DEADPAN', 'CYNICAL', 'RESIGNED', 'BORED', 'APATHETIC', 'ANNOYED', 'CALM', 'PASSIVE', 'SLEEPY', 'EXHAUSTED', 'DISBELIEF'];
+
+// voice_settings do ElevenLabs para um personagem, modulado pela emoção da cena.
+export function voiceSettingsFor(character: Character, emotion?: string) {
+    const e = String(emotion || '').toUpperCase();
+    let { stability, style } = character.voice;
+    if (HOT_EMOTIONS.includes(e)) { stability -= 0.10; style += 0.15; }
+    else if (COLD_EMOTIONS.includes(e)) { stability += 0.06; style -= 0.08; }
+    const clamp = (n: number) => Math.max(0, Math.min(1, n));
+    return {
+        stability: clamp(stability),
+        similarity_boost: character.voice.similarityBoost,
+        style: clamp(style),
+        use_speaker_boost: character.voice.speakerBoost,
+    };
+}
 
 export const CHARACTERS: Character[] = [
     {
@@ -45,6 +74,7 @@ export const CHARACTERS: Character[] = [
         imagePromptContext: 'anthropomorphic muscular kangaroo, acting exactly like a human podcast host, human posture, large red padded boxing gloves (no fingers), gold chain necklace, wearing a tight black singlet shirt with BOOMER written on the chest, professional studio headphones, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
+        voice: { modelId: 'eleven_multilingual_v2', stability: 0.30, style: 0.70, similarityBoost: 0.75, speakerBoost: true },
         referenceImage: '/assets/master_boomer.png'
     },
     {
@@ -76,6 +106,7 @@ export const CHARACTERS: Character[] = [
         imagePromptContext: 'anthropomorphic cute koala, acting exactly like a human podcast host, human posture, grey fluffy fur, professional studio headphones, holding a microphone, stubby holder on desk, detailed fur texture, soft studio lighting',
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
         voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Laid-Back, Casual, Resonant
+        voice: { modelId: 'eleven_multilingual_v2', stability: 0.82, style: 0.15, similarityBoost: 0.80, speakerBoost: true },
         referenceImage: '/assets/master_kev.png'
     }
 ];
