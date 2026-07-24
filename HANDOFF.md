@@ -51,15 +51,25 @@
 
 ---
 
-## ▶️ RETOMADA IMEDIATA (sessão Claude interrompida por cota, 19/07 noite)
+## ▶️ RETOMADA IMEDIATA (sessão 24-25/07 — foco: entregabilidade e VIBE)
 
-**Onde parou:** F1 do Plano Mestre (artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`, conversa Claude Code).
-Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 4×4 + two-shot master_wide + sonda de duo).
-**Commit `4a430ad` tem 1.6 (last-frame chaining) + 1.7 (xfade) IMPLEMENTADOS com build verde, mas:**
-1. ✅ **DEPLOYADOS 24/07** — 1.6+1.7 + fix wav2lip em produção (`boomer-engine` restart #5, sentinela GREEN, HTTP 200). Falta validação com render pago (encadeamento 1.6 + lipsync real) — exige OK do Felipe.
-2. ✅ **Teste $0 do 1.7 PASSOU (24/07):** ramo xfade valida contra os 4 pilotos crus (têm áudio → risco (a) OK; offsets corretos → risco (b) OK). Falta o e2e real via dev-server (glue) e a validação do 1.6/encadeamento (só com render pago). Detalhes: `progress.md` §011h.
-3. F1 restante: WP 1.1 (double-fire brainstorm) e 1.4 (pm2 startup + `N8N_RADAR_SECRET` + arquivar HANDOFF_AMANHA.md + tools mortos).
-**Contexto de decisões:** balanceamento provado 5/5 gerações 4×4; encadeamento SÓ entre cenas do mesmo personagem (troca = corte, correto); B-Roll = prints de notícias reais via HyperFrames (WP 4.2, v1 prova de estilo pendente).
+**Tudo abaixo está commitado+pushed na `restore-engine` (HEAD `38d632a`) e deployado em produção.**
+
+**JÁ FEITO nesta sessão:**
+- ✅ **Formato selecionável 9:16/16:9** (`4c0fde8`) — corrige sujeitos decepados (Kling herdava aspect 16:9 da âncora; agora reframe + target por formato). Ver §P0a.
+- ✅ **wav2lip 404 corrigido** (`7f6f36a`, version hash) — MAS lipsync não detecta rosto animal → sempre non-lipsynced (§P0, decisão de arquitetura pendente).
+- ✅ **Throttle Kling (429) + fallback de prod** (`db5011f`) — §P0b/P0c.
+- ✅ **Direção de voz por personagem + emoção** (`78ddeca`) — fim do settings hardcoded (§P0e).
+- ✅ **DESCOBERTA: vibe cômica = camada de áudio** (trilha+SFX+master do Premiere), ausente no pipeline. SFX absorvidos (`1262bbf`/`38d632a`): Funny_Song+Joke_Comedy_Drums+Hilarious_Laugh. Receita do original extraída (§DESCOBERTA GRANDE).
+- ✅ **n8n cron DESATIVADO** — incidente de gasto autônomo (9 renders 20+22/07). §incidente.
+
+**PRÓXIMOS PASSOS (ordem sugerida):**
+1. **Felipe ouve** os A/B em `04_Delivery/` (voice_ab, audio_ab) + `voice_clone/candidatos/cand6.mp3`.
+2. **Clonar voz ideal do Boomer** (cena4) no ElevenLabs → sample pronto em `04_Delivery/voice_clone/boomer_CLONE_*.wav` (23.6s) → Felipe manda `voice_id` → trocar `boomer.voiceId` em characters.ts → deploy.
+3. **Implementar camada de áudio no pipeline** (bed+ducking+stingers+loudnorm) — o ~80% da vibe que falta. Receita em §DESCOBERTA GRANDE.
+4. **2 renders de validação** (9:16 + 16:9) já com voz+áudio+framing certos — exige OK $ do Felipe (~US$3-6 cada).
+5. **Decidir estratégia de lipsync** (incompatível com rosto animal — §P0).
+**Plano vivo antigo:** artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`. F1 restante: WP 1.1 (double-fire) e 1.4 (higiene).
 
 ## 🎧 DESCOBERTA GRANDE (24/07): a vibe cômica era PÓS-PRODUÇÃO DE ÁUDIO
 Drive externo **`/Volumes/T5 EVO/BOOMER AND KEV`** = projeto ORIGINAL (10GB): áudios, arte (`_bk`, Firefly), episódios finalizados (`Videos/1.THE OAT MILK BAN/`, `2.AFL X NRL`), projeto **Adobe Premiere** + pasta **`Epidemic Sound`** (SFX/música licenciada) + `Characters/footy` (SFX de comédia).
