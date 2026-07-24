@@ -69,7 +69,11 @@ Drive externo **`/Volumes/T5 EVO/BOOMER AND KEV`** = projeto ORIGINAL (10GB): á
 **Já absorvido:** `Funny_Song.mp3` (bed 73.6s) + `Joke_Comedy_Drums.mp3` (stinger 3s) em `public/assets/audio/`. Demo audível (bed+loudnorm) em `04_Delivery/audio_ab/` — subiu mean pra -16.5dB, mas LRA ainda 2.6 (falta ducking + stingers p/ dinâmica).
 
 ### 🔴 PENDENTE — Camada de áudio cômico no pipeline
-Adicionar ao `assembleVideo` (ou passo pós): (1) **music bed** (Funny_Song) sob a voz; (2) **ducking** (sidechaincompress — voz estoura sobre a trilha); (3) **stingers** de rufo nos beats de piada; (4) **masterização** `loudnorm=I=-14`. Talvez absorver a pasta `Epidemic Sound` do drive. Isso é o VLAEG puro: pipeline faz sozinho o que o Premiere fazia à mão.
+Adicionar ao `assembleVideo` (ou passo pós): (1) **music bed** sob a voz; (2) **ducking** (sidechaincompress — voz estoura sobre a trilha); (3) **stingers** nos beats; (4) **masterização** `loudnorm=I=-14`.
+
+**RECEITA EXATA do original** (extraída do `boomer and kev.prproj` do OAT MILK BAN — Premiere): bed = **Rhodes.mp3 + Percussion.mp3**; stingers = **Double Hits.mp3 + Logo 01.mp3**; transição = **Transition Complex 14.wav** (whoosh); ambiência = **Flickering Torches.mp3**; voz = **monitor.show.audio.wav**. ⚠️ Esses arquivos NÃO estão no drive (bibliotecas externas Epidemic Sound / Premiere Composer) — re-sourciar equivalentes (temos Funny_Song + Joke_Comedy_Drums absorvidos como começo). Isso é o VLAEG puro: pipeline faz sozinho o que o Premiere fazia à mão.
+
+**CONFIRMADO:** o roteiro NÃO é o problema da vibe — o `ai/script` + `ai/brainstorm` atuais já têm Hook→Conflito→Payoff turbinado (Amygdala Hijack, Anticipation Loops, Payoff Ending). A vibe chapada é 100% ÁUDIO (voz + falta da camada trilha/SFX). Doc criativo original absorvido em `docs/from-original/` (magnetic-storytelling, masterpiece-ui, production-export).
 
 ### 🔴 PENDENTE — Clonar a voz ideal do Boomer (ElevenLabs)
 cena4 (`Piloto/`) = **voz ideal do Boomer** (confirmado Felipe). Sample de clone montado: **`04_Delivery/voice_clone/boomer_CLONE_cena4+cand2+cand5.wav`** (23.6s, normalizado). Falta: (a) Felipe ouvir `candidatos/cand6.mp3` e dizer se é voz limpa (se sim, adiciono → ~34s); (b) Felipe faz Instant Voice Cloning no ElevenLabs → manda o `voice_id` → troco em `characters.ts` `boomer.voiceId` → deploy. Conta tem eleven_v3 (audio tags) p/ A/B futuro. Ver [[capacidade-audio]].
