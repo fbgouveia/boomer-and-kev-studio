@@ -63,6 +63,18 @@ Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 
 
 ## 🔴 PENDÊNCIAS ABERTAS (por prioridade)
 
+### 🔴 P0a — SUJEITOS DECEPADOS: Kling sai 16:9, montagem corta p/ 9:16 (achado 24/07, render 393ef799)
+- **Cadeia da causa-raiz (confirmada por ffprobe):** âncoras `master_boomer/kev/wide.png` são **16:9 (1376×768)**. Kling é image-to-video → **herda o aspect da `start_image`**, ignora `aspect_ratio:"9:16"` do payload → clipes crus saem **1928×1072 (16:9)**. `assembleVideo` faz `scale ...force_original_aspect_ratio=increase, crop=1080:1920` do CENTRO → mantém só a faixa central (tela/mesa) e **deceps os personagens** nas bordas.
+- **Two-shot é impossível em 9:16 lado-a-lado:** `master_wide.png` tem Boomer à esquerda e Kev à direita — crop vertical nunca segura os dois.
+- **REQUISITO do Felipe (24/07):** formato deve ser **SELECIONÁVEL** (9:16 **ou** 16:9), não hardcoded. Implementar flexibilidade:
+  1. Param de formato no `runPipelineSchema` (ex: `aspect: '9:16'|'16:9'`, default a definir).
+  2. Kling: passar `aspect_ratio` correto E usar `start_image` no mesmo aspect (âncora vertical p/ 9:16, landscape p/ 16:9), OU padding/reframe dinâmico da âncora.
+  3. `assembleVideo`: `TARGET` derivado do formato escolhido (sem crop que deceps).
+  4. 9:16: shots WIDE/OTS (two-shot lado-a-lado) precisam virar solo/OTS/empilhado — não cabem.
+- **Lição de processo:** validar aspecto pelo container final é insuficiente — probar a FONTE (clipes crus) e criticar a composição. Ver [[analise-rigorosa]].
+
+### 🔴 P0d — Lipsync incompatível com rosto animal (ver P0 abaixo) — decidir estratégia
+
 ### P1 — Automação n8n → Radar (🔴 ALTA)
 - **O quê:** Workflow no n8n que a cada 3 dias busca novas ferramentas/tendências de IA para vídeo
 - **Fluxo:** Schedule Trigger → Pesquisa IA → Telegram (preview + aprovação) → POST `https://boomerandkev.fgss.io/api/radar`
@@ -119,10 +131,11 @@ Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 
 - **Era:** ao falhar o Kling em prod, o fallback buscava piloto inexistente → "Pilot video missing" enganoso, job FAILED.
 - **Fix:** os 2 fallbacks agora, sem piloto (prod), falham com mensagem acionável nomeando a causa real (crédito/rate-limit Replicate) em vez de mascarar como sandbox. Sandbox segue funcionando em dev (pilotos locais).
 
-### ✅ P0 — Wav2Lip 404 (CORRIGIDO 24/07, deployado)
-- **Causa-raiz:** o modelo `devxpy/cog-wav2lip` EXISTE (3.6M runs); o 404 era do endpoint `POST /v1/models/{owner}/{name}/predictions`, que só serve modelos oficiais. Community exige `version:` hash, não `model:` nome.
-- **Fix:** trocado `model:` → `version: 8d65e3f4f4298520...ed25eef` em `pipeline/run/route.ts` E `ai/sync/route.ts` (input schema `face/audio/pads/smooth/fps` confere). Build verde, deployado.
-- **Pendente:** validação com render pago (lipsync real só se prova gastando). Sem regressão: se falhar, cai no mesmo fallback de antes.
+### 🔴 P0 — LIPSYNC INCOMPATÍVEL com os personagens (achado 24/07, render de validação)
+- **404 corrigido** (era endpoint por nome; community exige `version:` hash — trocado em `pipeline/run` + `ai/sync`, deployado). MAS ao rodar de verdade apareceu a causa REAL, nas 8 cenas:
+  `LipSync failed: Face not detected! Ensure the video contains a face in all the frames.`
+- **Causa estrutural:** wav2lip detecta rosto HUMANO; Boomer/Kev são canguru/coala (rosto animal) → nunca detecta. **Todo episódio cai no fallback non-lipsynced** (boca vem da articulação do próprio Kling + TTS multiplexado por cima, sem sync).
+- **Decisão de arquitetura (não é bug):** (1) aceitar sem lipsync [atual]; (2) trocar por lipsync que aceite rosto estilizado/animal (testar latentsync etc. na detecção do focinho); (3) Kling nativo com fala. Validação prova: 1.6 encadeamento ✅, 1.7 transições ✅, throttle ✅, episódio 8 cenas ✅ (MP4 46.6MB no Supabase, job 393ef799).
 
 ---
 
