@@ -110,6 +110,15 @@ Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 
   (`active:False`), ~3h antes do cron das 12:00 UTC de sexta. Valor exato: dashboard Replicate.
   **Antes de reativar:** por gate de aprovação Telegram PRÉ-render (hoje o approve é pós). Ver [[incidente-render-autonomo]].
 
+### 🔴 P0b — Crédito Replicate < US$5 → throttle 6/min (bloqueia render)
+- **Sintoma:** render de validação 24/07 (job b66b3c3b) deu 429 na 2ª cena: "rate limit reduzido a 6/min, burst 1, enquanto <US$5 de crédito". Pipeline dispara 8 em paralelo → estoura.
+- **Provável causa:** renders autônomos de 20/07 drenaram o saldo.
+- **Ações:** (1) 🔴 **PENDENTE — Felipe recarrega crédito Replicate** (única trava restante p/ validar render); (2) ✅ FEITO 24/07: `createKlingPrediction` com retry no 429 honrando `retry_after` (deployado) — creates sequenciais agora pautam na cadência permitida.
+
+### ✅ P0c — Fallback de prod (CORRIGIDO 24/07, deployado)
+- **Era:** ao falhar o Kling em prod, o fallback buscava piloto inexistente → "Pilot video missing" enganoso, job FAILED.
+- **Fix:** os 2 fallbacks agora, sem piloto (prod), falham com mensagem acionável nomeando a causa real (crédito/rate-limit Replicate) em vez de mascarar como sandbox. Sandbox segue funcionando em dev (pilotos locais).
+
 ### ✅ P0 — Wav2Lip 404 (CORRIGIDO 24/07, deployado)
 - **Causa-raiz:** o modelo `devxpy/cog-wav2lip` EXISTE (3.6M runs); o 404 era do endpoint `POST /v1/models/{owner}/{name}/predictions`, que só serve modelos oficiais. Community exige `version:` hash, não `model:` nome.
 - **Fix:** trocado `model:` → `version: 8d65e3f4f4298520...ed25eef` em `pipeline/run/route.ts` E `ai/sync/route.ts` (input schema `face/audio/pads/smooth/fps` confere). Build verde, deployado.

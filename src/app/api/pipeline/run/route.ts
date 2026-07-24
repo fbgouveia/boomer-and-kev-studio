@@ -156,6 +156,24 @@ async function pollPrediction(replicate: Replicate, predictionId: string, maxAtt
   throw new Error(`Prediction timed out: ${predictionId}`);
 }
 
+// Kling create com retry no 429. Com < $5 de crédito o Replicate cai p/ 6/min
+// (burst 1); como os creates já são sequenciais, honrar retry_after pauta os
+// lançamentos na cadência permitida em vez de estourar. N tentativas → propaga.
+async function createKlingPrediction(replicate: Replicate, input: any, maxRetries = 6): Promise<any> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await replicate.predictions.create({ model: "kwaivgi/kling-v2.6", input });
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      const is429 = msg.includes('429') || msg.toLowerCase().includes('throttled');
+      if (!is429 || attempt >= maxRetries) throw e;
+      const m = msg.match(/retry_after"?\s*[:=]\s*(\d+)/);
+      const waitS = m ? parseInt(m[1], 10) + 1 : 12; // +1s de folga
+      await new Promise(r => setTimeout(r, waitS * 1000));
+    }
+  }
+}
+
 // WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
 
 // Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
@@ -347,16 +365,13 @@ async function processPipeline(
             ? '/assets/master_wide.png'
             : character?.referenceImage;
 
-          const prediction = await replicate.predictions.create({
-            model: "kwaivgi/kling-v2.6",
-            input: {
-              prompt: prompt,
-              duration: line.durationEst <= 5 ? 5 : 10,
-              aspect_ratio: "9:16",
-              start_image: anchorImage ? resolveAssetUrl(anchorImage) : undefined,
-              negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
-              generate_audio: false
-            }
+          const prediction = await createKlingPrediction(replicate, {
+            prompt: prompt,
+            duration: line.durationEst <= 5 ? 5 : 10,
+            aspect_ratio: "9:16",
+            start_image: anchorImage ? resolveAssetUrl(anchorImage) : undefined,
+            negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
+            generate_audio: false
           });
 
           scenesToProcess.push({
@@ -380,8 +395,8 @@ async function processPipeline(
           copyFileSync(pilotPath, targetPath);
           updateJob({ logs: [`✅ [Scene ${index}] Sandbox active. Copied pilot video cena${(i % 4) + 1}.mp4.`] });
         } else {
-          // If pilot is also missing, fail this line
-          throw new Error(`Critical Error: Pilot video missing at ${pilotPath}`);
+          // Produção não tem os pilotos — falha limpa e acionável (não fingir sandbox).
+          throw new Error(`[Scene ${index}] Kling não gerou e não há piloto de fallback (produção). Causa provável: crédito/rate-limit do Replicate — recarregue o saldo.`);
         }
       }
     }
@@ -400,16 +415,13 @@ async function processPipeline(
           const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
           updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
           const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
-          const prediction = await replicate!.predictions.create({
-            model: "kwaivgi/kling-v2.6",
-            input: {
-              prompt: scene.launch.prompt,
-              duration: scene.launch.duration,
-              aspect_ratio: "9:16",
-              start_image: frameUri,
-              negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
-              generate_audio: false
-            }
+          const prediction = await createKlingPrediction(replicate!, {
+            prompt: scene.launch.prompt,
+            duration: scene.launch.duration,
+            aspect_ratio: "9:16",
+            start_image: frameUri,
+            negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
+            generate_audio: false
           });
           scene.predictionId = prediction.id;
         }
@@ -490,7 +502,8 @@ async function processPipeline(
           copyFileSync(pilotPath, targetPath);
           finalClipPaths.push(targetPath);
         } else {
-          throw new Error(`Failed to recover Scene ${scene.index} using sandbox mode: Pilot video not found.`);
+          // Produção sem piloto — propaga a causa real em vez de mascarar como sandbox.
+          throw new Error(`[Scene ${scene.index}] Falha real e sem piloto de fallback (produção): ${err.message}. Causa provável: crédito/rate-limit do Replicate.`);
         }
       }
     }
