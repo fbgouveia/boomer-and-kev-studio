@@ -426,7 +426,8 @@ async function processPipeline(
         let usedWav2Lip = false;
         try {
           const syncPrediction = await replicate!.predictions.create({
-            model: "devxpy/cog-wav2lip",
+            // ponytail: modelo community exige version hash — endpoint por nome (model:) dá 404
+            version: "8d65e3f4f4298520e079198b493c25adfc43c058ffec924f2aefc8010ed25eef",
             input: {
               face: klingVideoUrl,
               audio: scene.audioDataUri,

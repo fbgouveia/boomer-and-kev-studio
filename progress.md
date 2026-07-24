@@ -706,7 +706,7 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 3. **WP 1.7 — transições xfade:** `assembleVideo` ganhou 3º parâmetro `transitions[]`; monta cadeia xfade+acrossfade com offsets pelas durações REAIS (ffprobe). `pickTransition` determinístico: entra/sai do sponsor break (cenas idx 3 e 5) = fadeblack 0.5s; mesmo personagem (encadeada) = corte (~1 frame); troca de personagem = corte se emoção quente (INTENSE/EXCITED/ANGRY/SHOCKED), crossfade 0.35s se calma. Sem plano → fallback concat original.
 
 **FALTA (próxima sessão):**
-- [ ] **Teste de aceite $0 do 1.7**: rodar pipeline local SEM `REPLICATE_API_TOKEN` (modo sandbox usa pilotos de `00_Legacy_Archives/Piloto/cena1-4.mp4`) e COM ElevenLabs real → valida VOICE_GATE + montagem xfade de ponta a ponta sem custo de render. Assistir o MP4 e conferir transições.
+- [x] **Teste de aceite $0 do 1.7 — PASSOU (24/07):** validado o ramo xfade do `assembleVideo` (route.ts:42-89) via mirror fiel contra os 4 pilotos crus. Resultado: os 4 pilotos têm áudio+vídeo (risco (a) `acrossfade` OK); MP4 de 8 clipes sai com vídeo+áudio, duração 58.50s vs 58.51s esperado (risco (b) offsets OK). Fiação da rota (512-519) conferida estática: `transitions` alinha com `finalClipPaths` em ordem de roteiro. NÃO rodei o dev-server e2e com ElevenLabs (VOICE_GATE é WP 1.3, já em prod; glue de cópia de piloto/job json não exercitado por execução). Script do teste: `scratchpad/test_xfade_sandbox.mjs`.
 - [ ] **Deploy na VPS** (`./deploy_studio.sh`) — produção ainda roda a versão SEM 1.6/1.7.
 - [ ] **Validação real do 1.6** (encadeamento) só é possível com render pago — junto do próximo episódio da F2.
 - [ ] Atualizar plano-mestre (artifact 7e32cc32) — 1.6/1.7 p/ "implementado, aguarda validação".

@@ -56,8 +56,8 @@
 **Onde parou:** F1 do Plano Mestre (artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`, conversa Claude Code).
 Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 4×4 + two-shot master_wide + sonda de duo).
 **Commit `4a430ad` tem 1.6 (last-frame chaining) + 1.7 (xfade) IMPLEMENTADOS com build verde, mas:**
-1. **NÃO deployados** — produção roda sem eles. Deploy = `./deploy_studio.sh`.
-2. **Teste $0 pendente:** rodar local sem `REPLICATE_API_TOKEN` (sandbox usa pilotos) p/ validar a montagem xfade e o risco (a): full-sandbox monta pilotos CRUS — se algum piloto não tiver stream de áudio, `acrossfade` falha. Detalhes: `progress.md` §011h.
+1. ✅ **DEPLOYADOS 24/07** — 1.6+1.7 + fix wav2lip em produção (`boomer-engine` restart #5, sentinela GREEN, HTTP 200). Falta validação com render pago (encadeamento 1.6 + lipsync real) — exige OK do Felipe.
+2. ✅ **Teste $0 do 1.7 PASSOU (24/07):** ramo xfade valida contra os 4 pilotos crus (têm áudio → risco (a) OK; offsets corretos → risco (b) OK). Falta o e2e real via dev-server (glue) e a validação do 1.6/encadeamento (só com render pago). Detalhes: `progress.md` §011h.
 3. F1 restante: WP 1.1 (double-fire brainstorm) e 1.4 (pm2 startup + `N8N_RADAR_SECRET` + arquivar HANDOFF_AMANHA.md + tools mortos).
 **Contexto de decisões:** balanceamento provado 5/5 gerações 4×4; encadeamento SÓ entre cenas do mesmo personagem (troca = corte, correto); B-Roll = prints de notícias reais via HyperFrames (WP 4.2, v1 prova de estilo pendente).
 
@@ -103,10 +103,17 @@ Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 
   `boomer-kev-studio:latest` + `/root/boomer-kev-studio` preservados p/ rollback);
   sonda verificada 4/4 GREEN contra a produção (confirma código novo: "8 cenas");
   hairpin n8n→URL pública testado OK.
-- **⚠️ ACHADO NA MESMA VERIFICAÇÃO:** o workflow de produção está **ATIVO** (cron
-  Seg/Qua/Sex 08h). Com pré-voo verde, segunda-feira 08h ele dispara um render REAL
-  (~US$3-6) sozinho. Se a ativação não foi intencional, desativar em n8n.fgss.io.
-  (Regra inviolável nº 4: render exige OK explícito.)
+- **🔴 CONFIRMADO (24/07): gasto NÃO-autorizado aconteceu.** O workflow ATIVO disparou
+  renders pagos sozinho — exec #122 (20/07): episódio de 8 cenas via Kling v2.6/Replicate
+  (~US$3-6); exec #135 (22/07): também disparou o pipeline (n8n errou no Telegram, mas
+  disparo é assíncrono → possível 2º gasto). **Workflow DESATIVADO via API 24/07 08:56 UTC**
+  (`active:False`), ~3h antes do cron das 12:00 UTC de sexta. Valor exato: dashboard Replicate.
+  **Antes de reativar:** por gate de aprovação Telegram PRÉ-render (hoje o approve é pós). Ver [[incidente-render-autonomo]].
+
+### ✅ P0 — Wav2Lip 404 (CORRIGIDO 24/07, deployado)
+- **Causa-raiz:** o modelo `devxpy/cog-wav2lip` EXISTE (3.6M runs); o 404 era do endpoint `POST /v1/models/{owner}/{name}/predictions`, que só serve modelos oficiais. Community exige `version:` hash, não `model:` nome.
+- **Fix:** trocado `model:` → `version: 8d65e3f4f4298520...ed25eef` em `pipeline/run/route.ts` E `ai/sync/route.ts` (input schema `face/audio/pads/smooth/fps` confere). Build verde, deployado.
+- **Pendente:** validação com render pago (lipsync real só se prova gastando). Sem regressão: se falhar, cai no mesmo fallback de antes.
 
 ---
 

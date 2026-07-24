@@ -35,7 +35,8 @@ export async function POST(req: Request) {
         // Note: If audioUrl is a Data URI, Replicate supports it for short clips
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://boomer-kev-studio.vercel.app';
         const prediction = await replicate.predictions.create({
-            model: "devxpy/cog-wav2lip",
+            // ponytail: modelo community exige version hash — endpoint por nome (model:) dá 404
+            version: "8d65e3f4f4298520e079198b493c25adfc43c058ffec924f2aefc8010ed25eef",
             input: {
                 face: videoUrl,
                 audio: audioUrl,
