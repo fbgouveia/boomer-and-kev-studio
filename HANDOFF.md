@@ -61,6 +61,19 @@ Concluídos hoje: WP 1.2 (action bar), 1.3 (VOICE_GATE), 1.5 (balanceamento Kev 
 3. F1 restante: WP 1.1 (double-fire brainstorm) e 1.4 (pm2 startup + `N8N_RADAR_SECRET` + arquivar HANDOFF_AMANHA.md + tools mortos).
 **Contexto de decisões:** balanceamento provado 5/5 gerações 4×4; encadeamento SÓ entre cenas do mesmo personagem (troca = corte, correto); B-Roll = prints de notícias reais via HyperFrames (WP 4.2, v1 prova de estilo pendente).
 
+## 🎧 DESCOBERTA GRANDE (24/07): a vibe cômica era PÓS-PRODUÇÃO DE ÁUDIO
+Drive externo **`/Volumes/T5 EVO/BOOMER AND KEV`** = projeto ORIGINAL (10GB): áudios, arte (`_bk`, Firefly), episódios finalizados (`Videos/1.THE OAT MILK BAN/`, `2.AFL X NRL`), projeto **Adobe Premiere** + pasta **`Epidemic Sound`** (SFX/música licenciada) + `Characters/footy` (SFX de comédia).
+
+**Medição prova:** episódio original (oatmilk.mp4) áudio = **LRA 7.8 / mean -19.8 dB / pico 0dB** (mixado, punchy); nosso gerado = **LRA 1.9 / mean -27.3 dB** (TTS cru, sem trilha). O original tinha **trilha cômica + stingers (rufo/risada) + masterização** feitos à mão no Premiere. O pipeline NÃO faz nada disso → por isso a vibe sai chapada. O fix de voz (feito) é ~20% da vibe; os ~80% são essa camada de áudio.
+
+**Já absorvido:** `Funny_Song.mp3` (bed 73.6s) + `Joke_Comedy_Drums.mp3` (stinger 3s) em `public/assets/audio/`. Demo audível (bed+loudnorm) em `04_Delivery/audio_ab/` — subiu mean pra -16.5dB, mas LRA ainda 2.6 (falta ducking + stingers p/ dinâmica).
+
+### 🔴 PENDENTE — Camada de áudio cômico no pipeline
+Adicionar ao `assembleVideo` (ou passo pós): (1) **music bed** (Funny_Song) sob a voz; (2) **ducking** (sidechaincompress — voz estoura sobre a trilha); (3) **stingers** de rufo nos beats de piada; (4) **masterização** `loudnorm=I=-14`. Talvez absorver a pasta `Epidemic Sound` do drive. Isso é o VLAEG puro: pipeline faz sozinho o que o Premiere fazia à mão.
+
+### 🔴 PENDENTE — Clonar a voz ideal do Boomer (ElevenLabs)
+cena4 (`Piloto/`) = **voz ideal do Boomer** (confirmado Felipe). Sample de clone montado: **`04_Delivery/voice_clone/boomer_CLONE_cena4+cand2+cand5.wav`** (23.6s, normalizado). Falta: (a) Felipe ouvir `candidatos/cand6.mp3` e dizer se é voz limpa (se sim, adiciono → ~34s); (b) Felipe faz Instant Voice Cloning no ElevenLabs → manda o `voice_id` → troco em `characters.ts` `boomer.voiceId` → deploy. Conta tem eleven_v3 (audio tags) p/ A/B futuro. Ver [[capacidade-audio]].
+
 ## 🔴 PENDÊNCIAS ABERTAS (por prioridade)
 
 ### 🔴 P0a — SUJEITOS DECEPADOS: Kling sai 16:9, montagem corta p/ 9:16 (achado 24/07, render 393ef799)
