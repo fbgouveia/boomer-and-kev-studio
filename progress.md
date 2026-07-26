@@ -747,4 +747,13 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Logo gerado com lockup “BOOMER & KEV — COMMERCIAL CREATIVES” em preto, branco e Signal Orange; salvo em `public/assets/branding/boomer-kev-commercial-creatives-logo.png`.
 - [x] Starter kit visual criado: banner 16:9, anúncio 9:16 e prancha de mockups 1:1 em `public/assets/commercial-creatives/starter-kit/`.
 - [x] Manifesto público criado para futura galeria: `public/assets/commercial-creatives/manifest.json`.
-- [ ] Falta decidir onde o selo e a galeria aparecem na UI e nos vídeos. Nenhum deploy realizado.
+- [ ] Falta decidir onde o selo e a galeria aparecem na UI e nos vídeos. Assets já publicados; galeria ainda não existe na UI.
+
+### Sessão 014 (2026-07-27) — deploy de produção
+
+- [x] Commit `f983dd7` deployado via `./deploy_studio.sh`.
+- [x] Build Next.js/TypeScript verde; PM2 `boomer-engine` reiniciado e online.
+- [x] Home pública: HTTP 200.
+- [x] `/api/sentinel`: HTTP 200, GREEN 4/4 (roteiro 4/4 Boomer/Kev, ElevenLabs, Kling e Supabase).
+- [x] Manifest e três assets Commercial Creatives publicados com HTTP 200.
+- [x] Produção agora inclui WP 1.6/1.7, mix cômico, fix do double-fire e starter kit.

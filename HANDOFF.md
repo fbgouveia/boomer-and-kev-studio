@@ -54,10 +54,10 @@
 
 ## ▶️ RETOMADA IMEDIATA (sessão 24-25/07 — foco: entregabilidade e VIBE)
 
-**Tudo abaixo está commitado+pushed na `restore-engine` (HEAD `525cedc`) e deployado em produção — EXCETO WP 1.6/1.7 (`4a430ad`), que estão na branch com teste $0 aprovado mas ainda NÃO foram para a VPS.**
+**Tudo abaixo está commitado+pushed na `restore-engine` e deployado em produção em 27/07/2026 (deploy do commit `f983dd7`), incluindo WP 1.6/1.7, mix cômico, fix do double-fire e assets de Commercial Creatives.**
 
 **JÁ FEITO nesta sessão:**
-- ✅ **Commercial Creatives formalizado** — linha de produção interna (não nova subsidiária), schema de briefing, formatos, regras de claims e logo próprio em `public/assets/branding/`.
+- ✅ **Commercial Creatives formalizado e publicado** — linha de produção interna (não nova subsidiária), schema de briefing, formatos, regras de claims, logo e starter kit em `public/assets/commercial-creatives/`.
 - ✅ **Formato selecionável 9:16/16:9** (`4c0fde8`) — corrige sujeitos decepados (Kling herdava aspect 16:9 da âncora; agora reframe + target por formato). Ver §P0a.
 - ✅ **wav2lip 404 corrigido** (`7f6f36a`, version hash) — MAS lipsync não detecta rosto animal → sempre non-lipsynced (§P0, decisão de arquitetura pendente).
 - ✅ **Throttle Kling (429) + fallback de prod** (`db5011f`) — §P0b/P0c.
@@ -68,7 +68,7 @@
 **PRÓXIMOS PASSOS (ordem sugerida):**
 1. **Felipe ouve** os A/B em `04_Delivery/` (voice_ab, audio_ab) + `voice_clone/candidatos/cand6.mp3`.
 2. **Clonar voz ideal do Boomer** (cena4) no ElevenLabs → sample pronto em `04_Delivery/voice_clone/boomer_CLONE_*.wav` (23.6s) → Felipe manda `voice_id` → trocar `boomer.voiceId` em characters.ts → deploy.
-3. ✅ **Camada de áudio implementada localmente** (bed+ducking+stingers+loudnorm) — A/B em `04_Delivery/audio_ab/`; ainda NÃO deployada.
+3. ✅ **Camada de áudio implementada e deployada** (bed+ducking+stingers+loudnorm) — A/B em `04_Delivery/audio_ab/`.
 4. **2 renders de validação** (9:16 + 16:9) já com voz+áudio+framing certos — exige OK $ do Felipe (~US$3-6 cada).
 5. **Decidir estratégia de lipsync** (incompatível com rosto animal — §P0).
 **Plano vivo antigo:** artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`. F1 restante: WP 1.1 (double-fire) e 1.4 (higiene).
@@ -80,8 +80,8 @@ Drive externo **`/Volumes/T5 EVO/BOOMER AND KEV`** = projeto ORIGINAL (10GB): á
 
 **Já absorvido (trio completo de SFX):** `Funny_Song.mp3` (bed 73.6s) + `Joke_Comedy_Drums.mp3` (rufo 3s) + `Hilarious_Laugh.mp3` (risada 26.8s, extraída de zip em footy) em `public/assets/audio/`. Demo audível (bed+loudnorm) em `04_Delivery/audio_ab/` — subiu mean pra -16.5dB, mas LRA ainda 2.6 (falta ducking + stingers p/ dinâmica). Toda a arte-âncora no drive é 16:9 (sem vertical) — o fix de reframe por crop já cobre isso.
 
-### 🟡 IMPLEMENTADA LOCALMENTE — Camada de áudio cômico no pipeline
-`assembleVideo` agora adiciona: (1) **music bed** sob a voz; (2) **ducking** com `sidechaincompress`; (3) rufo em 42% e risada curta em 72% do episódio; (4) masterização `loudnorm=I=-14:LRA=7:TP=-2`; saída AAC 48 kHz. Teste $0 nos quatro pilotos passou: 30.16s, vídeo+áudio; A = -18.11 LUFS/LRA 3.9, B = -14.01 LUFS/LRA 3.3/pico verdadeiro -0.76 dBTP. A/B em `04_Delivery/audio_ab/`. **Falta Felipe ouvir e falta deploy.**
+### ✅ IMPLEMENTADA E DEPLOYADA — Camada de áudio cômico no pipeline
+`assembleVideo` agora adiciona: (1) **music bed** sob a voz; (2) **ducking** com `sidechaincompress`; (3) rufo em 42% e risada curta em 72% do episódio; (4) masterização `loudnorm=I=-14:LRA=7:TP=-2`; saída AAC 48 kHz. Teste $0 nos quatro pilotos passou: 30.16s, vídeo+áudio; A = -18.11 LUFS/LRA 3.9, B = -14.01 LUFS/LRA 3.3/pico verdadeiro -0.76 dBTP. A/B em `04_Delivery/audio_ab/`. **Falta Felipe ouvir.**
 
 **RECEITA EXATA do original** (extraída do `boomer and kev.prproj` do OAT MILK BAN — Premiere): bed = **Rhodes.mp3 + Percussion.mp3**; stingers = **Double Hits.mp3 + Logo 01.mp3**; transição = **Transition Complex 14.wav** (whoosh); ambiência = **Flickering Torches.mp3**; voz = **monitor.show.audio.wav**. ⚠️ Esses arquivos NÃO estão no drive (bibliotecas externas Epidemic Sound / Premiere Composer) — re-sourciar equivalentes (temos Funny_Song + Joke_Comedy_Drums absorvidos como começo). Isso é o VLAEG puro: pipeline faz sozinho o que o Premiere fazia à mão.
 
