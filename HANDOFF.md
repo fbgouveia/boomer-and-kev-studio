@@ -58,7 +58,7 @@
 **Tudo abaixo está commitado+pushed na `restore-engine` e deployado em produção em 27/07/2026 (deploy do commit `f983dd7`), incluindo WP 1.6/1.7, mix cômico, fix do double-fire e assets de Commercial Creatives.**
 
 **JÁ FEITO nesta sessão:**
-- ✅ **Studio fechado com Basic Auth** — home, admin, sentinel e APIs internas retornam 401 sem credencial; assets de campanha seguem públicos; radar/cron preservam Bearer próprio. Deploy `b58f955`, verificado em produção.
+- ✅ **Studio fechado com Basic Auth** — home, admin, sentinel e APIs internas retornam 401 sem credencial; assets de campanha seguem públicos. Radar/trend cron exigem Bearer próprio e falham fechados com 503 enquanto seus segredos não forem configurados. Deploys `b58f955` + `21f09ae`, verificados em produção.
 - ✅ **Commercial Creatives formalizado e publicado** — linha de produção interna (não nova subsidiária), schema de briefing, formatos, regras de claims, logo e starter kit em `public/assets/commercial-creatives/`.
 - ✅ **Formato selecionável 9:16/16:9** (`4c0fde8`) — corrige sujeitos decepados (Kling herdava aspect 16:9 da âncora; agora reframe + target por formato). Ver §P0a.
 - ✅ **wav2lip 404 corrigido** (`7f6f36a`, version hash) — MAS lipsync não detecta rosto animal → sempre non-lipsynced (§P0, decisão de arquitetura pendente).

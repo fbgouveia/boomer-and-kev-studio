@@ -767,3 +767,6 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] `/api/radar` e `/api/cron/*` preservam a autenticação Bearer própria para não quebrar n8n/cron.
 - [x] Teste local e produção: home 401 sem auth/200 com auth; admin 401; sentinel 401; manifest público 200; cron sem Bearer 401.
 - [x] Commit `b58f955` deployado; senha permanece fora do Git.
+- [x] Fechamento complementar `21f09ae`: `/api/cron/agent` voltou para trás do Basic Auth; Radar perdeu o segredo-padrão; Radar e trend cron retornam 503 quando o segredo dedicado está ausente.
+- [x] Verificação final em produção: home 401/200; cron agent 401; Radar 503 fail-closed; trend cron 503 fail-closed; assets 200.
+- [ ] Para reativar Radar/trend cron: configurar `N8N_RADAR_SECRET`/`CRON_SECRET` na VPS e nos chamadores correspondentes.
