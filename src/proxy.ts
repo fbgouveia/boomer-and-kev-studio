@@ -6,8 +6,36 @@ const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 60; // Max 60 requests/min per IP
 
+const unauthorized = () => new NextResponse('Authentication required.', {
+  status: 401,
+  headers: {
+    'WWW-Authenticate': 'Basic realm="Boomer & Kev Studio", charset="UTF-8"',
+    'Cache-Control': 'no-store',
+  },
+});
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // n8n-only endpoints keep their own Bearer authentication because Basic Auth
+  // would replace the Authorization header they already validate.
+  const hasRouteSpecificAuth = pathname === '/api/radar' || pathname.startsWith('/api/cron/');
+  if (!hasRouteSpecificAuth) {
+    const user = process.env.STUDIO_AUTH_USER;
+    const password = process.env.STUDIO_AUTH_PASSWORD;
+
+    if (!user || !password) {
+      if (process.env.NODE_ENV === 'production') {
+        return new NextResponse('Studio authentication is not configured.', {
+          status: 503,
+          headers: { 'Cache-Control': 'no-store' },
+        });
+      }
+    } else {
+      const expected = `Basic ${btoa(`${user}:${password}`)}`;
+      if (request.headers.get('authorization') !== expected) return unauthorized();
+    }
+  }
 
   // Protect API routes
   if (pathname.startsWith('/api')) {
@@ -64,7 +92,7 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Apply middleware only to API endpoints to prevent performance impacts on static assets
+// Protect pages and APIs. Public campaign assets and Next.js internals bypass auth.
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/((?!_next/static|_next/image|assets/|favicon.ico).*)'],
 };
