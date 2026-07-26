@@ -770,3 +770,11 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Fechamento complementar `21f09ae`: `/api/cron/agent` voltou para trás do Basic Auth; Radar perdeu o segredo-padrão; Radar e trend cron retornam 503 quando o segredo dedicado está ausente.
 - [x] Verificação final em produção: home 401/200; cron agent 401; Radar 503 fail-closed; trend cron 503 fail-closed; assets 200.
 - [ ] Para reativar Radar/trend cron: configurar `N8N_RADAR_SECRET`/`CRON_SECRET` na VPS e nos chamadores correspondentes.
+
+### Sessão 016 (2026-07-27) — consolidação final para handoff
+
+- [x] `HANDOFF.md` promovido para v4.0 com estado autoritativo atual, separando concluído, descobertas e pendências reais.
+- [x] Pendências antigas do log histórico mantidas como registro, mas supersedidas pelo bloco de retomada do handoff.
+- [x] Descoberta operacional registrada: deploy standalone transfere ~742 MB e inclui `.tmp`; correção adicionada à higiene F1.
+- [x] Credenciais de Basic Auth permanecem exclusivamente em `.env.local`/VPS; senha não registrada em documentação nem Git.
+- [x] Segurança vigente: Studio/API internos 401 sem Basic Auth; assets públicos; Radar/trend cron 503 sem segredo dedicado.

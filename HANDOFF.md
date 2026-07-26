@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-19T19:38 AEST (v3.1)
+# Boomer & Kev Studio | Atualizado: 2026-07-27 AEST (v4.0)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -13,7 +13,7 @@
 
 | Item | Valor |
 |------|-------|
-| **URL Produção** | **https://boomerandkev.fgss.io** (LIVE, HTTP 200) |
+| **URL Produção** | **https://boomerandkev.fgss.io** (LIVE; 401 sem auth, 200 com auth) |
 | **VPS** | Hostinger `2.25.182.106`, root SSH, Ubuntu, Nginx 1.24.0 |
 | **Processo** | PM2 `boomer-engine` na porta `3001` |
 | **Reverse Proxy** | Nginx → `http://127.0.0.1:3001` |
@@ -53,13 +53,17 @@
 
 ---
 
-## ▶️ RETOMADA IMEDIATA (sessão 24-25/07 — foco: entregabilidade e VIBE)
+## ▶️ RETOMADA IMEDIATA (estado autoritativo em 27/07/2026)
 
-**Tudo abaixo está commitado+pushed na `restore-engine` e deployado em produção em 27/07/2026 (deploy do commit `f983dd7`), incluindo WP 1.6/1.7, mix cômico, fix do double-fire e assets de Commercial Creatives.**
+**Código commitado+pushed na `restore-engine`. Produção recebeu `f983dd7`, `b58f955` e `21f09ae`; documentação consolidada até `33a77b9`. Worktree limpo antes desta atualização.**
 
-**JÁ FEITO nesta sessão:**
+### ✅ Concluído e em produção
+
 - ✅ **Studio fechado com Basic Auth** — home, admin, sentinel e APIs internas retornam 401 sem credencial; assets de campanha seguem públicos. Radar/trend cron exigem Bearer próprio e falham fechados com 503 enquanto seus segredos não forem configurados. Deploys `b58f955` + `21f09ae`, verificados em produção.
 - ✅ **Commercial Creatives formalizado e publicado** — linha de produção interna (não nova subsidiária), schema de briefing, formatos, regras de claims, logo e starter kit em `public/assets/commercial-creatives/`.
+- ✅ **Double-fire do brainstorm corrigido** — lock síncrono com `useRef`; deployado.
+- ✅ **Mix cômico deployado** — bed, ducking, rufo, risada e `loudnorm -14 LUFS`; teste A/B salvo.
+- ✅ **WP 1.6/1.7 deployados** — encadeamento de último frame e transições `xfade`; 1.7 aprovado em teste $0, 1.6 ainda exige validação real paga.
 - ✅ **Formato selecionável 9:16/16:9** (`4c0fde8`) — corrige sujeitos decepados (Kling herdava aspect 16:9 da âncora; agora reframe + target por formato). Ver §P0a.
 - ✅ **wav2lip 404 corrigido** (`7f6f36a`, version hash) — MAS lipsync não detecta rosto animal → sempre non-lipsynced (§P0, decisão de arquitetura pendente).
 - ✅ **Throttle Kling (429) + fallback de prod** (`db5011f`) — §P0b/P0c.
@@ -67,13 +71,25 @@
 - ✅ **DESCOBERTA: vibe cômica = camada de áudio** (trilha+SFX+master do Premiere), ausente no pipeline. SFX absorvidos (`1262bbf`/`38d632a`): Funny_Song+Joke_Comedy_Drums+Hilarious_Laugh. Receita do original extraída (§DESCOBERTA GRANDE).
 - ✅ **n8n cron DESATIVADO** — incidente de gasto autônomo (9 renders 20+22/07). §incidente.
 
-**PRÓXIMOS PASSOS (ordem sugerida):**
-1. **Felipe ouve** os A/B em `04_Delivery/` (voice_ab, audio_ab) + `voice_clone/candidatos/cand6.mp3`.
-2. **Clonar voz ideal do Boomer** (cena4) no ElevenLabs → sample pronto em `04_Delivery/voice_clone/boomer_CLONE_*.wav` (23.6s) → Felipe manda `voice_id` → trocar `boomer.voiceId` em characters.ts → deploy.
-3. ✅ **Camada de áudio implementada e deployada** (bed+ducking+stingers+loudnorm) — A/B em `04_Delivery/audio_ab/`.
-4. **2 renders de validação** (9:16 + 16:9) já com voz+áudio+framing certos — exige OK $ do Felipe (~US$3-6 cada).
-5. **Decidir estratégia de lipsync** (incompatível com rosto animal — §P0).
-**Plano vivo antigo:** artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c`. F1 restante: WP 1.1 (double-fire) e 1.4 (higiene).
+### 🔎 Descobertas consolidadas
+
+1. **Segurança:** o Studio estava público e APIs de custo usavam chaves do servidor sem autenticação global. Basic Auth corrigiu a borda; CSRF/rate limit sozinhos não eram autenticação.
+2. **Automação fail-closed:** Radar tinha segredo-padrão previsível e `/api/cron/agent` estava público. O padrão foi removido; Radar/trend cron agora retornam 503 sem segredo dedicado.
+3. **Áudio é a maior parcela da vibe:** roteiro já tinha estrutura; o salto perceptivo vem de voz dirigida + trilha + SFX + masterização.
+4. **Lipsync humano não serve para rostos animais:** Wav2Lip não detecta Boomer/Kev; é decisão de arquitetura, não retry.
+5. **Commercial Creatives é capacidade do Studio:** não é nova subsidiária. Os assets são públicos intencionalmente; o painel operacional continua privado.
+6. **Deploy inflado:** `.next/standalone` está rastreando/copindo cerca de **742 MB**, incluindo `.tmp` e artefatos locais. Funciona, mas aumenta tempo, tráfego e superfície operacional; corrigir tracing/excludes no WP de higiene.
+
+### 🔴 Pendências reais — ordem atual
+
+1. **Configurar segredos da automação:** criar `N8N_RADAR_SECRET` e `CRON_SECRET` na VPS e nos chamadores; até lá Radar/trend cron ficam 503 por segurança.
+2. **Felipe ouvir os A/B:** `04_Delivery/audio_ab/`, materiais de voz e `voice_clone/candidatos/cand6.mp3`.
+3. **Clone do Boomer:** Instant Voice Cloning no ElevenLabs usando o sample preparado; enviar `voice_id` para atualizar `characters.ts`.
+4. **Galeria Commercial na UI:** assets estão publicados e manifestados, mas ainda não existe aba/tela de visualização no Studio.
+5. **Validação paga:** 2 renders (9:16 + 16:9) para validar chaining, enquadramento, wardrobe, áudio e custo real; exige autorização explícita (~US$3–6 cada).
+6. **Lipsync animal:** escolher aceitar articulação do Kling ou testar engine compatível com rosto estilizado/animal.
+7. **Higiene de deploy/F1:** excluir `.tmp` do standalone, revisar PM2 `--update-env`/startup, arquivar handoffs antigos e apenas então avaliar tools mortos sem apagá-los silenciosamente.
+8. **Plano-mestre antigo:** atualizar artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c` se ele continuar sendo usado.
 
 ## 🎧 DESCOBERTA GRANDE (24/07): a vibe cômica era PÓS-PRODUÇÃO DE ÁUDIO
 Drive externo **`/Volumes/T5 EVO/BOOMER AND KEV`** = projeto ORIGINAL (10GB): áudios, arte (`_bk`, Firefly), episódios finalizados (`Videos/1.THE OAT MILK BAN/`, `2.AFL X NRL`), projeto **Adobe Premiere** + pasta **`Epidemic Sound`** (SFX/música licenciada) + `Characters/footy` (SFX de comédia).
