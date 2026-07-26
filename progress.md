@@ -713,3 +713,38 @@ node --version → v22.23.1 | ffmpeg → 8.1.2
 - [ ] WPs restantes da F1: 1.1 (double-fire) e 1.4 (higiene: pm2 startup, N8N_RADAR_SECRET, arquivar HANDOFF_AMANHA.md, tools mortos).
 
 **Riscos conhecidos do código novo (revisar no teste):** (a) acrossfade exige stream de áudio em TODOS os clipes — clipes sandbox/pilotos precisam ter áudio (o multiplex põe anullsrc quando falta, MAS só no caminho replicate; no full-sandbox os pilotos entram crus — se algum piloto não tiver áudio, o filtro falha → validar no teste $0); (b) offsets do xfade assumem durações ffprobe corretas; (c) encadeamento serializa launches só das cenas CHAINED (heads continuam paralelos).
+
+### Sessão 012 (2026-07-25) — consolidação de estado (sem código)
+
+Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V.L.A.E.G., deriva com 4 sondas verdes há 16h). Nenhuma alteração de código; estado auditado e pendências consolidadas.
+
+**Correções de registro (o que estava desatualizado nos docs/memória):**
+- HEAD real da `restore-engine` = `525cedc` (não `38d632a`).
+- WP 1.7 já teve **teste de aceite $0 aprovado em 24/07** (8 clipes, 58.50s vs 58.51s esperado, áudio presente — o risco (a) do `acrossfade` não se materializou). A memória ainda dizia "não testado".
+- Workflow de produção `n6qm9qMxEFvvkU8C` está **DESATIVADO** desde 24/07 (incidente de gasto autônomo), não ativo como constava.
+
+**Fila de trabalho $0 acordada (ordem):**
+1. **Camada de áudio cômico** no `assembleVideo` — music bed + ducking (`sidechaincompress`) + stingers + `loudnorm=I=-14`. É o ~80% da vibe. Aceite: teste $0 contra os pilotos crus + medição LRA/mean (alvo: sair de LRA 1.9 / -27.3 dB rumo ao original LRA 7.8 / -19.8 dB) + A/B entregue pro ouvido do Felipe.
+2. **Deploy do 1.6/1.7** (`./deploy_studio.sh`) — produção roda versão sem chaining/xfade. Pedir OK (mexe no ar).
+3. **Higiene F1** — WP 1.1 (double-fire) + 1.4 (pm2 startup, `N8N_RADAR_SECRET`, arquivar `HANDOFF_AMANHA.md`, tools mortos).
+4. **Lipsync p/ rosto animal** — pesquisa + teste $0 de candidatos, sem render pago.
+
+**Bloqueado no Felipe:** ouvir `04_Delivery/{voice_ab,audio_ab,voice_clone/candidatos/cand6}` → Instant Voice Cloning no ElevenLabs a partir de `voice_clone/boomer_CLONE_cena4+cand2+cand5.wav` → mandar o `voice_id` → troca em `characters.ts`. Qualquer render pago (~US$3-6) segue exigindo OK explícito.
+
+### Sessão 013 (2026-07-26) — áudio cômico + double-fire (local, sem deploy)
+
+- [x] Camada de áudio adicionada ao `assembleVideo`: `Funny_Song` em loop, ducking por `sidechaincompress`, `Joke_Comedy_Drums` em 42%, risada curta em 72%, mix e `loudnorm=I=-14:LRA=7:TP=-2`; AAC fixado em 48 kHz.
+- [x] Teste $0 fiel ao grafo de produção contra os quatro pilotos: `A_voice_only.mp4` e `B_comedy_mix.mp4` em `04_Delivery/audio_ab/`, ambos com 30.16s e streams de vídeo+áudio.
+- [x] Medição: A = -18.11 LUFS, LRA 3.9, TP -4.80; B = -14.01 LUFS, LRA 3.3, TP -0.76. Loudness atingido sem clipping; dinâmica ainda depende da avaliação auditiva do Felipe e do material final.
+- [x] Causa do brainstorm duplicado confirmada: `isLoading` era um lock assíncrono e os dois efeitos enxergavam o mesmo closure `false`. Corrigido com `useRef` síncrono (`brainstormInFlight`).
+- [ ] Felipe ouvir o A/B. Mudanças ainda locais; sem deploy, gasto ou exclusão.
+
+### Sessão 013b (2026-07-26) — Commercial Creatives
+
+- [x] Criada a constituição `COMMERCIAL_CREATIVES.md`.
+- [x] Decisão arquitetural: Commercial Creatives é linha de produção/capacidade do Boomer & Kev Studio, não uma subsidiária separada.
+- [x] Taxonomia alinhada à vitrine FGSS: canal motion/audiovisual; natureza explícita por peça (`cliente`, `estudo` ou `subsidiária`).
+- [x] Logo gerado com lockup “BOOMER & KEV — COMMERCIAL CREATIVES” em preto, branco e Signal Orange; salvo em `public/assets/branding/boomer-kev-commercial-creatives-logo.png`.
+- [x] Starter kit visual criado: banner 16:9, anúncio 9:16 e prancha de mockups 1:1 em `public/assets/commercial-creatives/starter-kit/`.
+- [x] Manifesto público criado para futura galeria: `public/assets/commercial-creatives/manifest.json`.
+- [ ] Falta decidir onde o selo e a galeria aparecem na UI e nos vídeos. Nenhum deploy realizado.

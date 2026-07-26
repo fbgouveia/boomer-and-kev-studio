@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Zap,
     Lock,
@@ -79,6 +79,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     const [selectedInteraction2, setSelectedInteraction2] = useState<number | null>(null);
     const [selectedClosing, setSelectedClosing] = useState<number | null>(null);
     const [activeSection, setActiveSection] = useState<keyof BrainstormData>('hooks');
+    const brainstormInFlight = useRef(false);
 
     const advanceToNextIncompleteSection = () => {
         if (selectedHook === null) { setActiveSection('hooks'); return; }
@@ -94,7 +95,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     const [retryCountdown, setRetryCountdown] = useState<number>(0);
 
     const fetchBrainstorm = React.useCallback(async () => {
-        if (isLoading) return; // Prevent double firing
+        if (brainstormInFlight.current) return;
+        brainstormInFlight.current = true;
         setIsLoading(true);
         setError(null);
         try {
@@ -130,6 +132,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
             console.error("BRAINSTORM_ERROR", error);
             setError("NETWORK_SIGNAL_LOSS: Connection to Neural Core interrupted.");
         } finally {
+            brainstormInFlight.current = false;
             setIsLoading(false);
         }
     }, [topic, snippet, apiKey]);

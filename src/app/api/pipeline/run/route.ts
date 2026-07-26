@@ -51,6 +51,7 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
   );
 
   let filter: string;
+  let duration: number;
 
   if (transitions && transitions.length === clips.length - 1 && clips.length > 1) {
     // WP 1.7: cadeia de xfade/acrossfade com offsets pelas durações REAIS (ffprobe).
@@ -69,20 +70,48 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
       vPrev = vOut; aPrev = aOut;
       elapsed = elapsed - t.dur + durs[i];
     }
+    duration = elapsed;
     filter = [...norm, ...anorm, ...chain].join(';');
   } else {
     // Fallback: concat original (corte seco em tudo)
     const concatIn = clips.map((_, i) => `[v${i}][${i}:a]`).join('');
+    duration = (await Promise.all(clips.map(probeDuration))).reduce((sum, dur) => sum + dur, 0);
     filter = `${norm.join(';')};${concatIn}concat=n=${clips.length}:v=1:a=1[outv][outa]`;
+  }
+
+  const audioDir = path.resolve(process.cwd(), 'public/assets/audio');
+  const bed = path.resolve(audioDir, 'Funny_Song.mp3');
+  const drums = path.resolve(audioDir, 'Joke_Comedy_Drums.mp3');
+  const laugh = path.resolve(audioDir, 'Hilarious_Laugh.mp3');
+  const hasComedyMix = [bed, drums, laugh].every(existsSync);
+  const comedyInputs = hasComedyMix ? [bed, drums, laugh] : [];
+  const audioMap = hasComedyMix ? '[finala]' : '[outa]';
+
+  if (hasComedyMix) {
+    const bedIndex = clips.length;
+    const drumsIndex = bedIndex + 1;
+    const laughIndex = bedIndex + 2;
+    const drumsDelay = Math.round(duration * 0.42 * 1000);
+    const laughDelay = Math.round(duration * 0.72 * 1000);
+    filter +=
+      `;[outa]asplit=2[voice][key]` +
+      `;[${bedIndex}:a]aloop=loop=-1:size=2147483647,atrim=duration=${duration.toFixed(3)},volume=0.22[bed]` +
+      `;[bed][key]sidechaincompress=threshold=0.025:ratio=10:attack=15:release=350[ducked]` +
+      `;[${drumsIndex}:a]atrim=duration=2.8,volume=0.72,adelay=${drumsDelay}:all=1[drums]` +
+      `;[${laughIndex}:a]atrim=duration=2.4,volume=0.55,adelay=${laughDelay}:all=1[laugh]` +
+      `;[voice][ducked][drums][laugh]amix=inputs=4:duration=longest:normalize=0,` +
+      `loudnorm=I=-14:LRA=7:TP=-2[finala]`;
   }
 
   const args = [
     '-y',
     ...clips.flatMap((c) => ['-i', c]),
+    ...comedyInputs.flatMap((c) => ['-i', c]),
     '-filter_complex', filter,
-    '-map', '[outv]', '-map', '[outa]',
+    '-map', '[outv]', '-map', audioMap,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac', '-b:a', '192k',
+    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
+    '-shortest',
     outPath,
   ];
 

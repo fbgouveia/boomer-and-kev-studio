@@ -1,0 +1,29 @@
+{
+  "collection": "Boomer & Kev — Commercial Creatives",
+  "version": 1,
+  "status": "concept",
+  "disclosure": "Internal brand demonstration — not client work.",
+  "assets": [
+    {
+      "id": "campaign-banner-16x9",
+      "type": "banner",
+      "format": "16:9",
+      "file": "/assets/commercial-creatives/starter-kit/campaign-banner-16x9.png",
+      "use": ["website hero", "YouTube", "display"]
+    },
+    {
+      "id": "social-ad-9x16",
+      "type": "paid-social",
+      "format": "9:16",
+      "file": "/assets/commercial-creatives/starter-kit/social-ad-9x16.png",
+      "use": ["Instagram Story", "TikTok", "Reels cover"]
+    },
+    {
+      "id": "brand-mockup-board",
+      "type": "mockup",
+      "format": "1:1",
+      "file": "/assets/commercial-creatives/starter-kit/brand-mockup-board.png",
+      "use": ["portfolio", "campaign presentation", "brand approval"]
+    }
+  ]
+}
