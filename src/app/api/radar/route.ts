@@ -5,8 +5,12 @@ import path from 'path';
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
+    const radarSecret = process.env.N8N_RADAR_SECRET;
+    if (!radarSecret) {
+      return NextResponse.json({ error: 'Radar authentication is not configured' }, { status: 503 });
+    }
     // Basic security to ensure only your n8n workflow can hit this
-    if (authHeader !== `Bearer ${process.env.N8N_RADAR_SECRET || 'n8n_secret_key'}`) {
+    if (authHeader !== `Bearer ${radarSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

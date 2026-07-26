@@ -19,7 +19,7 @@ export function proxy(request: NextRequest) {
 
   // n8n-only endpoints keep their own Bearer authentication because Basic Auth
   // would replace the Authorization header they already validate.
-  const hasRouteSpecificAuth = pathname === '/api/radar' || pathname.startsWith('/api/cron/');
+  const hasRouteSpecificAuth = pathname === '/api/radar' || pathname === '/api/cron/trend-hunter';
   if (!hasRouteSpecificAuth) {
     const user = process.env.STUDIO_AUTH_USER;
     const password = process.env.STUDIO_AUTH_PASSWORD;
