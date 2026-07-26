@@ -757,3 +757,13 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] `/api/sentinel`: HTTP 200, GREEN 4/4 (roteiro 4/4 Boomer/Kev, ElevenLabs, Kling e Supabase).
 - [x] Manifest e três assets Commercial Creatives publicados com HTTP 200.
 - [x] Produção agora inclui WP 1.6/1.7, mix cômico, fix do double-fire e starter kit.
+
+### Sessão 015 (2026-07-27) — fechamento de segurança
+
+- [x] Auditoria confirmou exposição: home/admin públicos e APIs de custo sem autenticação global.
+- [x] Basic Auth implementado no `src/proxy.ts` para páginas e APIs internas.
+- [x] Produção falha fechada com HTTP 503 se `STUDIO_AUTH_USER`/`STUDIO_AUTH_PASSWORD` estiverem ausentes.
+- [x] `/assets/*`, recursos internos do Next e favicon permanecem públicos.
+- [x] `/api/radar` e `/api/cron/*` preservam a autenticação Bearer própria para não quebrar n8n/cron.
+- [x] Teste local e produção: home 401 sem auth/200 com auth; admin 401; sentinel 401; manifest público 200; cron sem Bearer 401.
+- [x] Commit `b58f955` deployado; senha permanece fora do Git.
