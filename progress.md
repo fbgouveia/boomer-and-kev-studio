@@ -849,3 +849,17 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Typecheck, build, deploy test, verificador standalone e integração passaram.
 - [x] Código consolidado no commit local `c320e88`.
 - [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+
+### Sessão 022 (2026-07-29) — rollback automático de deploy
+
+- [x] Deploy cria backup da versão atual em diretório irmão antes de sobrescrever o destino.
+- [x] Backup inclui código e `.env`; `.tmp` runtime fica fora da cópia e é preservado.
+- [x] Rotina remota foi extraída para `tools/deploy-remote.sh` e é executável/testável isoladamente.
+- [x] Nova versão só é aceita após health check HTTP 200/401.
+- [x] Falha restaura código+env anteriores, reinicia PM2 e verifica a versão restaurada.
+- [x] Rollback bem-sucedido mantém exit code de falha, impedindo falso deploy verde.
+- [x] Falha da versão nova e também do rollback produz erro distinto e últimos logs do PM2.
+- [x] Testes locais cobrem sucesso, rollback recuperado e falha irrecuperável em diretórios temporários.
+- [x] Bash syntax, typecheck, deploy test, verificador standalone e lint do teste passaram.
+- [x] Código consolidado no commit local `c83877c`.
+- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
