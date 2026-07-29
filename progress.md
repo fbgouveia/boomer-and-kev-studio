@@ -811,3 +811,16 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Sequência integral do CI passou localmente.
 - [x] Código consolidado no commit local `a10bf76`.
 - [ ] Commits ainda não pushed/deployados; workflow CI ainda não executou no GitHub.
+
+### Sessão 019 (2026-07-29) — job store atômico e IDs fail-closed
+
+- [x] Status de jobs passou de overwrite direto para gravação atômica no mesmo filesystem (`arquivo temporário → rename`).
+- [x] Polling não pode mais observar JSON parcialmente escrito.
+- [x] `GET /api/pipeline/run` e `/api/pipeline/download` exigem UUID antes de construir caminhos em `.tmp`.
+- [x] `DELETE /api/episodes/delete` exige UUID antes de montar filtro com service role.
+- [x] Teste standalone executa 30 leituras concorrentes do mesmo job e valida JSON/ID íntegros.
+- [x] Teste cobre traversal em status/download e tentativa de injeção de filtro na exclusão; todos retornam 400 antes de filesystem/Supabase.
+- [x] Teste confirma ausência de arquivos temporários órfãos após o job falhar no VOICE_GATE.
+- [x] Typecheck, build, deploy test, verificador standalone e teste de integração passaram.
+- [x] Código consolidado no commit local `f7c26d2`.
+- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
