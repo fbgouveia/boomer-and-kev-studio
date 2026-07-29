@@ -1,5 +1,9 @@
 # COMMERCIAL CREATIVES — Boomer & Kev
 
+> A arquitetura de receita, ofertas, direitos, escala e roadmap está em
+> [`COMMERCIAL_STRATEGY.md`](COMMERCIAL_STRATEGY.md). Este documento continua
+> sendo a constituição criativa e produtiva da divisão.
+
 ## Natureza
 
 **Commercial Creatives é uma linha de produção do Boomer & Kev Studio, não uma nova subsidiária.**

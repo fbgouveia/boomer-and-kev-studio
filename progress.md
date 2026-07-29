@@ -968,3 +968,15 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [ ] Decidir e documentar tratamento operacional de registros corrompidos sem apagá-los automaticamente.
 - [ ] Os 631 MB históricos continuam intocados e só podem ser revisados/removidos com autorização explícita.
 - [ ] Produção continua intacta; não houve áudio, provider pago nem deploy.
+
+### Sessão 031 (2026-07-29) — arquitetura do setor comercial
+
+- [x] Estratégia comercial formalizada em `COMMERCIAL_STRATEGY.md`.
+- [x] Boomer & Kev definido como propriedade intelectual/audiência; tecnologia permanece infraestrutura, não posicionamento público.
+- [x] Três motores de receita organizados: media/patrocínio, Commercial Creatives e produtos/licenciamento.
+- [x] Escada de cinco ofertas, composição de preço, direitos, compliance, métricas, funil e gates de escala definidos.
+- [x] Roadmap de 90 dias prioriza prova editorial, primeiro piloto e renovação antes de estoque ou expansão estrutural.
+- [x] Guardrail inicial: pelo menos 80% editorial e no máximo uma integração a cada cinco publicações, sujeito a dados de retenção/sentimento.
+- [x] Regras atuais de disclosure de YouTube, TikTok, Meta e Austrália consideradas; revalidação é obrigatória antes de publicar.
+- [ ] Fundador precisa decidir marca pública canônica, território inicial, categorias proibidas, gate mínimo para patrocínio, primeiro merch e papel pessoal nas vendas.
+- [ ] Criar os ativos comerciais mínimos: one-page, media kit v0, reel, três cases, briefing, proposta/contrato/relatório e CRM.
