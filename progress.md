@@ -989,5 +989,6 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Deck não inventa audiência, alcance ou resultados e identifica artes demonstrativas como conceito interno.
 - [x] Revisão visual corrigiu contraste dos heróis, colisões, alinhamento de kickers e marcas de terceiros visíveis no master individual.
 - [x] Modelo comercial separa produção, publicação, licença, mídia paga e exclusividade.
+- [x] `HANDOFF.md` atualizado com estado, descobertas, blockers de distribuição e ponto exato de retomada comercial.
 - [ ] Antes de distribuição externa: confirmar email comercial, entidade legal, papel público do fundador, naming canônico, preços e métricas verificadas.
 - [ ] Ainda faltam reel comercial, contrato juridicamente revisado e templates de relatório 7/30 dias.
