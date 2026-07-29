@@ -931,3 +931,19 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] 22 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
 - [x] Código consolidado em `4e16064`.
 - [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
+
+### Sessão 028 (2026-07-29) — ciclo de vida seguro do `.tmp`
+
+- [x] Inventário local encontrou 631 MB, incluindo vídeos finais e evidências manuais; nada histórico foi apagado.
+- [x] Nova limpeza remove apenas `audio_`, `kling_`, `sync_`, `anchor_` e `lastframe_` pertencentes ao UUID terminal.
+- [x] `job_*.json`, `final_*.mp4`, idempotência, arquivos desconhecidos e outros jobs são preservados por contrato.
+- [x] Limpeza roda em `finally` após COMPLETED/FAILED e também ao reconciliar worker órfão.
+- [x] Helper recusa UUID inválido antes de ler/remover arquivos.
+- [x] Schema do pipeline limita 1–32 cenas, IDs seguros, personagens/enquadramentos conhecidos, duração 0–10 s e tamanhos de texto/direção/wardrobe.
+- [x] Teste de integração bloqueia ID de cena com traversal antes de persistência/provedor.
+- [x] Engine Higgsfield é rejeitada pelo pipeline principal e ficou desabilitada na UI; antes a seleção era registrada como Higgsfield, mas o worker cobrava Kling.
+- [x] Dois testes unitários provam remoção seletiva e fail-closed; standalone prova limpeza de intermediário órfão.
+- [x] 24 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
+- [x] Código consolidado em `4f011f2`.
+- [ ] Os 631 MB históricos só devem ser revisados/removidos com autorização explícita e inventário de retenção.
+- [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.

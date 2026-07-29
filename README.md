@@ -103,6 +103,10 @@ External HTTP calls use a shared bounded client:
 - **No Blind Mutation Retry** — ambiguous network errors are surfaced immediately
 - **Caller Cancellation** — an existing `AbortSignal` remains effective
 
+Terminal pipeline jobs remove only their own temporary scene/audio/anchor files.
+Job state, idempotency records, final videos, other jobs, and unknown operator
+artifacts are preserved.
+
 ---
 
 ## 🎨 UI Design System
