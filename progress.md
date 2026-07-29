@@ -900,3 +900,19 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Typecheck, lint focado, 10 testes unitários, deploy test, build e três verificações standalone passaram sem áudio/provedores.
 - [x] Código consolidado em `5bd8adf`.
 - [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
+
+### Sessão 026 (2026-07-29) — fechamento dos bypasses de custo
+
+- [x] Auditoria confirmou cinco rotas de mídia que podiam usar credenciais do servidor fora do gate do pipeline: render, video/generate, sync, voice e image.
+- [x] Contrato compartilhado exige `Idempotency-Key` e aprovação humana recente (`studio_ui`, `n8n_manual` ou `operator_cli`) antes de qualquer provedor.
+- [x] Chave igual+payload igual reproduz a resposta persistida; payload diferente retorna 409.
+- [x] Reserva concorrente/incerta retorna `IDEMPOTENCY_IN_PROGRESS`, impedindo repetição cega após timeout.
+- [x] Respostas de voz são persistidas em base64 para replay sem nova chamada ao ElevenLabs.
+- [x] Registros expiram após sete dias, têm teto de mil entradas e falham fechados se reservas incertas ocuparem o limite.
+- [x] `/api/video/generate` não troca mais automaticamente Higgsfield→Replicate nem Kling→Luma após falha ambígua.
+- [x] Painel DNA pede confirmação humana e preserva chave/aprovação em retries incertos de imagem.
+- [x] Teste standalone comprova os cinco gates com `REPLICATE_API_TOKEN`, `HF_CREDENTIALS`, `ELEVENLABS_API_KEY` e `GEMINI_API_KEY` vazios.
+- [x] 15 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
+- [x] Código consolidado em `84baa4f`.
+- [ ] Chamadores legados em `tools/` precisam adotar o novo contrato antes de qualquer reutilização; o pipeline atual já usa seu gate próprio.
+- [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.

@@ -80,12 +80,19 @@ https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generat
 | `POST /api/ai/brainstorm` | Generates script section options (Hooks, Bridges, Reactions, Closings) |
 | `POST /api/ai/script` | Full 6-scene script from topic + directorial notes |
 | `POST /api/ai/interview` | Q&A questions + master blueprint synthesis |
-| `POST /api/ai/voice` | ElevenLabs voice synthesis per character |
-| `POST /api/ai/sync` | Replicate LipSync orchestration |
-| `POST /api/render` | Kicks off Kling v2 video render pipeline |
+| `POST /api/ai/voice` | ElevenLabs voice synthesis per character (paid gate) |
+| `POST /api/ai/image` | Gemini image synthesis (paid gate) |
+| `POST /api/ai/sync` | Replicate LipSync orchestration (paid gate) |
+| `POST /api/video/generate` | Single video generation (paid gate) |
+| `POST /api/render` | Kicks off Kling/Higgsfield scene renders (paid gate) |
 | `GET /api/render/status` | Polls Replicate prediction status |
 | `GET /api/trends` | Fetches Australian trending topics from Google RSS |
 | `POST /api/keys/balance` | Validates API keys + checks ElevenLabs character balance |
+
+Paid media routes require an `Idempotency-Key` header plus a fresh `approval`
+object (`confirmed`, `source`, `approvedAt`). Reuse the same key and payload
+after an uncertain response; never create a new key until the provider state is
+known.
 
 ### Resilience: Neural Link Hardening
 
