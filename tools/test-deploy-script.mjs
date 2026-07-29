@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmod, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 const tempDir = await mkdtemp(path.join(os.tmpdir(), 'boomer-kev-deploy-test-'));
 const binDir = path.join(tempDir, 'bin');
 const logPath = path.join(tempDir, 'commands.log');
-await import('node:fs/promises').then(({ mkdir }) => mkdir(binDir));
+await mkdir(binDir);
 
 const mock = `#!/bin/sh
 printf '%s' "$0" >> "$DEPLOY_TEST_LOG"
@@ -60,4 +60,81 @@ const missingEnvRun = run({ DEPLOY_ENV_FILE: path.join(tempDir, 'missing.env') }
 assert.notEqual(missingEnvRun.status, 0);
 assert.match(missingEnvRun.stdout, /DEPLOY_ENV_FILE não encontrado/);
 
-console.log('Deploy válido: env remoto preservado por padrão, envio explícito aceito e arquivo ausente bloqueado.');
+const remoteBinDir = path.join(tempDir, 'remote-bin');
+const healthCountPath = path.join(tempDir, 'health-count');
+await mkdir(remoteBinDir);
+
+const remoteMocks = {
+  npx: '#!/bin/sh\nexit 0\n',
+  sleep: '#!/bin/sh\nexit 0\n',
+  curl: `#!/bin/sh
+count=0
+[ -f "$HEALTH_COUNT_FILE" ] && count="$(cat "$HEALTH_COUNT_FILE")"
+count=$((count + 1))
+printf '%s' "$count" > "$HEALTH_COUNT_FILE"
+case "$HEALTH_MODE" in
+  success) printf '401' ;;
+  rollback) [ "$count" -le 10 ] && printf '503' || printf '401' ;;
+  *) printf '503' ;;
+esac
+`,
+  rsync: `#!/bin/sh
+src="$4"
+dest="$5"
+cp "$src/server.js" "$dest/server.js"
+[ -f "$src/.env" ] && cp "$src/.env" "$dest/.env"
+exit 0
+`
+};
+
+for (const [command, contents] of Object.entries(remoteMocks)) {
+  const commandPath = path.join(remoteBinDir, command);
+  await writeFile(commandPath, contents);
+  await chmod(commandPath, 0o755);
+}
+
+function runRemote(mode) {
+  const fixtureDir = path.join(tempDir, `remote-${mode}`);
+  const destination = path.join(fixtureDir, 'current');
+  const rollback = path.join(fixtureDir, 'rollback');
+  return mkdir(destination, { recursive: true })
+    .then(() => mkdir(rollback, { recursive: true }))
+    .then(() => Promise.all([
+      writeFile(path.join(destination, 'server.js'), 'new-version'),
+      writeFile(path.join(destination, '.env'), 'new-environment'),
+      writeFile(path.join(rollback, 'server.js'), 'old-version'),
+      writeFile(path.join(rollback, '.env'), 'old-environment'),
+      writeFile(healthCountPath, '0')
+    ]))
+    .then(() => {
+      const result = spawnSync('bash', ['tools/deploy-remote.sh', destination, '3999', rollback], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${remoteBinDir}:${process.env.PATH}`,
+          HEALTH_MODE: mode,
+          HEALTH_COUNT_FILE: healthCountPath,
+          HEALTHCHECK_SLEEP_SECONDS: '0'
+        }
+      });
+      return { result, destination };
+    });
+}
+
+const healthy = await runRemote('success');
+assert.equal(healthy.result.status, 0, healthy.result.stderr);
+assert.equal(await readFile(path.join(healthy.destination, 'server.js'), 'utf8'), 'new-version');
+assert.equal(await readFile(path.join(healthy.destination, '.env'), 'utf8'), 'new-environment');
+
+const rolledBack = await runRemote('rollback');
+assert.notEqual(rolledBack.result.status, 0);
+assert.match(rolledBack.result.stderr, /Rollback restaurou a versão anterior/);
+assert.equal(await readFile(path.join(rolledBack.destination, 'server.js'), 'utf8'), 'old-version');
+assert.equal(await readFile(path.join(rolledBack.destination, '.env'), 'utf8'), 'old-environment');
+
+const unrecoverable = await runRemote('failure');
+assert.notEqual(unrecoverable.result.status, 0);
+assert.match(unrecoverable.result.stderr, /Deploy e rollback não produziram/);
+
+console.log('Deploy válido: env seguro, health check, rollback restaurado e falha irrecuperável sinalizada.');
