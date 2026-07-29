@@ -126,7 +126,7 @@
 - [ ] #14 Migrar localStorage → Supabase DB + Realtime
 - [ ] #15 Implementar publicação automática (TikTok/IG/YT)
 - [ ] #16 Implementar webhooks Replicate via Supabase Edge
-- [ ] #19 Adicionar rate limiting nas API routes
+- [x] #19 Adicionar rate limiting nas API routes — endurecido e testado no standalone em `ceec811`
 
 #### ⚪ SPRINT 4 — POLIMENTO (Semana 4-5)
 - [ ] #20 Configurar RLS no Supabase
@@ -874,3 +874,15 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Segundo workflow remoto (`30446742161`) passou em 46s, todas as etapas verdes e sem anotações.
 - [x] Branch local e `origin/restore-engine` sincronizados em `0814d11`.
 - [ ] Produção continua sem estes aprimoramentos; deploy exige coordenação prévia do contrato n8n.
+
+### Sessão 024 (2026-07-29) — controles HTTP fail-closed
+
+- [x] Rate limit existente passou a preferir `X-Real-IP`, normalizar o fallback e ignorar `X-Forwarded-For` variável quando o proxy fornece o cliente real.
+- [x] Estado em memória agora é limitado a 10 mil clientes e remove janelas expiradas/entradas antigas, evitando crescimento ilimitado.
+- [x] Resposta 429 inclui `Retry-After` e `Cache-Control: no-store`.
+- [x] Proteção CSRF agora cobre `PATCH`, além de POST/PUT/DELETE.
+- [x] `Origin` e `Referer` malformados retornam 403 em vez de causarem erro 500.
+- [x] Novo `test:security:standalone` prova auth ausente=503, credencial ausente=401, mesma origem aceita, origem cruzada/malformada=403 e 61ª requisição=429.
+- [x] Typecheck, lint focado, build, verificador standalone, segurança e idempotência passaram localmente sem áudio ou provedores externos.
+- [x] Código consolidado em `ceec811`; teste adicionado ao workflow `Quality`.
+- [ ] Produção permanece intacta; o incremento exige posterior coordenação de deploy.
