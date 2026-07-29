@@ -28,6 +28,11 @@ const runPipelineSchema = z.object({
     boomer: z.string().optional(),
     kev: z.string().optional(),
     studio: z.string().optional()
+  }).optional(),
+  approval: z.object({
+    confirmed: z.literal(true),
+    source: z.enum(['studio_ui', 'n8n_manual']),
+    approvedAt: z.string().datetime()
   }).optional()
 });
 
@@ -39,6 +44,33 @@ type IdempotencyRecord = {
   payloadHash: string;
   createdAt: string;
 };
+
+function replayIdempotentJob(idempotencyPath: string, payloadHash: string, tmpDir: string) {
+  if (!existsSync(idempotencyPath)) return null;
+
+  const existing = JSON.parse(readFileSync(idempotencyPath, 'utf8')) as IdempotencyRecord;
+  if (existing.payloadHash !== payloadHash) {
+    return NextResponse.json({
+      error: "IDEMPOTENCY_CONFLICT",
+      details: "A mesma chave já foi usada com outro payload."
+    }, { status: 409 });
+  }
+
+  const existingJobPath = path.resolve(tmpDir, `job_${existing.jobId}.json`);
+  if (!existsSync(existingJobPath)) {
+    return NextResponse.json({
+      error: "IDEMPOTENCY_STATE_MISSING",
+      details: "A reserva existe, mas o estado do job não foi encontrado."
+    }, { status: 409 });
+  }
+
+  return NextResponse.json({
+    status: "QUEUED",
+    jobId: existing.jobId,
+    statusUrl: `/api/pipeline/run?id=${existing.jobId}`,
+    replayed: true
+  });
+}
 
 function writeJsonAtomic(filePath: string, value: unknown) {
   const temporaryPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
@@ -690,6 +722,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_INPUT_SIGNAL", details: validation.error.format() }, { status: 400 });
     }
 
+    const approval = validation.data.approval;
+    if (!approval) {
+      return NextResponse.json({ error: "RENDER_APPROVAL_REQUIRED" }, { status: 403 });
+    }
+
     const keyValidation = idempotencyKeySchema.safeParse(req.headers.get('idempotency-key'));
     if (!keyValidation.success) {
       return NextResponse.json({
@@ -709,6 +746,14 @@ export async function POST(req: Request) {
     const keyHash = crypto.createHash('sha256').update(keyValidation.data).digest('hex');
     const payloadHash = crypto.createHash('sha256').update(JSON.stringify(validation.data)).digest('hex');
     const idempotencyPath = path.resolve(tmpDir, `idempotency_${keyHash}.json`);
+    const replay = replayIdempotentJob(idempotencyPath, payloadHash, tmpDir);
+    if (replay) return replay;
+
+    const approvalAgeMs = Date.now() - Date.parse(approval.approvedAt);
+    if (approvalAgeMs < -60_000 || approvalAgeMs > 10 * 60_000) {
+      return NextResponse.json({ error: "RENDER_APPROVAL_EXPIRED" }, { status: 403 });
+    }
+
     const jobId = crypto.randomUUID();
     const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
     const idempotencyRecord: IdempotencyRecord = {
@@ -722,29 +767,7 @@ export async function POST(req: Request) {
     } catch (error) {
       const fileError = error as NodeJS.ErrnoException;
       if (fileError.code !== 'EEXIST') throw error;
-
-      const existing = JSON.parse(readFileSync(idempotencyPath, 'utf8')) as IdempotencyRecord;
-      if (existing.payloadHash !== payloadHash) {
-        return NextResponse.json({
-          error: "IDEMPOTENCY_CONFLICT",
-          details: "A mesma chave já foi usada com outro payload."
-        }, { status: 409 });
-      }
-
-      const existingJobPath = path.resolve(tmpDir, `job_${existing.jobId}.json`);
-      if (!existsSync(existingJobPath)) {
-        return NextResponse.json({
-          error: "IDEMPOTENCY_STATE_MISSING",
-          details: "A reserva existe, mas o estado do job não foi encontrado."
-        }, { status: 409 });
-      }
-
-      return NextResponse.json({
-        status: "QUEUED",
-        jobId: existing.jobId,
-        statusUrl: `/api/pipeline/run?id=${existing.jobId}`,
-        replayed: true
-      });
+      return replayIdempotentJob(idempotencyPath, payloadHash, tmpDir)!;
     }
 
     const initialJobState = {

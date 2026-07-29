@@ -68,6 +68,7 @@ export default function Home() {
   const [isRenderingProject, setIsRenderingProject] = useState(false);
   const renderInFlight = useRef(false);
   const renderIdempotencyKey = useRef<string | null>(null);
+  const renderApproval = useRef<{ confirmed: true; source: 'studio_ui'; approvedAt: string } | null>(null);
   const [renderEngine, setRenderEngine] = useState<'kling' | 'higgsfield'>('kling');
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
@@ -866,6 +867,17 @@ export default function Home() {
 
   const renderProject = async () => {
     if (renderInFlight.current) return;
+    if (!renderApproval.current) {
+      const confirmed = window.confirm(
+        "AUTHORIZE PAID RENDER?\n\nThis production may spend approximately US$3–6 on external providers."
+      );
+      if (!confirmed) return;
+      renderApproval.current = {
+        confirmed: true,
+        source: 'studio_ui',
+        approvedAt: new Date().toISOString()
+      };
+    }
     renderInFlight.current = true;
     renderIdempotencyKey.current ||= crypto.randomUUID();
 
@@ -908,7 +920,8 @@ export default function Home() {
       directorIdea,
       directorSnippet,
       engine: renderEngine,
-      wardrobe: wardrobeConfig
+      wardrobe: wardrobeConfig,
+      approval: renderApproval.current
     };
 
     try {
@@ -930,6 +943,10 @@ export default function Home() {
 
       if (!runRes.ok) {
         if (runRes.status === 400 || runData.error === 'IDEMPOTENCY_CONFLICT') {
+          renderIdempotencyKey.current = null;
+        }
+        if (runData.error === 'RENDER_APPROVAL_REQUIRED' || runData.error === 'RENDER_APPROVAL_EXPIRED') {
+          renderApproval.current = null;
           renderIdempotencyKey.current = null;
         }
         throw new Error(runData.error || "Failed to start background orchestrator.");
@@ -958,6 +975,7 @@ export default function Home() {
             clearInterval(pollInterval);
             renderInFlight.current = false;
             renderIdempotencyKey.current = null;
+            renderApproval.current = null;
             setAssembledVideoUrl(jobState.finalVideoUrl);
             setRenderProgress(100);
             setRenderLogs(prev => ["🎉 SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prev]);
@@ -968,6 +986,7 @@ export default function Home() {
             clearInterval(pollInterval);
             renderInFlight.current = false;
             renderIdempotencyKey.current = null;
+            renderApproval.current = null;
             setRenderProgress(0);
             setRenderLogs(prev => ["🔴 CRITICAL_PIPELINE_FAILURE.", ...prev]);
             setTimeout(() => {

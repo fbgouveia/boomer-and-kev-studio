@@ -18,7 +18,12 @@ const payload = {
   }],
   directorIdea: 'Idempotency contract test',
   engine: 'kling',
-  aspect: '9:16'
+  aspect: '9:16',
+  approval: {
+    confirmed: true,
+    source: 'studio_ui',
+    approvedAt: new Date().toISOString()
+  }
 };
 
 async function post(body, idempotencyKey) {
@@ -80,6 +85,23 @@ const missingKey = await post(payload);
 assert.equal(missingKey.status, 400);
 assert.equal(missingKey.body.error, 'IDEMPOTENCY_KEY_REQUIRED');
 
+const missingApproval = await post(
+  Object.fromEntries(Object.entries(payload).filter(([key]) => key !== 'approval')),
+  `test-${crypto.randomUUID()}`
+);
+assert.equal(missingApproval.status, 403);
+assert.equal(missingApproval.body.error, 'RENDER_APPROVAL_REQUIRED');
+
+const expiredApproval = await post({
+  ...payload,
+  approval: {
+    ...payload.approval,
+    approvedAt: new Date(Date.now() - 11 * 60_000).toISOString()
+  }
+}, `test-${crypto.randomUUID()}`);
+assert.equal(expiredApproval.status, 403);
+assert.equal(expiredApproval.body.error, 'RENDER_APPROVAL_EXPIRED');
+
 const traversal = encodeURIComponent('../../HANDOFF');
 const invalidStatusId = await get(`/api/pipeline/run?id=${traversal}`);
 assert.equal(invalidStatusId.status, 400);
@@ -93,6 +115,6 @@ const invalidDeleteId = await deleteRequest(`/api/episodes/delete?id=${encodeURI
 assert.equal(invalidDeleteId.status, 400);
 assert.equal(invalidDeleteId.body.error, 'INVALID_EPISODE_ID');
 
-console.log(`Pipeline seguro: idempotência reutilizou ${first.body.jobId}; 30 leituras íntegras; IDs/traversal inválidos=400.`);
+console.log(`Pipeline seguro: job ${first.body.jobId}; aprovação ausente/expirada=403; 30 leituras íntegras; IDs inválidos=400.`);
 
 export const testedJobId = first.body.jobId;
