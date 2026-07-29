@@ -372,6 +372,9 @@ cada publicação e campanha.
 
 ## Roadmap de 90 dias
 
+O foundation pack operacional correspondente está em
+[`commercial/foundation-pack/`](commercial/foundation-pack/).
+
 ### Dias 1–30 — fundação
 
 - resolver nomenclatura pública entre Boomer & Kev e Down Under Discourse;

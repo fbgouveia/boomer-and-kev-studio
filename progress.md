@@ -980,3 +980,14 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Regras atuais de disclosure de YouTube, TikTok, Meta e Austrália consideradas; revalidação é obrigatória antes de publicar.
 - [ ] Fundador precisa decidir marca pública canônica, território inicial, categorias proibidas, gate mínimo para patrocínio, primeiro merch e papel pessoal nas vendas.
 - [ ] Criar os ativos comerciais mínimos: one-page, media kit v0, reel, três cases, briefing, proposta/contrato/relatório e CRM.
+
+### Sessão 032 (2026-07-29) — Commercial Foundation Pack v0
+
+- [x] One-page, menu de ofertas, briefing, proposta, matriz de direitos, rate architecture, score de marca e pipeline CRM criados.
+- [x] Três campanhas-conceito fictícias estruturadas para café, ferramenta/outdoor e app, cada uma com conflito, prova, hooks, teste controlado e outputs.
+- [x] Media kit editável de nove slides produzido em inglês com artifact-tool e ativos oficiais do projeto.
+- [x] Deck não inventa audiência, alcance ou resultados e identifica artes demonstrativas como conceito interno.
+- [x] Revisão visual corrigiu contraste dos heróis, colisões, alinhamento de kickers e marcas de terceiros visíveis no master individual.
+- [x] Modelo comercial separa produção, publicação, licença, mídia paga e exclusividade.
+- [ ] Antes de distribuição externa: confirmar email comercial, entidade legal, papel público do fundador, naming canônico, preços e métricas verificadas.
+- [ ] Ainda faltam reel comercial, contrato juridicamente revisado e templates de relatório 7/30 dias.
