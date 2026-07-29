@@ -312,6 +312,9 @@ Camada 3 (API routes + tools/) — Código determinístico e atômico
    distribuída em 26 prompts mutando sozinhos é entropia com nome bonito.
 7. **Ação cara ou irreversível exige OK explícito**: render (~US$3-6), publicação, exclusão,
    credenciais. Reversível e barato → age; caro ou irreversível → pergunta.
+   **[LOCAL — aguarda deploy]** `/api/pipeline/run` materializa essa regra: exige aprovação
+   confirmada há no máximo 10 minutos; a UI usa confirmação humana nativa. Chamadores n8n só podem
+   enviar `source: n8n_manual` depois do gate humano no Telegram.
 8. **Ambiguidade de intenção não se resolve investigando código**: pare e pergunte.
 
 > ⚠️ **Camada 3 diverge do V.L.A.E.G. canônico — e a divergência é LEI aqui:**
@@ -414,4 +417,3 @@ YOUTUBE_CLIENT_SECRET=...
 | Telegram | chat `6431944169`, cred n8n `xMM0nVZz16NfA8M8` |
 | Política de manutenção | `deriva.yml` na raiz |
 | GitHub | `fbgouveia/boomer-and-kev-studio` branch `restore-engine` |
-

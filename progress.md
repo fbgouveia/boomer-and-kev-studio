@@ -824,3 +824,16 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Typecheck, build, deploy test, verificador standalone e teste de integração passaram.
 - [x] Código consolidado no commit local `f7c26d2`.
 - [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+
+### Sessão 020 (2026-07-29) — gate financeiro explícito
+
+- [x] `POST /api/pipeline/run` exige `approval.confirmed=true`, origem conhecida e timestamp ISO.
+- [x] Aprovação ausente ou com mais de 10 minutos (ou >1 minuto no futuro) retorna 403 antes de idempotência, persistência ou provedor.
+- [x] A UI exibe confirmação humana nativa informando custo aproximado de US$3–6 antes de qualquer POST.
+- [x] Chave idempotente e aprovação são preservadas em retries incertos e limpas ao concluir/falhar.
+- [x] Replay de job já aceito continua recuperável mesmo depois que a aprovação envelhece; aprovação expirada nunca cria job novo.
+- [x] Teste standalone cobre aprovação válida, ausente e expirada sem secrets/provedores.
+- [x] Typecheck, build, deploy test, verificador standalone e integração passaram.
+- [x] Código consolidado no commit local `9de3b47`.
+- [ ] n8n precisa enviar `approval.source=n8n_manual` apenas após aprovação humana no Telegram.
+- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
