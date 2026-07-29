@@ -38,6 +38,7 @@ const runPipelineSchema = z.object({
 
 const idempotencyKeySchema = z.string().min(16).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 const jobIdSchema = z.string().uuid();
+const workerInstanceId = crypto.randomUUID();
 
 type IdempotencyRecord = {
   jobId: string;
@@ -337,7 +338,12 @@ async function processPipeline(
   const updateJob = (updates: any) => {
     try {
       const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
-      const newData = { ...currentData, ...updates, logs: [...currentData.logs, ...(updates.logs || [])] };
+      const newData = {
+        ...currentData,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        logs: [...currentData.logs, ...(updates.logs || [])]
+      };
       writeJsonAtomic(jobFilePath, newData);
     } catch (e) {
       console.error("Failed to write job status file:", e);
@@ -770,12 +776,16 @@ export async function POST(req: Request) {
       return replayIdempotentJob(idempotencyPath, payloadHash, tmpDir)!;
     }
 
+    const now = new Date().toISOString();
     const initialJobState = {
       id: jobId,
       status: "PROCESSING",
       progress: 0,
       logs: ["🚀 PIPELINE_ORCHESTRATOR_TRIGGERED.", `JOB_ID: ${jobId}`],
       engine,
+      workerInstanceId,
+      createdAt: now,
+      updatedAt: now,
       finalVideoUrl: null
     };
 
@@ -819,7 +829,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    const jobData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+    let jobData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+    if (jobData.status === 'PROCESSING' && jobData.workerInstanceId !== workerInstanceId) {
+      jobData = {
+        ...jobData,
+        status: 'FAILED',
+        progress: 0,
+        failureCode: 'WORKER_RESTARTED',
+        updatedAt: new Date().toISOString(),
+        logs: [
+          ...(Array.isArray(jobData.logs) ? jobData.logs : []),
+          '🔴 WORKER_RESTARTED: o processo original não existe mais; job encerrado sem retry automático.'
+        ]
+      };
+      writeJsonAtomic(jobFilePath, jobData);
+    }
     return NextResponse.json(jobData);
 
   } catch (error) {

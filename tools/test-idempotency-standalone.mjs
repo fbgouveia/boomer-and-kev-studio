@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readdir, rename } from 'node:fs/promises';
+import { readdir, rename, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -65,8 +66,29 @@ try {
   }
   assert.equal(jobState?.status, 'FAILED');
   assert.match(jobState.logs.at(-1), /ELEVENLABS_API_KEY ausente/);
+
+  const orphanedJobId = crypto.randomUUID();
+  await writeFile(path.join(runtimeTmp, `job_${orphanedJobId}.json`), JSON.stringify({
+    id: orphanedJobId,
+    status: 'PROCESSING',
+    progress: 42,
+    logs: ['job criado por instância anterior'],
+    workerInstanceId: 'previous-worker',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }));
+  const orphanedResponse = await fetch(`${baseUrl}/api/pipeline/run?id=${orphanedJobId}`, {
+    headers: { Authorization: authorization }
+  });
+  const orphanedState = await orphanedResponse.json();
+  assert.equal(orphanedResponse.status, 200);
+  assert.equal(orphanedState.status, 'FAILED');
+  assert.equal(orphanedState.failureCode, 'WORKER_RESTARTED');
+  assert.match(orphanedState.logs.at(-1), /WORKER_RESTARTED/);
+
   assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|Replicate/i);
   assert.ok((await readdir(runtimeTmp)).every(name => !name.endsWith('.tmp')));
+  console.log(`Recuperação válida: job órfão ${orphanedJobId} reconciliado como WORKER_RESTARTED.`);
 } finally {
   server.kill('SIGTERM');
   await new Promise(resolve => server.once('exit', resolve));
