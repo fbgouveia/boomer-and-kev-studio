@@ -799,3 +799,15 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [ ] Lint global permanece vermelho por 55 erros e 44 warnings preexistentes; não foram misturados nesta mudança cirúrgica.
 - [x] Mudanças consolidadas no commit local `38ec9bd`.
 - [ ] Commit ainda não pushed nem deployado; produção permanece intacta.
+
+### Sessão 018 (2026-07-29) — CI e VOICE_GATE sem episódio fantasma
+
+- [x] VOICE_GATE passa a validar `ELEVENLABS_API_KEY` antes do INSERT no Supabase; configuração ausente não cria episódio fantasma.
+- [x] O catch só tenta marcar o episódio como `failed` quando o registro inicial foi concluído.
+- [x] Criado teste standalone autocontido: sobe o servidor com chaves pagas vazias, testa concorrência/replay/conflito e confirma estado `FAILED` antes de qualquer provedor.
+- [x] O teste rejeita logs com tentativa de Supabase, ElevenLabs ou Replicate.
+- [x] Criado `.github/workflows/quality.yml` para pushes na `restore-engine` e pull requests.
+- [x] CI executa `npm ci`, typecheck, teste do deploy, build, verificação do standalone e idempotência standalone; não requer secrets.
+- [x] Sequência integral do CI passou localmente.
+- [x] Código consolidado no commit local `a10bf76`.
+- [ ] Commits ainda não pushed/deployados; workflow CI ainda não executou no GitHub.
