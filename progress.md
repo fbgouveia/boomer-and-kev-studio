@@ -837,3 +837,15 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Código consolidado no commit local `9de3b47`.
 - [ ] n8n precisa enviar `approval.source=n8n_manual` apenas após aprovação humana no Telegram.
 - [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+
+### Sessão 021 (2026-07-29) — recuperação fail-closed após restart
+
+- [x] Cada job novo registra `workerInstanceId`, `createdAt` e `updatedAt`.
+- [x] Toda atualização de estado renova `updatedAt` dentro da gravação atômica.
+- [x] Polling detecta `PROCESSING` pertencente a outra instância e reconcilia para `FAILED`.
+- [x] Causa explícita `WORKER_RESTARTED` é persistida no status e nos logs.
+- [x] Não há retry automático após restart, evitando repetição de chamadas pagas cujo resultado externo pode ser incerto.
+- [x] Teste standalone cria job órfão de uma instância anterior e confirma a reconciliação.
+- [x] Typecheck, build, deploy test, verificador standalone e integração passaram.
+- [x] Código consolidado no commit local `c320e88`.
+- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
