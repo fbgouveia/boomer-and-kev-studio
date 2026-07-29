@@ -798,7 +798,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [ ] Antes do deploy, o workflow n8n que chama `/api/pipeline/run` precisa enviar uma chave estável (ex.: execution ID); sem ela a nova rota falha fechada com 400.
 - [ ] Lint global permanece vermelho por 55 erros e 44 warnings preexistentes; não foram misturados nesta mudança cirúrgica.
 - [x] Mudanças consolidadas no commit local `38ec9bd`.
-- [ ] Commit ainda não pushed nem deployado; produção permanece intacta.
+- [x] Push concluído na Sessão 023; produção permanece sem deploy.
 
 ### Sessão 018 (2026-07-29) — CI e VOICE_GATE sem episódio fantasma
 
@@ -810,7 +810,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] CI executa `npm ci`, typecheck, teste do deploy, build, verificação do standalone e idempotência standalone; não requer secrets.
 - [x] Sequência integral do CI passou localmente.
 - [x] Código consolidado no commit local `a10bf76`.
-- [ ] Commits ainda não pushed/deployados; workflow CI ainda não executou no GitHub.
+- [x] Push e workflow remoto concluídos na Sessão 023; produção permanece sem deploy.
 
 ### Sessão 019 (2026-07-29) — job store atômico e IDs fail-closed
 
@@ -823,7 +823,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Teste confirma ausência de arquivos temporários órfãos após o job falhar no VOICE_GATE.
 - [x] Typecheck, build, deploy test, verificador standalone e teste de integração passaram.
 - [x] Código consolidado no commit local `f7c26d2`.
-- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+- [x] Push concluído na Sessão 023; produção permanece sem deploy.
 
 ### Sessão 020 (2026-07-29) — gate financeiro explícito
 
@@ -836,7 +836,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Typecheck, build, deploy test, verificador standalone e integração passaram.
 - [x] Código consolidado no commit local `9de3b47`.
 - [ ] n8n precisa enviar `approval.source=n8n_manual` apenas após aprovação humana no Telegram.
-- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+- [x] Push concluído na Sessão 023; produção permanece sem deploy.
 
 ### Sessão 021 (2026-07-29) — recuperação fail-closed após restart
 
@@ -848,7 +848,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Teste standalone cria job órfão de uma instância anterior e confirma a reconciliação.
 - [x] Typecheck, build, deploy test, verificador standalone e integração passaram.
 - [x] Código consolidado no commit local `c320e88`.
-- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+- [x] Push concluído na Sessão 023; produção permanece sem deploy.
 
 ### Sessão 022 (2026-07-29) — rollback automático de deploy
 
@@ -862,4 +862,15 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Testes locais cobrem sucesso, rollback recuperado e falha irrecuperável em diretórios temporários.
 - [x] Bash syntax, typecheck, deploy test, verificador standalone e lint do teste passaram.
 - [x] Código consolidado no commit local `c83877c`.
-- [ ] Commit ainda não pushed/deployado; produção permanece intacta.
+- [x] Push concluído na Sessão 023; produção permanece sem deploy.
+
+### Sessão 023 (2026-07-29) — push e CI remoto comprovado
+
+- [x] Doze commits de robustez enviados para `origin/restore-engine`; nenhum deploy acionado.
+- [x] Primeiro workflow `Quality` remoto (`30446481721`) passou em 48s com todas as etapas verdes.
+- [x] Anotação de Node 20 detectada nas actions v4.
+- [x] Releases oficiais verificados: `actions/checkout` v7.0.1 e `actions/setup-node` v7.0.0.
+- [x] Actions atualizadas e fixadas por SHA imutável no commit `0814d11`.
+- [x] Segundo workflow remoto (`30446742161`) passou em 46s, todas as etapas verdes e sem anotações.
+- [x] Branch local e `origin/restore-engine` sincronizados em `0814d11`.
+- [ ] Produção continua sem estes aprimoramentos; deploy exige coordenação prévia do contrato n8n.
