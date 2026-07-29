@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { querySupabase } from '@/lib/supabase';
+import { z } from 'zod';
+
+const episodeIdSchema = z.string().uuid();
 
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: 'Episode ID is required' }, { status: 400 });
+    const idValidation = episodeIdSchema.safeParse(id);
+    if (!idValidation.success) {
+      return NextResponse.json({ error: 'INVALID_EPISODE_ID' }, { status: 400 });
     }
 
     // Use service role to bypass RLS and delete the row
-    await querySupabase(`episodes?id=eq.${id}`, { 
+    await querySupabase(`episodes?id=eq.${idValidation.data}`, {
       method: 'DELETE',
       useServiceRole: true 
     });

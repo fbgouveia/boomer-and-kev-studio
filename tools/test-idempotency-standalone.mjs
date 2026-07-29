@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { rename } from 'node:fs/promises';
+import { readdir, rename } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -66,6 +66,7 @@ try {
   assert.equal(jobState?.status, 'FAILED');
   assert.match(jobState.logs.at(-1), /ELEVENLABS_API_KEY ausente/);
   assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|Replicate/i);
+  assert.ok((await readdir(runtimeTmp)).every(name => !name.endsWith('.tmp')));
 } finally {
   server.kill('SIGTERM');
   await new Promise(resolve => server.once('exit', resolve));

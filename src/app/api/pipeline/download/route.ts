@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { existsSync, createReadStream } from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
+
+const jobIdSchema = z.string().uuid();
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing job ID" }, { status: 400 });
+    const idValidation = jobIdSchema.safeParse(id);
+    if (!idValidation.success) {
+      return NextResponse.json({ error: "INVALID_JOB_ID" }, { status: 400 });
     }
 
-    const filePath = path.resolve(process.cwd(), '.tmp', `final_${id}.mp4`);
+    const filePath = path.resolve(process.cwd(), '.tmp', `final_${idValidation.data}.mp4`);
     if (!existsSync(filePath)) {
       return NextResponse.json({ error: "Video not found or still processing" }, { status: 404 });
     }
@@ -21,7 +25,7 @@ export async function GET(req: Request) {
     return new Response(fileStream as any, {
       headers: {
         'Content-Type': 'video/mp4',
-        'Content-Disposition': `attachment; filename="boomer_and_kev_episode_${id}.mp4"`
+        'Content-Disposition': `attachment; filename="boomer_and_kev_episode_${idValidation.data}.mp4"`
       }
     });
 

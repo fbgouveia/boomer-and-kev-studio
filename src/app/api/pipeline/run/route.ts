@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -32,12 +32,24 @@ const runPipelineSchema = z.object({
 });
 
 const idempotencyKeySchema = z.string().min(16).max(128).regex(/^[A-Za-z0-9._:-]+$/);
+const jobIdSchema = z.string().uuid();
 
 type IdempotencyRecord = {
   jobId: string;
   payloadHash: string;
   createdAt: string;
 };
+
+function writeJsonAtomic(filePath: string, value: unknown) {
+  const temporaryPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporaryPath, JSON.stringify(value, null, 2), { flag: 'wx' });
+    renameSync(temporaryPath, filePath);
+  } catch (error) {
+    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+    throw error;
+  }
+}
 
 // FFmpeg Video Assembly function
 type Target = { width: number; height: number; fps: number };
@@ -294,7 +306,7 @@ async function processPipeline(
     try {
       const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
       const newData = { ...currentData, ...updates, logs: [...currentData.logs, ...(updates.logs || [])] };
-      writeFileSync(jobFilePath, JSON.stringify(newData, null, 2));
+      writeJsonAtomic(jobFilePath, newData);
     } catch (e) {
       console.error("Failed to write job status file:", e);
     }
@@ -745,7 +757,8 @@ export async function POST(req: Request) {
     };
 
     try {
-      writeFileSync(jobFilePath, JSON.stringify(initialJobState, null, 2), { flag: 'wx' });
+      if (existsSync(jobFilePath)) throw new Error(`Job file collision: ${jobId}`);
+      writeJsonAtomic(jobFilePath, initialJobState);
     } catch (error) {
       unlinkSync(idempotencyPath);
       throw error;
@@ -773,11 +786,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing job ID" }, { status: 400 });
+    const idValidation = jobIdSchema.safeParse(id);
+    if (!idValidation.success) {
+      return NextResponse.json({ error: "INVALID_JOB_ID" }, { status: 400 });
     }
 
-    const jobFilePath = path.resolve(process.cwd(), '.tmp', `job_${id}.json`);
+    const jobFilePath = path.resolve(process.cwd(), '.tmp', `job_${idValidation.data}.json`);
     if (!existsSync(jobFilePath)) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }

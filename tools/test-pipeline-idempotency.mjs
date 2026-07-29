@@ -36,6 +36,21 @@ async function post(body, idempotencyKey) {
   return { status: response.status, body: await response.json() };
 }
 
+async function get(pathname) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    headers: { Authorization: `Basic ${auth}` }
+  });
+  return { status: response.status, body: await response.json() };
+}
+
+async function deleteRequest(pathname) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Basic ${auth}` }
+  });
+  return { status: response.status, body: await response.json() };
+}
+
 const [first, concurrentReplay] = await Promise.all([
   post(payload, key),
   post(payload, key)
@@ -45,6 +60,12 @@ assert.equal(first.status, 200);
 assert.equal(concurrentReplay.status, 200);
 assert.equal(first.body.jobId, concurrentReplay.body.jobId);
 assert.equal([first.body.replayed, concurrentReplay.body.replayed].filter(Boolean).length, 1);
+
+const concurrentReads = await Promise.all(
+  Array.from({ length: 30 }, () => get(`/api/pipeline/run?id=${first.body.jobId}`))
+);
+assert.ok(concurrentReads.every(result => result.status === 200));
+assert.ok(concurrentReads.every(result => result.body.id === first.body.jobId));
 
 const laterReplay = await post(payload, key);
 assert.equal(laterReplay.status, 200);
@@ -59,6 +80,19 @@ const missingKey = await post(payload);
 assert.equal(missingKey.status, 400);
 assert.equal(missingKey.body.error, 'IDEMPOTENCY_KEY_REQUIRED');
 
-console.log(`Idempotência válida: concorrência e replay reutilizaram ${first.body.jobId}; conflito=409; chave ausente=400.`);
+const traversal = encodeURIComponent('../../HANDOFF');
+const invalidStatusId = await get(`/api/pipeline/run?id=${traversal}`);
+assert.equal(invalidStatusId.status, 400);
+assert.equal(invalidStatusId.body.error, 'INVALID_JOB_ID');
+
+const invalidDownloadId = await get(`/api/pipeline/download?id=${traversal}`);
+assert.equal(invalidDownloadId.status, 400);
+assert.equal(invalidDownloadId.body.error, 'INVALID_JOB_ID');
+
+const invalidDeleteId = await deleteRequest(`/api/episodes/delete?id=${encodeURIComponent('x&status=neq.deleted')}`);
+assert.equal(invalidDeleteId.status, 400);
+assert.equal(invalidDeleteId.body.error, 'INVALID_EPISODE_ID');
+
+console.log(`Pipeline seguro: idempotência reutilizou ${first.body.jobId}; 30 leituras íntegras; IDs/traversal inválidos=400.`);
 
 export const testedJobId = first.body.jobId;
