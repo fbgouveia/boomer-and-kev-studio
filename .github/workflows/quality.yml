@@ -26,4 +26,5 @@ jobs:
       - run: npm run test:deploy
       - run: npm run build
       - run: npm run verify:standalone
+      - run: npm run test:security:standalone
       - run: npm run test:idempotency:standalone

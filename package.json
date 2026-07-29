@@ -8,6 +8,7 @@
     "test:deploy": "node tools/test-deploy-script.mjs",
     "test:idempotency": "node tools/test-pipeline-idempotency.mjs",
     "test:idempotency:standalone": "node tools/test-idempotency-standalone.mjs",
+    "test:security:standalone": "node tools/test-security-standalone.mjs",
     "verify:standalone": "node tools/verify-standalone.mjs",
     "start": "next start",
     "lint": "eslint"
