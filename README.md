@@ -96,10 +96,12 @@ known.
 
 ### Resilience: Neural Link Hardening
 
-All AI routes implement:
-- **Auto Retry** — 3 retries with exponential backoff (`1s → 2s → 3s`)
-- **429 Rate Limit** — Returns `retryAfter` seconds to the frontend
-- **Frontend Countdown** — Live countdown in Drafting Table before retry is re-enabled
+External HTTP calls use a shared bounded client:
+- **Timeouts** — requests are aborted instead of occupying a worker indefinitely
+- **Safe 429 Retry** — up to 3 retries, honoring short `Retry-After` values
+- **Long Backoff Handoff** — long waits return `retryAfter` to the caller
+- **No Blind Mutation Retry** — ambiguous network errors are surfaced immediately
+- **Caller Cancellation** — an existing `AbortSignal` remains effective
 
 ---
 

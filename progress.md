@@ -916,3 +916,18 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Código consolidado em `84baa4f`.
 - [ ] Chamadores legados em `tools/` precisam adotar o novo contrato antes de qualquer reutilização; o pipeline atual já usa seu gate próprio.
 - [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
+
+### Sessão 027 (2026-07-29) — rede externa limitada e honesta
+
+- [x] `fetchWithRetry` refeito com orçamento total de 60s e composição com `AbortSignal` do chamador.
+- [x] Retry automático ocorre apenas após resposta HTTP 429 explícita; falha de rede ambígua em POST não é repetida.
+- [x] `Retry-After` aceita segundos/data HTTP; espera acima do teto automático retorna ao chamador sem retry prematuro.
+- [x] Corpo 429 não JSON não mascara o status nem causa crash no parser.
+- [x] Sete testes simulados cobrem sucesso, backoff, limite longo, corpo inválido, erro de rede, timeout e cancelamento.
+- [x] Helper duplicado de interview removido; todas as APIs/libs ficaram sem `fetch()` direto.
+- [x] VOICE_GATE usa timeout de 60s; downloads têm 120s; uploads 60s; Supabase/model checks 15s; balanços 10s.
+- [x] Sentinel agora aborta as sondas HTTP quando o prazo vence, em vez de apenas abandonar `Promise.race`.
+- [x] Balanços sem credenciais retornam `UNCONFIGURED`; os antigos valores simulados “autenticados” foram removidos.
+- [x] 22 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
+- [x] Código consolidado em `4e16064`.
+- [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
