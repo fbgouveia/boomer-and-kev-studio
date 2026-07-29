@@ -70,7 +70,11 @@ function maintainOperationStore(storageDir: string, now: number) {
         .filter(record => record !== null);
 
     for (const entry of records) {
-        if (Number.isFinite(entry.createdAt) && now - entry.createdAt > RECORD_RETENTION_MS) {
+        if (
+            entry.record.status === 'COMPLETED'
+            && Number.isFinite(entry.createdAt)
+            && now - entry.createdAt > RECORD_RETENTION_MS
+        ) {
             unlinkSync(entry.filePath);
         }
     }

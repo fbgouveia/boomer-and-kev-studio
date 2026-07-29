@@ -908,7 +908,7 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Chave igual+payload igual reproduz a resposta persistida; payload diferente retorna 409.
 - [x] Reserva concorrente/incerta retorna `IDEMPOTENCY_IN_PROGRESS`, impedindo repetição cega após timeout.
 - [x] Respostas de voz são persistidas em base64 para replay sem nova chamada ao ElevenLabs.
-- [x] Registros expiram após sete dias, têm teto de mil entradas e falham fechados se reservas incertas ocuparem o limite.
+- [x] Registros concluídos expiram após sete dias; reservas incertas nunca expiram automaticamente, e o teto de mil entradas falha fechado se elas ocuparem o limite.
 - [x] `/api/video/generate` não troca mais automaticamente Higgsfield→Replicate nem Kling→Luma após falha ambígua.
 - [x] Painel DNA pede confirmação humana e preserva chave/aprovação em retries incertos de imagem.
 - [x] Teste standalone comprova os cinco gates com `REPLICATE_API_TOKEN`, `HF_CREDENTIALS`, `ELEVENLABS_API_KEY` e `GEMINI_API_KEY` vazios.
@@ -946,4 +946,13 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] 24 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
 - [x] Código consolidado em `4f011f2`.
 - [ ] Os 631 MB históricos só devem ser revisados/removidos com autorização explícita e inventário de retenção.
+- [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
+
+### Sessão 029 (2026-07-29) — retenção fail-closed de operações pagas
+
+- [x] Auditoria detectou que a manutenção removia qualquer registro com mais de sete dias, inclusive `RESERVED`.
+- [x] Expiração automática agora se limita a operações `COMPLETED`.
+- [x] Reservas incertas são preservadas indefinidamente e continuam bloqueando a mesma chave idempotente até reconciliação manual.
+- [x] Teste regressivo simula reserva incerta com oito dias e comprova `IDEMPOTENCY_IN_PROGRESS`.
+- [x] 25 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
 - [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.

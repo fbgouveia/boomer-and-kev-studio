@@ -160,4 +160,30 @@ describe('paid operation contract', () => {
         assert.equal(fresh.kind, 'reserved');
         assert.equal((await readdir(storageDir)).filter(name => name.startsWith('paid_')).length, 1);
     });
+
+    it('preserva indefinidamente reservas antigas cujo resultado externo é incerto', async () => {
+        const oldInput = {
+            scope: 'render',
+            idempotencyKey: 'uncertain-key-123456',
+            approval: {
+                ...approval,
+                approvedAt: new Date(now - 8 * 24 * 60 * 60_000).toISOString(),
+            },
+            payload: { scene: 1 },
+            storageDir,
+            now: now - 8 * 24 * 60 * 60_000,
+        };
+        assert.equal(beginPaidOperation(oldInput).kind, 'reserved');
+
+        const retry = beginPaidOperation({
+            ...oldInput,
+            approval,
+            now,
+        });
+        assert.equal(retry.kind, 'error');
+        if (retry.kind === 'error') {
+            assert.equal(retry.body.error, 'IDEMPOTENCY_IN_PROGRESS');
+        }
+        assert.equal((await readdir(storageDir)).filter(name => name.startsWith('paid_')).length, 1);
+    });
 });
