@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import Replicate from 'replicate';
 import { z } from 'zod';
 import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
-import { fetchWithRetry } from '@/lib/fetch-retry';
+import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
 
 // Zod Input Validation
@@ -400,7 +400,7 @@ async function processPipeline(
       updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio...`] });
       let response: Response;
       try {
-        response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`, {
+        response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -412,7 +412,7 @@ async function processPipeline(
             model_id: character.voice.modelId,
             voice_settings: voiceSettingsFor(character, line.emotion),
           }),
-        });
+        }, 60_000);
       } catch (e: any) {
         throw new Error(`VOICE_GATE: ElevenLabs inacessível na cena ${index} (${e.message}) — run cancelado antes de gastar render.`);
       }
@@ -567,7 +567,11 @@ async function processPipeline(
 
         // Download final synced video to local disk
         updateJob({ logs: [`📥 [Scene ${scene.index}] Downloading scene video...`] });
-        const videoBuffer = await fetch(syncVideoUrl).then(r => r.arrayBuffer());
+        const videoResponse = await fetchWithTimeout(syncVideoUrl, {}, 120_000);
+        if (!videoResponse.ok) {
+          throw new Error(`download HTTP ${videoResponse.status}`);
+        }
+        const videoBuffer = await videoResponse.arrayBuffer();
         const scenePath = path.resolve(tmpDir, `kling_${jobId}_${scene.sceneId}.mp4`);
         writeFileSync(scenePath, Buffer.from(videoBuffer));
 
@@ -648,7 +652,7 @@ async function processPipeline(
       
       if (supabaseUrl && serviceRole) {
         updateJob({ logs: ["☁️ UPLOADING_TO_SUPABASE_STORAGE..."] });
-        const res = await fetch(`${supabaseUrl}/storage/v1/object/videos/${jobId}.mp4`, {
+        const res = await fetchWithTimeout(`${supabaseUrl}/storage/v1/object/videos/${jobId}.mp4`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${serviceRole}`,
@@ -656,7 +660,7 @@ async function processPipeline(
             'Content-Type': 'video/mp4'
           },
           body: fileBuffer
-        });
+        }, 60_000);
         
         if (res.ok) {
           finalVideoUrl = `${supabaseUrl}/storage/v1/object/public/videos/${jobId}.mp4`;

@@ -194,6 +194,20 @@ try {
   assert.equal(imageWithoutApproval.status, 403);
   assert.equal((await imageWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
 
+  const missingBalances = await fetch(`${baseUrl}/api/keys/balance`, {
+    method: 'POST',
+    headers: {
+      Authorization: authorization,
+      'Content-Type': 'application/json',
+      'X-Real-IP': 'missing-balances',
+    },
+    body: '{}',
+  });
+  const missingBalancesBody = await missingBalances.json();
+  assert.equal(missingBalances.status, 200);
+  assert.equal(missingBalancesBody.replicate.status, 'UNCONFIGURED');
+  assert.equal(missingBalancesBody.elevenlabs.status, 'UNCONFIGURED');
+
   for (let requestNumber = 1; requestNumber <= 61; requestNumber++) {
     const response = await fetch(`${baseUrl}/api/pipeline/run?id=invalid`, {
       headers: {

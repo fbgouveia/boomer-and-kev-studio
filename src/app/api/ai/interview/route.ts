@@ -1,17 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000;
-
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
-    const response = await fetch(url, options);
-    if (response.status === 429 && retries > 0) {
-        const delay = INITIAL_RETRY_DELAY * (MAX_RETRIES - retries + 1);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchWithRetry(url, options, retries - 1);
-    }
-    return response;
-}
+import { fetchWithRetry } from '@/lib/fetch-retry';
 
 export async function POST(req: Request) {
     try {
@@ -69,7 +57,7 @@ Output ONLY a JSON object:
 `;
         }
 
-        const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const { response } = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

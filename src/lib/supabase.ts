@@ -1,5 +1,6 @@
 // ponytail: Lightweight native HTTP client for Supabase REST API. 
 // Avoids installing @supabase/supabase-js to keep project lean.
+import { fetchWithTimeout } from '@/lib/fetch-retry';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -28,10 +29,10 @@ export async function querySupabase<T = any>(
     ...options.headers,
   };
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+  const res = await fetchWithTimeout(`${supabaseUrl}/rest/v1/${path}`, {
     ...fetchOptions,
     headers,
-  });
+  }, 15_000);
 
   if (!res.ok) {
     const errorText = await res.text();

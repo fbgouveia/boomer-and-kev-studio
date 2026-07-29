@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-retry';
 
 // Sondas de contrato lidas pela skill `deriva` (ver deriva.yml na raiz).
 // Afirmam CONTEUDO, nao disponibilidade: "respondeu 200" nao e prova de saude.
@@ -30,11 +31,11 @@ async function run(id: string, fn: () => Promise<string>, timeoutMs = 90_000): P
 // O roteirista tem que referenciar o topico recebido. Deriva ja vista em 19/07:
 // workflow mandava `trend` onde a rota le `topic` -> roteiro generico com HTTP 200.
 const probeRoteirista = () => run('gemini_roteirista', async () => {
-  const res = await fetch(`${SELF}/api/ai/script`, {
+  const res = await fetchWithTimeout(`${SELF}/api/ai/script`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic: 'Shark sighted at Bondi Beach', snippet: 'Beach closed after great white sighting' }),
-  });
+  }, 90_000);
   // 404 no modelo => rodar `node find-model.js`; 403 => key sem acesso ao gemini-2.5-flash.
   // Dica herdada do antigo tools/verify_gemini.py, removido em 19/07.
   assert(res.ok, `HTTP ${res.status}${res.status === 404 ? ' — modelo sumiu? rodar `node find-model.js`' : ''}${res.status === 403 ? ' — key sem acesso ao gemini-2.5-flash' : ''}`);
@@ -72,11 +73,11 @@ const probeVoz = () => run('elevenlabs_voz', async () => {
 
   // Contrato so e provado por TTS real: a key e escopada (sem user_read),
   // entao /v1/user devolve 401 mesmo com billing em dia.
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_BOOMER}`, {
+  const res = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_BOOMER}`, {
     method: 'POST',
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: 'Contract check.', model_id: 'eleven_multilingual_v2' }),
-  });
+  }, 90_000);
   // Ler o corpo so no caminho de erro: a mensagem do assert e avaliada ANTES
   // da checagem, entao um `await res.text()` inline consome o body sempre.
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
@@ -93,9 +94,9 @@ const probeKling = () => run('replicate_kling', async () => {
   const token = process.env.REPLICATE_API_TOKEN;
   assert(token, 'REPLICATE_API_TOKEN ausente');
 
-  const res = await fetch(`https://api.replicate.com/v1/models/${KLING_MODEL}`, {
+  const res = await fetchWithTimeout(`https://api.replicate.com/v1/models/${KLING_MODEL}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, 15_000);
 
   // 403 = token com escopo restrito: nao lista modelos, mas AINDA cria predictions.
   // Tratar como vermelho cancelaria a producao todo dia por engano (falso positivo).
@@ -121,25 +122,25 @@ const probeSupabase = () => run('supabase_sydney', async () => {
 
   const ep = `${url}/rest/v1/episodes`;
 
-  const ins = await fetch(ep, {
+  const ins = await fetchWithTimeout(ep, {
     method: 'POST',
     headers: { apikey: srk, Authorization: `Bearer ${srk}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
     body: JSON.stringify({ topic: '__deriva_sentinel__', status: 'draft' }),
-  });
+  }, 15_000);
   assert(ins.ok, `service_role nao gravou: HTTP ${ins.status}`);
   const [row] = await ins.json();
 
-  const del = await fetch(`${ep}?id=eq.${row.id}`, {
+  const del = await fetchWithTimeout(`${ep}?id=eq.${row.id}`, {
     method: 'DELETE',
     headers: { apikey: srk, Authorization: `Bearer ${srk}` },
-  });
+  }, 15_000);
   assert(del.ok, `limpeza falhou: HTTP ${del.status} (linha ${row.id} ficou no banco)`);
 
-  const anonIns = await fetch(ep, {
+  const anonIns = await fetchWithTimeout(ep, {
     method: 'POST',
     headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic: '__deriva_rls_check__', status: 'draft' }),
-  });
+  }, 15_000);
   assert(!anonIns.ok, `FALHA DE SEGURANCA: anon conseguiu gravar (HTTP ${anonIns.status}) - RLS aberto`);
 
   return `escrita OK, RLS bloqueia anon (${anonIns.status})`;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-retry';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,13 +18,13 @@ export async function POST(req: NextRequest) {
     // 1. Check Replicate
     if (replicateKey) {
       try {
-        const resp = await fetch('https://api.replicate.com/v1/account', {
+        const resp = await fetchWithTimeout('https://api.replicate.com/v1/account', {
           headers: {
             'Authorization': `Token ${replicateKey}`,
             'Content-Type': 'application/json',
           },
           next: { revalidate: 0 }
-        });
+        }, 10_000);
         if (resp.status === 200) {
           const data = await resp.json();
           results.replicate = {
@@ -33,27 +34,21 @@ export async function POST(req: NextRequest) {
         } else {
           results.replicate = { status: 'INVALID_KEY', balance: 'AUTH_FAILED' };
         }
-      } catch (err) {
+      } catch {
         results.replicate = { status: 'OFFLINE', balance: 'CONNECTION_ERROR' };
       }
-    } else {
-      // Simulation / Mock fallback for pure UI demonstration
-      results.replicate = {
-        status: 'AUTHENTICATED',
-        balance: 'SIM_ACTIVE (fbgouveia)'
-      };
     }
 
     // 2. Check ElevenLabs
     if (elevenlabsKey) {
       try {
-        const resp = await fetch('https://api.elevenlabs.io/v1/user/subscription', {
+        const resp = await fetchWithTimeout('https://api.elevenlabs.io/v1/user/subscription', {
           headers: {
             'xi-api-key': elevenlabsKey,
             'Content-Type': 'application/json',
           },
           next: { revalidate: 0 }
-        });
+        }, 10_000);
         if (resp.status === 200) {
           const data = await resp.json();
           const count = data.character_count;
@@ -68,20 +63,13 @@ export async function POST(req: NextRequest) {
         } else {
           results.elevenlabs = { status: 'INVALID_KEY', balance: 'AUTH_FAILED', percent: 0 };
         }
-      } catch (err) {
+      } catch {
         results.elevenlabs = { status: 'OFFLINE', balance: 'CONNECTION_ERROR', percent: 0 };
       }
-    } else {
-      // Simulation / Mock fallback for pure UI demonstration
-      results.elevenlabs = {
-        status: 'AUTHENTICATED',
-        balance: '48,250 / 50,000 Chars',
-        percent: 96
-      };
     }
 
     return NextResponse.json(results);
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       replicate: { status: 'ERROR', balance: 'PARSE_FAILED' },
       elevenlabs: { status: 'ERROR', balance: 'PARSE_FAILED', percent: 0 }
