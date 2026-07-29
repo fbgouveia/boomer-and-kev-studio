@@ -303,8 +303,15 @@ async function processPipeline(
   const replicateToken = process.env.REPLICATE_API_TOKEN;
   const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
   const replicate = replicateToken ? new Replicate({ auth: replicateToken }) : null;
+  let episodeRegistered = false;
 
   try {
+    // VOICE_GATE começa pelas precondições locais: não cria episódio fantasma
+    // quando a configuração já prova que nenhuma cena poderá ser sintetizada.
+    if (!elevenLabsKey) {
+      throw new Error("VOICE_GATE: ELEVENLABS_API_KEY ausente — run cancelado antes de persistir ou gastar render.");
+    }
+
     // Write to Supabase if configured
     try {
       await querySupabase('episodes', {
@@ -319,6 +326,7 @@ async function processPipeline(
           script_json: script
         })
       });
+      episodeRegistered = true;
       updateJob({ logs: ["[Supabase] Episode successfully queued in cloud database."] });
     } catch (e: any) {
       updateJob({ logs: [`[Supabase] DB registration bypassed: ${e.message}`] });
@@ -329,10 +337,6 @@ async function processPipeline(
     // Step 1a: VOICE GATE — TODAS as vozes sintetizadas ANTES de qualquer render.
     // Decisão Felipe 19/07 (doutrina Deriva: degradar calado, nunca): voz falhou →
     // o run FALHA aqui, com US$0 gastos em Kling, em vez de gerar vídeo mudo "com sucesso".
-    if (!elevenLabsKey) {
-      throw new Error("VOICE_GATE: ELEVENLABS_API_KEY ausente — run cancelado antes de gastar render.");
-    }
-
     const audioByScene = new Map<string, string>();
 
     for (let i = 0; i < script.length; i++) {
@@ -642,16 +646,18 @@ async function processPipeline(
   } catch (error: any) {
     console.error("MAESTRO_PIPELINE_CRASH:", error);
 
-    try {
-      await querySupabase(`episodes?id=eq.${jobId}`, {
-        method: 'PATCH',
-        useServiceRole: true,
-        body: JSON.stringify({
-          status: 'failed'
-        })
-      });
-    } catch (e: any) {
-      console.warn("[Supabase] Failed to mark episode as failed in DB:", e.message);
+    if (episodeRegistered) {
+      try {
+        await querySupabase(`episodes?id=eq.${jobId}`, {
+          method: 'PATCH',
+          useServiceRole: true,
+          body: JSON.stringify({
+            status: 'failed'
+          })
+        });
+      } catch (e: any) {
+        console.warn("[Supabase] Failed to mark episode as failed in DB:", e.message);
+      }
     }
 
     updateJob({

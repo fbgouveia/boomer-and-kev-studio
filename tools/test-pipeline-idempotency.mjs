@@ -60,3 +60,5 @@ assert.equal(missingKey.status, 400);
 assert.equal(missingKey.body.error, 'IDEMPOTENCY_KEY_REQUIRED');
 
 console.log(`Idempotência válida: concorrência e replay reutilizaram ${first.body.jobId}; conflito=409; chave ausente=400.`);
+
+export const testedJobId = first.body.jobId;
