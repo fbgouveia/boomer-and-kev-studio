@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -30,6 +30,14 @@ const runPipelineSchema = z.object({
     studio: z.string().optional()
   }).optional()
 });
+
+const idempotencyKeySchema = z.string().min(16).max(128).regex(/^[A-Za-z0-9._:-]+$/);
+
+type IdempotencyRecord = {
+  jobId: string;
+  payloadHash: string;
+  createdAt: string;
+};
 
 // FFmpeg Video Assembly function
 type Target = { width: number; height: number; fps: number };
@@ -664,6 +672,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_INPUT_SIGNAL", details: validation.error.format() }, { status: 400 });
     }
 
+    const keyValidation = idempotencyKeySchema.safeParse(req.headers.get('idempotency-key'));
+    if (!keyValidation.success) {
+      return NextResponse.json({
+        error: "IDEMPOTENCY_KEY_REQUIRED",
+        details: "Envie Idempotency-Key com 16-128 caracteres seguros."
+      }, { status: 400 });
+    }
+
     const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe } = validation.data;
 
     // Create .tmp directory
@@ -672,8 +688,46 @@ export async function POST(req: Request) {
       mkdirSync(tmpDir, { recursive: true });
     }
 
+    const keyHash = crypto.createHash('sha256').update(keyValidation.data).digest('hex');
+    const payloadHash = crypto.createHash('sha256').update(JSON.stringify(validation.data)).digest('hex');
+    const idempotencyPath = path.resolve(tmpDir, `idempotency_${keyHash}.json`);
     const jobId = crypto.randomUUID();
     const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
+    const idempotencyRecord: IdempotencyRecord = {
+      jobId,
+      payloadHash,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      writeFileSync(idempotencyPath, JSON.stringify(idempotencyRecord, null, 2), { flag: 'wx' });
+    } catch (error) {
+      const fileError = error as NodeJS.ErrnoException;
+      if (fileError.code !== 'EEXIST') throw error;
+
+      const existing = JSON.parse(readFileSync(idempotencyPath, 'utf8')) as IdempotencyRecord;
+      if (existing.payloadHash !== payloadHash) {
+        return NextResponse.json({
+          error: "IDEMPOTENCY_CONFLICT",
+          details: "A mesma chave já foi usada com outro payload."
+        }, { status: 409 });
+      }
+
+      const existingJobPath = path.resolve(tmpDir, `job_${existing.jobId}.json`);
+      if (!existsSync(existingJobPath)) {
+        return NextResponse.json({
+          error: "IDEMPOTENCY_STATE_MISSING",
+          details: "A reserva existe, mas o estado do job não foi encontrado."
+        }, { status: 409 });
+      }
+
+      return NextResponse.json({
+        status: "QUEUED",
+        jobId: existing.jobId,
+        statusUrl: `/api/pipeline/run?id=${existing.jobId}`,
+        replayed: true
+      });
+    }
 
     const initialJobState = {
       id: jobId,
@@ -684,7 +738,12 @@ export async function POST(req: Request) {
       finalVideoUrl: null
     };
 
-    writeFileSync(jobFilePath, JSON.stringify(initialJobState, null, 2));
+    try {
+      writeFileSync(jobFilePath, JSON.stringify(initialJobState, null, 2), { flag: 'wx' });
+    } catch (error) {
+      unlinkSync(idempotencyPath);
+      throw error;
+    }
 
     // Fire background task
     processPipeline(jobId, script, directorIdea, directorSnippet, engine, aspect, wardrobe).catch(err => {

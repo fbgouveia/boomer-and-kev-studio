@@ -29,6 +29,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone', // deploy Docker na VPS (rede do n8n)
+  outputFileTracingExcludes: {
+    '*': ['.tmp/**/*'],
+  },
   async headers() {
     return [
       {

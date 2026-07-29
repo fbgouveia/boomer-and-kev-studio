@@ -18,7 +18,7 @@
 | **Processo** | PM2 `boomer-engine` na porta `3001` |
 | **Reverse Proxy** | Nginx → `http://127.0.0.1:3001` |
 | **SSL** | Let's Encrypt, expira 17/10/2026, auto-renew |
-| **Deploy** | `./deploy_studio.sh` (build → rsync → npx pm2 restart) |
+| **Deploy** | `./deploy_studio.sh` (build → verify → rsync → PM2 → health check) |
 | **GitHub** | `fbgouveia/boomer-and-kev-studio` branch `restore-engine` |
 | **n8n** | `https://n8n.fgss.io` (mesmo VPS, porta 5678) |
 | **Supabase** | `ktysmnltubbfbvyjphdq` (Sydney ap-southeast-2) |
@@ -53,9 +53,11 @@
 
 ---
 
-## ▶️ RETOMADA IMEDIATA (estado autoritativo em 27/07/2026)
+## ▶️ RETOMADA IMEDIATA (estado autoritativo em 29/07/2026)
 
 **Código commitado+pushed na `restore-engine`. Produção recebeu `f983dd7`, `b58f955` e `21f09ae`; documentação consolidada até `33a77b9`. Worktree limpo antes desta atualização.**
+
+**Mudanças locais ainda não deployadas (29/07):** higiene do standalone, fail-fast do deploy e idempotência do pipeline pago. `.tmp` foi excluído do file tracing; o artefato caiu de 713 MB para 90 MB no disco e ganhou `npm run verify:standalone` (exige `server.js`, rejeita `.tmp` e tamanho acima de 200 MB). O rsync preserva o `.tmp` runtime da VPS. `deploy_studio.sh` agora aborta em qualquer falha, preserva o env remoto por padrão, só o substitui com `DEPLOY_ENV_FILE=/caminho`, reinicia o PM2 com `--update-env` e exige health check local HTTP 200/401. `POST /api/pipeline/run` exige `Idempotency-Key`: concorrência/replay com a mesma chave+payload reutiliza o job; chave igual com payload diferente retorna 409. A UI mantém a chave em retries e possui lock síncrono contra double-click. Typecheck, build, verificadores e testes locais de deploy/idempotência passaram. O lint global continua vermelho por débitos preexistentes.
 
 ### ✅ Concluído e em produção
 
@@ -78,7 +80,7 @@
 3. **Áudio é a maior parcela da vibe:** roteiro já tinha estrutura; o salto perceptivo vem de voz dirigida + trilha + SFX + masterização.
 4. **Lipsync humano não serve para rostos animais:** Wav2Lip não detecta Boomer/Kev; é decisão de arquitetura, não retry.
 5. **Commercial Creatives é capacidade do Studio:** não é nova subsidiária. Os assets são públicos intencionalmente; o painel operacional continua privado.
-6. **Deploy inflado:** `.next/standalone` está rastreando/copindo cerca de **742 MB**, incluindo `.tmp` e artefatos locais. Funciona, mas aumenta tempo, tráfego e superfície operacional; corrigir tracing/excludes no WP de higiene.
+6. **Deploy inflado:** causa confirmada em `.tmp` (631 MB). Correção local reduz o standalone de 713 MB para 90 MB e preserva separadamente o `.tmp` runtime da VPS; ainda falta deploy.
 
 ### 🔴 Pendências reais — ordem atual
 
@@ -88,7 +90,7 @@
 4. **Galeria Commercial na UI:** assets estão publicados e manifestados, mas ainda não existe aba/tela de visualização no Studio.
 5. **Validação paga:** 2 renders (9:16 + 16:9) para validar chaining, enquadramento, wardrobe, áudio e custo real; exige autorização explícita (~US$3–6 cada).
 6. **Lipsync animal:** escolher aceitar articulação do Kling ou testar engine compatível com rosto estilizado/animal.
-7. **Higiene de deploy/F1:** excluir `.tmp` do standalone, revisar PM2 `--update-env`/startup, arquivar handoffs antigos e apenas então avaliar tools mortos sem apagá-los silenciosamente.
+7. **Higiene de deploy/F1:** alteração local já exclui `.tmp` do standalone, preserva o estado runtime e aplica PM2 `--update-env`; falta revisar/configurar PM2 startup, adaptar o chamador n8n para enviar `Idempotency-Key`, deployar a mudança, arquivar handoffs antigos e apenas então avaliar tools mortos sem apagá-los silenciosamente.
 8. **Plano-mestre antigo:** atualizar artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c` se ele continuar sendo usado.
 
 ## 🎧 DESCOBERTA GRANDE (24/07): a vibe cômica era PÓS-PRODUÇÃO DE ÁUDIO

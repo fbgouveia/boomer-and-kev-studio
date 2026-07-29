@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, GUIDE_IMAGES, ANGLE_SPECS, DEFAULT_STUDIO_REFERENCE, DEFAULT_DNA_FOLDER_URL } from '@/data/characters';
 import { ScriptEngine, DirectorialIntelligence } from '@/lib/script-engine';
@@ -66,6 +66,8 @@ export default function Home() {
   const [sharingLineId, setSharingLineId] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isRenderingProject, setIsRenderingProject] = useState(false);
+  const renderInFlight = useRef(false);
+  const renderIdempotencyKey = useRef<string | null>(null);
   const [renderEngine, setRenderEngine] = useState<'kling' | 'higgsfield'>('kling');
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
@@ -863,6 +865,10 @@ export default function Home() {
   };
 
   const renderProject = async () => {
+    if (renderInFlight.current) return;
+    renderInFlight.current = true;
+    renderIdempotencyKey.current ||= crypto.randomUUID();
+
     console.log("RENDER_PROJECT_TRIGGERED");
     setIsRenderingProject(true);
     setRenderProgress(0);
@@ -913,13 +919,19 @@ export default function Home() {
       console.log("TRIGGERING_PIPELINE_RUN...");
       const runRes = await fetch('/api/pipeline/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': renderIdempotencyKey.current
+        },
         body: JSON.stringify(productionData)
       });
 
       const runData = await runRes.json();
 
       if (!runRes.ok) {
+        if (runRes.status === 400 || runData.error === 'IDEMPOTENCY_CONFLICT') {
+          renderIdempotencyKey.current = null;
+        }
         throw new Error(runData.error || "Failed to start background orchestrator.");
       }
 
@@ -944,6 +956,8 @@ export default function Home() {
 
           if (jobState.status === 'COMPLETED') {
             clearInterval(pollInterval);
+            renderInFlight.current = false;
+            renderIdempotencyKey.current = null;
             setAssembledVideoUrl(jobState.finalVideoUrl);
             setRenderProgress(100);
             setRenderLogs(prev => ["🎉 SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prev]);
@@ -952,6 +966,8 @@ export default function Home() {
             }, 3000);
           } else if (jobState.status === 'FAILED') {
             clearInterval(pollInterval);
+            renderInFlight.current = false;
+            renderIdempotencyKey.current = null;
             setRenderProgress(0);
             setRenderLogs(prev => ["🔴 CRITICAL_PIPELINE_FAILURE.", ...prev]);
             setTimeout(() => {
@@ -965,6 +981,7 @@ export default function Home() {
 
     } catch (error: any) {
       console.error("RENDER_PROJECT_ERROR:", error);
+      renderInFlight.current = false;
       setRenderLogs(prev => [`CRITICAL_PIPELINE_FAILURE: ${error.message || 'Unknown Error'}`, ...prev]);
       setRenderProgress(0);
       setTimeout(() => setIsRenderingProject(false), 3000);

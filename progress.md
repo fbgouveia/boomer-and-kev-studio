@@ -778,3 +778,23 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Descoberta operacional registrada: deploy standalone transfere ~742 MB e inclui `.tmp`; correção adicionada à higiene F1.
 - [x] Credenciais de Basic Auth permanecem exclusivamente em `.env.local`/VPS; senha não registrada em documentação nem Git.
 - [x] Segurança vigente: Studio/API internos 401 sem Basic Auth; assets públicos; Radar/trend cron 503 sem segredo dedicado.
+
+### Sessão 017 (2026-07-29) — higiene local do standalone e fail-fast do deploy
+
+- [x] Causa do deploy inflado confirmada: `.next/standalone/.tmp` respondia por 631 MB dos 713 MB do artefato.
+- [x] `next.config.ts` agora exclui `.tmp/**/*` do file tracing.
+- [x] Criado `npm run verify:standalone`: exige `server.js`, rejeita qualquer `.tmp` e bloqueia artefatos acima de 200 MB.
+- [x] `deploy_studio.sh` ganhou `set -Eeuo pipefail`, quoting dos destinos e restart determinístico do PM2 com `--update-env`.
+- [x] Rsync passou a excluir `.tmp/` do `--delete`, preservando jobs e vídeos runtime na VPS mesmo sem empacotar temporários locais.
+- [x] `.env.local` deixou de ser copiada automaticamente para produção. Deploy comum preserva o env remoto; substituição exige `DEPLOY_ENV_FILE=/caminho/explicito`.
+- [x] Deploy só declara sucesso após a aplicação responder localmente na VPS com HTTP 200 ou 401; demais estados geram falha e exibem os últimos logs do PM2.
+- [x] `npm run test:deploy` cobre preservação padrão do env, envio explícito e bloqueio de arquivo inexistente usando comandos locais simulados, sem conexão à VPS.
+- [x] Prova local: typecheck e build verdes; standalone final com 90 MB no disco (77,6 MB em arquivos), sem `.tmp`; teste negativo confirmou que o gate bloqueia `.tmp`.
+- [x] Lint focado (`next.config.ts` + verificador novo) verde.
+- [x] Idempotência do pipeline pago implementada: `Idempotency-Key` obrigatório, reserva atômica `wx`, replay retorna o mesmo `jobId`, payload conflitante retorna 409.
+- [x] UI ganhou lock síncrono contra double-click e reutiliza a chave enquanto uma tentativa pode ter sido aceita pelo servidor.
+- [x] Teste de integração local com duas requisições simultâneas passou: um único `jobId`, exatamente um replay; replay posterior igual; conflito 409; chave ausente 400.
+- [x] Nenhum provedor pago foi chamado no teste. O Supabase compilado tentou registrar o episódio, recebeu 401 por RLS e não criou linha; o VOICE_GATE encerrou o único job antes do Kling.
+- [ ] Antes do deploy, o workflow n8n que chama `/api/pipeline/run` precisa enviar uma chave estável (ex.: execution ID); sem ela a nova rota falha fechada com 400.
+- [ ] Lint global permanece vermelho por 55 erros e 44 warnings preexistentes; não foram misturados nesta mudança cirúrgica.
+- [ ] Mudanças locais ainda não commitadas nem deployadas; produção permanece intacta.

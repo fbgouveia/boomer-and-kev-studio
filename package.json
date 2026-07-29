@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:deploy": "node tools/test-deploy-script.mjs",
+    "test:idempotency": "node tools/test-pipeline-idempotency.mjs",
+    "verify:standalone": "node tools/verify-standalone.mjs",
     "start": "next start",
     "lint": "eslint"
   },
