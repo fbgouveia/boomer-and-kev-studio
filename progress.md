@@ -955,4 +955,16 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Reservas incertas são preservadas indefinidamente e continuam bloqueando a mesma chave idempotente até reconciliação manual.
 - [x] Teste regressivo simula reserva incerta com oito dias e comprova `IDEMPOTENCY_IN_PROGRESS`.
 - [x] 25 testes unitários, typecheck, lint focado, deploy test, build e verificações standalone passaram sem áudio/provedores.
+- [x] Código consolidado em `e5f8488`; workflow `Quality` `30449855101` aprovado em 47 s.
 - [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
+
+### Sessão 030 (2026-07-29) — pausa e ponto de retomada
+
+- [x] Worktree confirmado limpo e branch `restore-engine` sincronizada em `e5f8488` antes desta atualização documental.
+- [x] Auditoria de leitura dos registros de idempotência iniciada e interrompida a pedido do operador, sem mudança de código.
+- [ ] Validar com schema runtime todo registro pago lido do disco; conteúdo malformado ou adulterado deve falhar fechado sem criar nova reserva.
+- [ ] Aplicar o mesmo princípio ao registro idempotente do pipeline, incluindo UUID do job, hash do payload e data.
+- [ ] Adicionar testes regressivos para JSON inválido, campos ausentes, status desconhecido e `jobId` adulterado/path traversal.
+- [ ] Decidir e documentar tratamento operacional de registros corrompidos sem apagá-los automaticamente.
+- [ ] Os 631 MB históricos continuam intocados e só podem ser revisados/removidos com autorização explícita.
+- [ ] Produção continua intacta; não houve áudio, provider pago nem deploy.
