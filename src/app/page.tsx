@@ -1894,7 +1894,7 @@ export default function Home() {
             className="bg-black/80 border-2 border-white/20 text-[10px] font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
           >
             <option value="kling">Kling (Replicate)</option>
-            <option value="higgsfield">Higgsfield.ai</option>
+            <option value="higgsfield" disabled>Higgsfield.ai (not wired to full pipeline)</option>
           </select>
           <button
             onClick={renderProject}

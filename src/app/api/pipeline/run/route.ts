@@ -8,26 +8,27 @@ import { z } from 'zod';
 import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
 import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
+import { cleanupPipelineIntermediates } from '@/lib/pipeline-storage';
 
 // Zod Input Validation
 const runPipelineSchema = z.object({
-  script: z.array(z.object({
-    id: z.string(),
-    characterId: z.string(),
-    text: z.string(),
-    shotType: z.string(),
-    action: z.string(),
-    emotion: z.string(),
-    durationEst: z.number()
-  })),
-  directorIdea: z.string().optional(),
-  directorSnippet: z.string().optional(),
-  engine: z.string().optional().default('kling'),
+    script: z.array(z.object({
+    id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
+    characterId: z.enum(['boomer', 'kev']),
+    text: z.string().trim().min(1).max(5_000),
+    shotType: z.enum(['WIDE', 'BOOMER_MCU', 'KEV_CU', 'OTS_BOOMER', 'LOW_ANGLE_BOOMER', 'GOPRO_FISHEYE']),
+    action: z.string().trim().min(1).max(2_000),
+    emotion: z.string().trim().min(1).max(128),
+    durationEst: z.number().finite().positive().max(10)
+  })).min(1).max(32),
+  directorIdea: z.string().max(20_000).optional(),
+  directorSnippet: z.string().max(20_000).optional(),
+  engine: z.literal('kling').optional().default('kling'),
   aspect: z.enum(['9:16', '16:9']).optional().default('9:16'), // formato selecionável (Kling + montagem)
   wardrobe: z.object({
-    boomer: z.string().optional(),
-    kev: z.string().optional(),
-    studio: z.string().optional()
+    boomer: z.string().max(5_000).optional(),
+    kev: z.string().max(5_000).optional(),
+    studio: z.string().max(5_000).optional()
   }).optional(),
   approval: z.object({
     confirmed: z.literal(true),
@@ -327,7 +328,6 @@ async function processPipeline(
   script: any[],
   directorIdea: string,
   directorSnippet: string,
-  engine: string,
   aspect: '9:16' | '16:9',
   wardrobe?: { boomer?: string, kev?: string, studio?: string }
 ) {
@@ -719,6 +719,15 @@ async function processPipeline(
       progress: 0,
       logs: [`🔴 CRITICAL_PIPELINE_ERROR: ${error.message}`]
     });
+  } finally {
+    try {
+      const removed = cleanupPipelineIntermediates(tmpDir, jobId);
+      if (removed.length) {
+        console.log(`[Pipeline Cleanup] Removed ${removed.length} intermediate files for ${jobId}.`);
+      }
+    } catch (cleanupError) {
+      console.warn(`[Pipeline Cleanup] Failed for ${jobId}:`, cleanupError);
+    }
   }
 }
 
@@ -802,7 +811,7 @@ export async function POST(req: Request) {
     }
 
     // Fire background task
-    processPipeline(jobId, script, directorIdea, directorSnippet, engine, aspect, wardrobe).catch(err => {
+    processPipeline(jobId, script, directorIdea, directorSnippet, aspect, wardrobe).catch(err => {
       console.error(`Uncaught background task error for job ${jobId}:`, err);
     });
 
@@ -847,6 +856,11 @@ export async function GET(req: Request) {
         ]
       };
       writeJsonAtomic(jobFilePath, jobData);
+      try {
+        cleanupPipelineIntermediates(path.resolve(process.cwd(), '.tmp'), idValidation.data);
+      } catch (cleanupError) {
+        console.warn(`[Pipeline Cleanup] Failed while reconciling ${idValidation.data}:`, cleanupError);
+      }
     }
     return NextResponse.json(jobData);
 

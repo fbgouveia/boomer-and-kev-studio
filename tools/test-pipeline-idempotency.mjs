@@ -102,6 +102,20 @@ const expiredApproval = await post({
 assert.equal(expiredApproval.status, 403);
 assert.equal(expiredApproval.body.error, 'RENDER_APPROVAL_EXPIRED');
 
+const invalidSceneId = await post({
+  ...payload,
+  script: [{ ...payload.script[0], id: '../../escape' }]
+}, `test-${crypto.randomUUID()}`);
+assert.equal(invalidSceneId.status, 400);
+assert.equal(invalidSceneId.body.error, 'INVALID_INPUT_SIGNAL');
+
+const unsupportedEngine = await post({
+  ...payload,
+  engine: 'higgsfield'
+}, `test-${crypto.randomUUID()}`);
+assert.equal(unsupportedEngine.status, 400);
+assert.equal(unsupportedEngine.body.error, 'INVALID_INPUT_SIGNAL');
+
 const traversal = encodeURIComponent('../../HANDOFF');
 const invalidStatusId = await get(`/api/pipeline/run?id=${traversal}`);
 assert.equal(invalidStatusId.status, 400);
@@ -115,6 +129,6 @@ const invalidDeleteId = await deleteRequest(`/api/episodes/delete?id=${encodeURI
 assert.equal(invalidDeleteId.status, 400);
 assert.equal(invalidDeleteId.body.error, 'INVALID_EPISODE_ID');
 
-console.log(`Pipeline seguro: job ${first.body.jobId}; aprovação ausente/expirada=403; 30 leituras íntegras; IDs inválidos=400.`);
+console.log(`Pipeline seguro: job ${first.body.jobId}; aprovação ausente/expirada=403; 30 leituras íntegras; IDs/engine inválidos=400.`);
 
 export const testedJobId = first.body.jobId;

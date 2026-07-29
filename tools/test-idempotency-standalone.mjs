@@ -77,6 +77,8 @@ try {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }));
+  const orphanedIntermediate = path.join(runtimeTmp, `audio_${orphanedJobId}_scene-1.mp3`);
+  await writeFile(orphanedIntermediate, 'orphaned audio');
   const orphanedResponse = await fetch(`${baseUrl}/api/pipeline/run?id=${orphanedJobId}`, {
     headers: { Authorization: authorization }
   });
@@ -85,6 +87,7 @@ try {
   assert.equal(orphanedState.status, 'FAILED');
   assert.equal(orphanedState.failureCode, 'WORKER_RESTARTED');
   assert.match(orphanedState.logs.at(-1), /WORKER_RESTARTED/);
+  assert.equal(existsSync(orphanedIntermediate), false);
 
   assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|Replicate/i);
   assert.ok((await readdir(runtimeTmp)).every(name => !name.endsWith('.tmp')));
