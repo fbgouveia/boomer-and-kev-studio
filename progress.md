@@ -117,7 +117,7 @@
 - [x] #7 Consolidar `fetchWithRetry` em `src/lib/fetch-retry.ts` (CONCLUÍDO)
 - [ ] #8 Substituir polling 4s por webhooks Replicate
 - [ ] #9 Criar `/api/assembly/route.ts` (ffmpeg concat 6 cenas)
-- [ ] #10 Criar testes unitários (validations + script-engine)
+- [x] #10 Criar testes unitários (validations + script-engine) — 10 contratos cobertos em `5bd8adf`
 - [ ] #11 Resolver GDrive links → URLs diretas Supabase Storage
 - [ ] #12 Implementar IP-Adapter (Opção C) → consistência 70-80%
 
@@ -886,3 +886,17 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Typecheck, lint focado, build, verificador standalone, segurança e idempotência passaram localmente sem áudio ou provedores externos.
 - [x] Código consolidado em `ceec811`; teste adicionado ao workflow `Quality`.
 - [ ] Produção permanece intacta; o incremento exige posterior coordenação de deploy.
+
+### Sessão 025 (2026-07-29) — contratos unitários do roteiro e entradas
+
+- [x] Adicionado `tsx` somente como dependência de desenvolvimento e `npm run test:unit`.
+- [x] Dez testes cobrem `ScriptEngine`, `renderSchema`, `voiceSchema` e `balanceSchema`.
+- [x] IDs de cenas migrados de `Math.random` para UUID criptográfico.
+- [x] `generateNextLine([])` agora inicia com Boomer sem crash após o usuário remover todas as cenas.
+- [x] Classificação usa fronteiras para termos curtos, evitando interpretar o fragmento `ai` de `rainfall` como TECH sem perder a categoria NATURE.
+- [x] Render rejeita lote vazio ou acima de 32 cenas, duração fora de 0–10 s, personagem/enquadramento desconhecido e campos essenciais vazios/excessivos.
+- [x] Voz rejeita personagem desconhecido, texto vazio/acima de 5 mil caracteres e chaves vazias/acima de 512 caracteres.
+- [x] Testes unitários adicionados ao workflow `Quality` antes dos testes de deploy e standalone.
+- [x] Typecheck, lint focado, 10 testes unitários, deploy test, build e três verificações standalone passaram sem áudio/provedores.
+- [x] Código consolidado em `5bd8adf`.
+- [ ] Produção permanece intacta; incremento exige posterior coordenação de deploy.
