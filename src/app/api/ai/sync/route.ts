@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import Replicate from "replicate";
 import { z } from 'zod';
+import {
+    beginPaidOperation,
+    completePaidOperation,
+    type PaidOperationReservation,
+} from '@/lib/paid-operation';
 
 const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
@@ -9,10 +14,12 @@ const replicate = new Replicate({
 const syncSchema = z.object({
     videoUrl: z.string().url(),
     audioUrl: z.string().min(1), // Can be a URL or a Data URI
-    sceneId: z.string()
+    sceneId: z.string(),
+    approval: z.unknown().optional(),
 });
 
 export async function POST(req: Request) {
+    let paidReservation: PaidOperationReservation | undefined;
     try {
         const body = await req.json();
         const validation = syncSchema.safeParse(body);
@@ -21,14 +28,33 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'INVALID_SYNC_SIGNAL', details: validation.error.format() }, { status: 400 });
         }
 
+        const paidOperation = beginPaidOperation({
+            scope: 'ai-sync',
+            idempotencyKey: req.headers.get('idempotency-key'),
+            approval: validation.data.approval,
+            payload: body,
+        });
+        if (paidOperation.kind === 'error') {
+            return NextResponse.json(paidOperation.body, { status: paidOperation.status });
+        }
+        if (paidOperation.kind === 'replay') {
+            return NextResponse.json(paidOperation.response.body, {
+                status: paidOperation.response.status,
+                headers: { 'Idempotent-Replay': 'true' },
+            });
+        }
+        paidReservation = paidOperation.reservation;
+
         const { videoUrl, audioUrl, sceneId } = validation.data;
 
         if (!process.env.REPLICATE_API_TOKEN) {
-            return NextResponse.json({
+            const responseBody = {
                 mode: 'SANDBOX',
                 predictionId: `sync_${Math.random().toString(36).substr(2, 9)}`,
                 message: 'SANDBOX_SYNC_TRIGGERED'
-            });
+            };
+            completePaidOperation(paidReservation, { status: 200, body: responseBody });
+            return NextResponse.json(responseBody);
         }
 
         // Using lucataco/wav2lip or similar reliable lipsync model
@@ -48,15 +74,24 @@ export async function POST(req: Request) {
             webhook_events_filter: ['completed']
         });
 
-        return NextResponse.json({
+        const responseBody = {
             mode: 'REAL',
             predictionId: prediction.id,
             status: prediction.status,
             sceneId
-        });
+        };
+        completePaidOperation(paidReservation, { status: 200, body: responseBody });
+        return NextResponse.json(responseBody);
 
     } catch (error) {
         console.error("LIPSYNC_ENGINE_CRASH:", error);
-        return NextResponse.json({ error: 'INTERNAL_SYNC_ERROR' }, { status: 500 });
+        const responseBody = {
+            error: 'PAID_OPERATION_STATE_UNCERTAIN',
+            details: 'Confirme no provedor antes de tentar novamente.',
+        };
+        if (paidReservation) {
+            completePaidOperation(paidReservation, { status: 502, body: responseBody });
+        }
+        return NextResponse.json(responseBody, { status: 502 });
     }
 }

@@ -3,6 +3,11 @@ import Replicate from "replicate";
 import { renderSchema } from '@/lib/validations';
 import { higgsfield, config as hfConfig } from '@higgsfield/client/v2';
 import { expandToCinematicPrompt } from '@/lib/cinematic-orchestrator';
+import {
+  beginPaidOperation,
+  completePaidOperation,
+  type PaidOperationReservation,
+} from '@/lib/paid-operation';
 
 // NEUROMARKETING_PRODUCTION_PIPELINE_V3
 // Integration: Replicate SDK (Kling-v2.6) & Higgsfield SDK (Kling-v3 / Seedance)
@@ -32,6 +37,7 @@ const resolveAssetUrl = (url: string | undefined, origin: string) => {
 };
 
 export async function POST(req: Request) {
+  let paidReservation: PaidOperationReservation | undefined;
   try {
     const rawBody = await req.json();
     const validation = renderSchema.safeParse(rawBody);
@@ -43,6 +49,23 @@ export async function POST(req: Request) {
         details: validation.error.format()
       }, { status: 400 });
     }
+
+    const paidOperation = beginPaidOperation({
+      scope: 'render',
+      idempotencyKey: req.headers.get('idempotency-key'),
+      approval: rawBody.approval,
+      payload: rawBody,
+    });
+    if (paidOperation.kind === 'error') {
+      return NextResponse.json(paidOperation.body, { status: paidOperation.status });
+    }
+    if (paidOperation.kind === 'replay') {
+      return NextResponse.json(paidOperation.response.body, {
+        status: paidOperation.response.status,
+        headers: { 'Idempotent-Replay': 'true' },
+      });
+    }
+    paidReservation = paidOperation.reservation;
 
     const { script, engine = 'kling', apiKeys } = validation.data;
 
@@ -157,17 +180,23 @@ export async function POST(req: Request) {
       };
     }));
 
-    return NextResponse.json({
+    const responseBody = {
       status: "PRODUCTION_ACTIVE",
       mode: (engine === 'higgsfield' ? hfApiKey : replicateToken) ? "REAL" : "SANDBOX",
       engine,
       total_scenes: script.length,
       pipeline: engine === 'higgsfield' ? "HIGGSFIELD_V2_SDK" : "KLING_V2.1_SDK",
       results
-    });
+    };
+    completePaidOperation(paidReservation, { status: 200, body: responseBody });
+    return NextResponse.json(responseBody);
 
   } catch (error) {
     console.error("PIPELINE_CRASH:", error);
-    return NextResponse.json({ error: "PIPELINE_CRASH: Internal Engine Error" }, { status: 500 });
+    const responseBody = { error: "PIPELINE_CRASH: Internal Engine Error" };
+    if (paidReservation) {
+      completePaidOperation(paidReservation, { status: 500, body: responseBody });
+    }
+    return NextResponse.json(responseBody, { status: 500 });
   }
 }

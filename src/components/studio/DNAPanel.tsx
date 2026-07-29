@@ -47,12 +47,33 @@ export function DNAPanel({
   downloadPromptPDF
 }: DNAPanelProps) {
   const [generating, setGenerating] = React.useState<string | null>(null);
+  const paidImageRequests = React.useRef<Record<string, {
+    idempotencyKey: string;
+    approval: { confirmed: true; source: 'studio_ui'; approvedAt: string };
+  }>>({});
 
   const generateWithBanana = async (charId: string, angle: string) => {
     const char = CHARACTERS.find(c => c.id === charId);
     if (!char) return;
 
     const key = `${charId}-${angle}`;
+    let paidRequest: (typeof paidImageRequests.current)[string] | undefined = paidImageRequests.current[key];
+    if (paidRequest && Date.now() - Date.parse(paidRequest.approval.approvedAt) > 10 * 60_000) {
+      delete paidImageRequests.current[key];
+      paidRequest = undefined;
+    }
+    if (!paidRequest) {
+      if (!window.confirm('Esta síntese de imagem usa um provedor pago e pode gerar cobrança. Deseja continuar?')) return;
+      paidRequest = {
+        idempotencyKey: `dna-image-${crypto.randomUUID()}`,
+        approval: {
+          confirmed: true,
+          source: 'studio_ui',
+          approvedAt: new Date().toISOString()
+        }
+      };
+      paidImageRequests.current[key] = paidRequest;
+    }
     setGenerating(key);
 
     try {
@@ -85,19 +106,27 @@ export function DNAPanel({
 
       const res = await fetch('/api/ai/image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': paidRequest.idempotencyKey
+        },
         body: JSON.stringify({
           prompt: finalPrompt,
-          aspectRatio
+          aspectRatio,
+          approval: paidRequest.approval
         })
       });
 
       const data = await res.json();
       if (data.error) {
+        if ([400, 403, 409].includes(res.status) && data.error !== 'IDEMPOTENCY_IN_PROGRESS') {
+          delete paidImageRequests.current[key];
+        }
         throw new Error(data.error);
       }
 
       if (data.imageUrl) {
+        delete paidImageRequests.current[key];
         setCharReferences(prev => {
           const updated = {
             ...prev,

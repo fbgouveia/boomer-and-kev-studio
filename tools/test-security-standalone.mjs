@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { readdir, unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 const serverPath = path.resolve('.next/standalone/server.js');
+const runtimeTmp = path.resolve('.next/standalone/.tmp');
 assert.ok(existsSync(serverPath), 'Execute npm run build antes do teste standalone.');
 
 async function startServer(port, auth = true) {
@@ -16,6 +19,10 @@ async function startServer(port, auth = true) {
       NODE_ENV: 'production',
       STUDIO_AUTH_USER: auth ? 'security-test' : '',
       STUDIO_AUTH_PASSWORD: auth ? 'local-only' : '',
+      REPLICATE_API_TOKEN: '',
+      HF_CREDENTIALS: '',
+      ELEVENLABS_API_KEY: '',
+      GEMINI_API_KEY: '',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -99,6 +106,94 @@ try {
   });
   assert.equal(sameOrigin.status, 400);
 
+  const approval = {
+    confirmed: true,
+    source: 'operator_cli',
+    approvedAt: new Date().toISOString(),
+  };
+  const paidKey = `security-${crypto.randomUUID()}`;
+  const paidPayload = {
+    prompt: 'Local sandbox contract test',
+    engine: 'kling',
+    aspect_ratio: '16:9',
+    approval,
+  };
+  const postPaid = (pathname, body, idempotencyKey) => fetch(`${baseUrl}${pathname}`, {
+    method: 'POST',
+    headers: {
+      Authorization: authorization,
+      'Content-Type': 'application/json',
+      'X-Real-IP': `paid-${pathname}`,
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const missingPaidKey = await postPaid('/api/video/generate', paidPayload);
+  assert.equal(missingPaidKey.status, 400);
+  assert.equal((await missingPaidKey.json()).error, 'IDEMPOTENCY_KEY_REQUIRED');
+
+  const missingPaidApproval = await postPaid(
+    '/api/video/generate',
+    { ...paidPayload, approval: undefined },
+    `security-${crypto.randomUUID()}`,
+  );
+  assert.equal(missingPaidApproval.status, 403);
+  assert.equal((await missingPaidApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+
+  const firstPaid = await postPaid('/api/video/generate', paidPayload, paidKey);
+  const firstPaidBody = await firstPaid.json();
+  assert.equal(firstPaid.status, 200);
+  assert.equal(firstPaidBody.mode, 'SANDBOX');
+
+  const replayedPaid = await postPaid('/api/video/generate', paidPayload, paidKey);
+  assert.equal(replayedPaid.status, 200);
+  assert.equal(replayedPaid.headers.get('idempotent-replay'), 'true');
+  assert.deepEqual(await replayedPaid.json(), firstPaidBody);
+
+  const paidConflict = await postPaid(
+    '/api/video/generate',
+    { ...paidPayload, prompt: 'Different paid payload' },
+    paidKey,
+  );
+  assert.equal(paidConflict.status, 409);
+  assert.equal((await paidConflict.json()).error, 'IDEMPOTENCY_CONFLICT');
+
+  const renderWithoutApproval = await postPaid('/api/render', {
+    script: [{
+      id: 'scene-1',
+      characterId: 'boomer',
+      text: 'No provider should be called.',
+      shotType: 'BOOMER_MCU',
+      durationEst: 5,
+      technicalPrompt: 'Local contract test',
+    }],
+  }, `security-${crypto.randomUUID()}`);
+  assert.equal(renderWithoutApproval.status, 403);
+  assert.equal((await renderWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+
+  const syncWithoutApproval = await postPaid('/api/ai/sync', {
+    videoUrl: 'https://example.com/video.mp4',
+    audioUrl: 'https://example.com/audio.mp3',
+    sceneId: 'scene-1',
+  }, `security-${crypto.randomUUID()}`);
+  assert.equal(syncWithoutApproval.status, 403);
+  assert.equal((await syncWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+
+  const voiceWithoutApproval = await postPaid('/api/ai/voice', {
+    text: 'This must not reach ElevenLabs.',
+    characterId: 'boomer',
+  }, `security-${crypto.randomUUID()}`);
+  assert.equal(voiceWithoutApproval.status, 403);
+  assert.equal((await voiceWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+
+  const imageWithoutApproval = await postPaid('/api/ai/image', {
+    prompt: 'This must not reach Gemini image generation.',
+    aspectRatio: '1:1',
+  }, `security-${crypto.randomUUID()}`);
+  assert.equal(imageWithoutApproval.status, 403);
+  assert.equal((await imageWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+
   for (let requestNumber = 1; requestNumber <= 61; requestNumber++) {
     const response = await fetch(`${baseUrl}/api/pipeline/run?id=invalid`, {
       headers: {
@@ -116,7 +211,12 @@ try {
     }
   }
 
-  console.log('Segurança standalone válida: auth fail-closed, CSRF cobre PATCH e rate limit não é burlado por X-Forwarded-For variável.');
+  console.log('Segurança standalone válida: auth/CSRF/rate limit e gates pagos idempotentes sem provedores.');
 } finally {
   await stopServer(server);
+  if (existsSync(runtimeTmp)) {
+    for (const filename of await readdir(runtimeTmp)) {
+      if (filename.startsWith('paid_')) await unlink(path.join(runtimeTmp, filename));
+    }
+  }
 }
