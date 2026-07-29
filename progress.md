@@ -797,4 +797,5 @@ Sessão de retomada: protocolos confirmados ativos (Karpathy, Ponytail `full`, V
 - [x] Nenhum provedor pago foi chamado no teste. O Supabase compilado tentou registrar o episódio, recebeu 401 por RLS e não criou linha; o VOICE_GATE encerrou o único job antes do Kling.
 - [ ] Antes do deploy, o workflow n8n que chama `/api/pipeline/run` precisa enviar uma chave estável (ex.: execution ID); sem ela a nova rota falha fechada com 400.
 - [ ] Lint global permanece vermelho por 55 erros e 44 warnings preexistentes; não foram misturados nesta mudança cirúrgica.
-- [ ] Mudanças locais ainda não commitadas nem deployadas; produção permanece intacta.
+- [x] Mudanças consolidadas no commit local `38ec9bd`.
+- [ ] Commit ainda não pushed nem deployado; produção permanece intacta.
