@@ -18,9 +18,12 @@ const TOPIC_KEYWORDS: Record<TopicCategory, string[]> = {
 };
 
 const detectTopic = (text: string): { category: TopicCategory, keyword: string } => {
-    const lowerText = text.toLowerCase();
     for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-        const found = keywords.find(k => lowerText.includes(k.toLowerCase()));
+        const found = keywords.find(keyword => {
+            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const endBoundary = keyword.length <= 3 ? '\\b' : '';
+            return new RegExp(`\\b${escapedKeyword}${endBoundary}`, 'i').test(text);
+        });
         if (found) {
             return { category: category as TopicCategory, keyword: found };
         }
@@ -214,6 +217,10 @@ const BOOMER_REBUTTALS: Record<TopicCategory, string[]> = {
 // ==========================================
 
 export class ScriptEngine {
+    private static newId(): string {
+        return crypto.randomUUID();
+    }
+
     private static getRandom(arr: string[]): string {
         return arr[Math.floor(Math.random() * arr.length)];
     }
@@ -247,14 +254,14 @@ export class ScriptEngine {
         const keyword = topicData.keyword;
 
         // generated IDs for 8 scenes
-        const id1 = Math.random().toString(36).substr(2, 9);
-        const id2 = Math.random().toString(36).substr(2, 9);
-        const id3 = Math.random().toString(36).substr(2, 9);
-        const id4 = Math.random().toString(36).substr(2, 9);
-        const id5 = Math.random().toString(36).substr(2, 9);
-        const id6 = Math.random().toString(36).substr(2, 9);
-        const id7 = Math.random().toString(36).substr(2, 9);
-        const id8 = Math.random().toString(36).substr(2, 9);
+        const id1 = this.newId();
+        const id2 = this.newId();
+        const id3 = this.newId();
+        const id4 = this.newId();
+        const id5 = this.newId();
+        const id6 = this.newId();
+        const id7 = this.newId();
+        const id8 = this.newId();
 
         // INTELLIGENCE OVERRIDE
         // If we have a specific 'take' from the trends feed, we should build the script around it.
@@ -339,8 +346,7 @@ export class ScriptEngine {
         const topicData = detectTopic(title);
         const topic = topicData.category;
         const keyword = topicData.keyword;
-        const lastLine = currentScript[currentScript.length - 1] as { characterId: string };
-        const lastCharId = lastLine.characterId;
+        const lastCharId = currentScript.at(-1)?.characterId;
         const nextCharId = lastCharId === 'boomer' ? 'kev' : 'boomer';
 
         let text = "";
@@ -375,7 +381,7 @@ export class ScriptEngine {
         }
 
         return {
-            id: Math.random().toString(36).substr(2, 9),
+            id: this.newId(),
             characterId: nextCharId,
             text: text,
             shotType: nextCharId === 'boomer' ? 'BOOMER_MCU' : 'KEV_CU',

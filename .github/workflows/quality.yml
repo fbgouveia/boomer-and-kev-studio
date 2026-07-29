@@ -23,6 +23,7 @@ jobs:
 
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npm run test:unit
       - run: npm run test:deploy
       - run: npm run build
       - run: npm run verify:standalone
