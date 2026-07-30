@@ -46,6 +46,10 @@ assert.match(defaultRun.stdout, /Ambiente remoto preservado/);
 let commands = await readFile(logPath, 'utf8');
 assert.doesNotMatch(commands, /\.env\.local/);
 assert.match(commands, /<--exclude=\.tmp\/>/);
+// Regressao 30/07: "preservar o ambiente" so vale se o rsync --delete tambem PULAR o .env.
+// Sem isso o deploy apagava o env de producao e nao enviava nada no lugar -> app sem
+// variavel nenhuma, health check vermelho, rollback. Ver HANDOFF 30/07.
+assert.match(commands, /<--exclude=\.env>/, 'rsync do standalone precisa excluir .env do --delete');
 
 const envPath = path.join(tempDir, 'production.env');
 await writeFile(envPath, 'SAFE_TEST_VALUE=1\n');

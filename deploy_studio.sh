@@ -43,7 +43,10 @@ REMOTE
 # 3. Sync dos arquivos Standalone para a VPS
 echo "🌐 3. Fazendo upload dos arquivos via Rsync..."
 # Copiamos o miolo do servidor (standalone)
-rsync -avz --delete --exclude='.tmp/' .next/standalone/ "$VPS_USER@$VPS_IP:$DEST_DIR/"
+# --exclude='.env': o standalone do Next nao contem .env, entao o --delete apagava o env de
+# PRODUCAO e, com DEPLOY_ENV_FILE vazio (padrao), nada era enviado no lugar -> app subia sem
+# nenhuma variavel e morria no health check. Medido em 30/07; o rollback salvou o site.
+rsync -avz --delete --exclude='.tmp/' --exclude='.env' .next/standalone/ "$VPS_USER@$VPS_IP:$DEST_DIR/"
 # Copiamos os assets estáticos (necessário para o standalone)
 rsync -avz --delete .next/static/ "$VPS_USER@$VPS_IP:$DEST_DIR/.next/static/"
 rsync -avz --delete public/ "$VPS_USER@$VPS_IP:$DEST_DIR/public/"
