@@ -15,6 +15,15 @@ function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) throw new Error(msg);
 }
 
+// A borda passou a exigir Basic Auth em 27/07 (b58f955) e o self-call da sonda
+// continuou sem credencial -> 401 diario, sentinela cega. Ver HANDOFF 30/07.
+function selfAuthHeader(): Record<string, string> {
+  const user = process.env.STUDIO_AUTH_USER;
+  const pass = process.env.STUDIO_AUTH_PASSWORD;
+  if (!user || !pass) return {};
+  return { Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}` };
+}
+
 async function run(id: string, fn: () => Promise<string>, timeoutMs = 90_000): Promise<Probe> {
   const t0 = Date.now();
   try {
@@ -33,12 +42,12 @@ async function run(id: string, fn: () => Promise<string>, timeoutMs = 90_000): P
 const probeRoteirista = () => run('gemini_roteirista', async () => {
   const res = await fetchWithTimeout(`${SELF}/api/ai/script`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...selfAuthHeader() },
     body: JSON.stringify({ topic: 'Shark sighted at Bondi Beach', snippet: 'Beach closed after great white sighting' }),
   }, 90_000);
   // 404 no modelo => rodar `node find-model.js`; 403 => key sem acesso ao gemini-2.5-flash.
   // Dica herdada do antigo tools/verify_gemini.py, removido em 19/07.
-  assert(res.ok, `HTTP ${res.status}${res.status === 404 ? ' — modelo sumiu? rodar `node find-model.js`' : ''}${res.status === 403 ? ' — key sem acesso ao gemini-2.5-flash' : ''}`);
+  assert(res.ok, `HTTP ${res.status}${res.status === 404 ? ' — modelo sumiu? rodar `node find-model.js`' : ''}${res.status === 403 ? ' — key sem acesso ao gemini-2.5-flash' : ''}${res.status === 401 ? ' — self-call sem Basic Auth: conferir STUDIO_AUTH_USER/PASSWORD no .env da VPS' : ''}`);
   const script = await res.json();
 
   assert(Array.isArray(script), 'resposta nao e array');
