@@ -250,10 +250,10 @@ export default function LabsPanel() {
       {/* HEADER */}
       <div className="mb-12 border-b border-white/10 pb-6 flex justify-between items-center">
         <div>
-          <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block uppercase italic">Visualizer & Labs</span>
+          <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] block uppercase italic">Visualizer & Labs</span>
           <h2 className="text-5xl font-black tracking-tighter uppercase italic">LABORATÓRIO TECNOLÓGICO 2026</h2>
         </div>
-        <div className="flex items-center gap-2 px-4 py-1.5 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[9px] font-black tracking-widest uppercase">
+        <div className="flex items-center gap-2 px-4 py-1.5 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-xs font-black tracking-widest uppercase">
           <Sparkles size={12} /> BEYOND STATE OF THE ART
         </div>
       </div>
@@ -268,7 +268,7 @@ export default function LabsPanel() {
                 <Box className="text-[#FF5F1F]" size={18} />
                 <h3 className="text-xs font-black tracking-widest uppercase">Palco Pré-vis 3D (WebGL / Three.js)</h3>
               </div>
-              <span className="text-[8px] text-white/40 font-mono">RENDER: WEBGL_ACTIVE</span>
+              <span className="text-xs text-white/60 font-mono">RENDER: WEBGL_ACTIVE</span>
             </div>
             
             {/* CANVAS CONTAINER */}
@@ -283,15 +283,15 @@ export default function LabsPanel() {
               <div className="absolute left-1/2 top-0 bottom-0 w-px border-l border-dashed border-[#FF5F1F]/20 pointer-events-none" />
               
               <div className="absolute top-4 left-4 flex flex-col gap-1 bg-black/80 p-2 border border-white/10 pointer-events-none">
-                <span className="text-[7px] text-white/50 font-black tracking-widest uppercase">CAMERA PARAMETERS</span>
-                <span className="text-[9px] font-mono text-[#FF5F1F]">X: {camX.toFixed(1)} | Y: {camY.toFixed(1)} | Z: {camZ.toFixed(1)}</span>
+                <span className="text-xs text-white/50 font-black tracking-widest uppercase">CAMERA PARAMETERS</span>
+                <span className="text-xs font-mono text-[#FF5F1F]">X: {camX.toFixed(1)} | Y: {camY.toFixed(1)} | Z: {camZ.toFixed(1)}</span>
               </div>
             </div>
 
             {/* CONTROLS */}
             <div className="grid grid-cols-4 gap-6 mt-6 border-t border-white/5 pt-6">
               <div className="flex flex-col gap-2">
-                <label className="text-[8px] text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
+                <label className="text-xs text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
                   <span>Câmera Horiz (X)</span>
                   <span className="font-mono text-[#FF5F1F]">{camX}</span>
                 </label>
@@ -303,7 +303,7 @@ export default function LabsPanel() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[8px] text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
+                <label className="text-xs text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
                   <span>Câmera Altura (Y)</span>
                   <span className="font-mono text-[#FF5F1F]">{camY}</span>
                 </label>
@@ -315,7 +315,7 @@ export default function LabsPanel() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[8px] text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
+                <label className="text-xs text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
                   <span>Zoom / Dist (Z)</span>
                   <span className="font-mono text-[#FF5F1F]">{camZ}</span>
                 </label>
@@ -327,7 +327,7 @@ export default function LabsPanel() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[8px] text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
+                <label className="text-xs text-white/50 font-black tracking-widest uppercase flex items-center justify-between">
                   <span>Intensidade Luz</span>
                   <span className="font-mono text-[#FF5F1F]">{lightIntensity}</span>
                 </label>
@@ -347,12 +347,12 @@ export default function LabsPanel() {
                 <Cpu className="text-[#FF5F1F]" size={18} />
                 <h3 className="text-xs font-black tracking-widest uppercase font-mono">WebGPU Local Inference Model (Drafting)</h3>
               </div>
-              <span className="text-[8px] text-white/40 font-mono">STATUS: {isGPUCompiled ? 'COMPILED_READY' : 'IDLE'}</span>
+              <span className="text-xs text-white/60 font-mono">STATUS: {isGPUCompiled ? 'COMPILED_READY' : 'IDLE'}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="col-span-1 flex flex-col gap-4 border-r border-white/5 pr-6">
-                <p className="text-[9px] text-white/50 uppercase leading-relaxed font-bold">
+                <p className="text-xs text-white/50 uppercase leading-relaxed font-bold">
                   Execute modelos de linguagem leves locais diretamente na sua GPU usando WebGPU para zero custos de API.
                 </p>
                 
@@ -360,7 +360,7 @@ export default function LabsPanel() {
                   <button
                     onClick={compileWebGPU}
                     disabled={isCompiling}
-                    className="w-full flex items-center justify-center gap-2 py-3 border border-[#FF5F1F] text-[#FF5F1F] hover:bg-[#FF5F1F] hover:text-black font-black text-[9px] tracking-widest uppercase transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3 border border-[#FF5F1F] text-[#FF5F1F] hover:bg-[#FF5F1F] hover:text-black font-black text-xs tracking-widest uppercase transition-all"
                   >
                     {isCompiling ? (
                       <>
@@ -375,7 +375,7 @@ export default function LabsPanel() {
                 ) : (
                   <button
                     onClick={generateLocalDialogue}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-[#FF5F1F] text-black hover:bg-[#FF5F1F]/90 font-black text-[9px] tracking-widest uppercase transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-[#FF5F1F] text-black hover:bg-[#FF5F1F]/90 font-black text-xs tracking-widest uppercase transition-all"
                   >
                     <RefreshCw size={12} /> Gerar Diálogo Local
                   </button>
@@ -383,16 +383,16 @@ export default function LabsPanel() {
               </div>
 
               {/* LOGS WINDOW */}
-              <div className="col-span-2 flex flex-col bg-black/90 p-4 border border-white/5 min-h-[120px] font-mono text-[9px] leading-relaxed">
-                <div className="text-white/40 uppercase mb-2 text-[7px] tracking-widest border-b border-white/5 pb-1">System Compiler Output</div>
-                {gpuLogs.length === 0 && <span className="text-white/20">Aguardando compilação do shader...</span>}
+              <div className="col-span-2 flex flex-col bg-black/90 p-4 border border-white/5 min-h-[120px] font-mono text-xs leading-relaxed">
+                <div className="text-white/60 uppercase mb-2 text-xs tracking-widest border-b border-white/5 pb-1">System Compiler Output</div>
+                {gpuLogs.length === 0 && <span className="text-white/50">Aguardando compilação do shader...</span>}
                 {gpuLogs.map((log, i) => (
                   <div key={i} className="text-white/80">{log}</div>
                 ))}
                 
                 {gpuOutput && (
                   <div className="mt-4 pt-3 border-t border-[#FF5F1F]/30 text-[#FF5F1F] font-bold">
-                    <span className="text-[7px] text-[#FF5F1F]/50 block mb-1">LOCAL DETAILED GENERATED OUTPUT:</span>
+                    <span className="text-xs text-[#FF5F1F]/50 block mb-1">LOCAL DETAILED GENERATED OUTPUT:</span>
                     {gpuOutput}
                   </div>
                 )}
@@ -414,14 +414,14 @@ export default function LabsPanel() {
               <span className={isAgentRunning ? "w-2 h-2 rounded-full bg-green-500 animate-pulse" : "w-2 h-2 rounded-full bg-white/20"} />
             </div>
 
-            <p className="text-[9px] text-white/50 leading-relaxed mb-6 font-bold uppercase">
+            <p className="text-xs text-white/50 leading-relaxed mb-6 font-bold uppercase">
               Orquestre caçadores de tendências, roteiristas criativos e auditores jurídicos em uma esteira 100% autônoma.
             </p>
 
             <button
               onClick={runAutonomousAgents}
               disabled={isAgentRunning}
-              className="w-full flex items-center justify-center gap-2 py-3 border border-white/10 hover:border-white hover:bg-white hover:text-black font-black text-[9px] tracking-widest uppercase transition-all mb-6"
+              className="w-full flex items-center justify-center gap-2 py-3 border border-white/10 hover:border-white hover:bg-white hover:text-black font-black text-xs tracking-widest uppercase transition-all mb-6"
             >
               {isAgentRunning ? (
                 <>
@@ -434,9 +434,9 @@ export default function LabsPanel() {
               )}
             </button>
 
-            <div className="flex flex-col bg-black/95 p-4 border border-white/5 font-mono text-[9px] leading-relaxed min-h-[180px]">
-              <div className="text-white/40 uppercase mb-2 text-[7px] tracking-widest border-b border-white/5 pb-1">Agent Terminal Output</div>
-              {agentLogs.length === 0 && <span className="text-white/20">Aguardando disparo do gatilho...</span>}
+            <div className="flex flex-col bg-black/95 p-4 border border-white/5 font-mono text-xs leading-relaxed min-h-[180px]">
+              <div className="text-white/60 uppercase mb-2 text-xs tracking-widest border-b border-white/5 pb-1">Agent Terminal Output</div>
+              {agentLogs.length === 0 && <span className="text-white/50">Aguardando disparo do gatilho...</span>}
               {agentLogs.map((log, i) => (
                 <div key={i} className="text-white/80 mb-1 border-l-2 border-white/10 pl-2">{log}</div>
               ))}
@@ -452,7 +452,7 @@ export default function LabsPanel() {
               </div>
               <button
                 onClick={() => setStreamActive(!streamActive)}
-                className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest border transition-all ${
+                className={`px-3 py-1 text-xs font-black uppercase tracking-widest border transition-all ${
                   streamActive 
                     ? "bg-red-600 border-red-600 text-white animate-pulse" 
                     : "bg-transparent border-white/20 text-white/50 hover:border-white hover:text-white"
@@ -465,7 +465,7 @@ export default function LabsPanel() {
             <div className="aspect-video w-full bg-black border border-white/5 flex flex-col items-center justify-center p-4 relative mb-4">
               {streamActive ? (
                 <div className="w-full h-full flex flex-col justify-between">
-                  <div className="flex justify-between items-center text-[8px] font-mono text-white/40">
+                  <div className="flex justify-between items-center text-xs font-mono text-white/60">
                     <span className="flex items-center gap-1.5 text-red-500 font-bold">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" /> LIVE
                     </span>
@@ -475,22 +475,22 @@ export default function LabsPanel() {
                   {/* Audio Waveform Canvas */}
                   <canvas ref={canvasRef} className="w-full h-12 my-auto" />
 
-                  <div className="text-[7px] text-[#FF5F1F] font-mono text-center tracking-widest font-black uppercase">
+                  <div className="text-xs text-[#FF5F1F] font-mono text-center tracking-widest font-black uppercase">
                     GEMINI_MULTIMODAL_LIVE_CONNECTED
                   </div>
                 </div>
               ) : (
                 <>
-                  <Tv size={36} className="text-white/10 mb-2" />
-                  <span className="text-[8px] font-black uppercase text-white/30 tracking-widest">STREAM IS OFFLINE</span>
+                  <Tv size={36} className="text-white/50 mb-2" />
+                  <span className="text-xs font-black uppercase text-white/60 tracking-widest">STREAM IS OFFLINE</span>
                 </>
               )}
             </div>
 
             {/* LIVE CHAT SIMULATION */}
-            <div className="flex flex-col bg-black/95 border border-white/5 font-mono text-[9px] p-4 min-h-[140px] max-h-[160px] overflow-y-auto">
-              <div className="text-white/40 uppercase mb-2 text-[7px] tracking-widest border-b border-white/5 pb-1">Real-Time User Chat</div>
-              {liveChat.length === 0 && <span className="text-white/20">Chat ocioso. Inicie a stream...</span>}
+            <div className="flex flex-col bg-black/95 border border-white/5 font-mono text-xs p-4 min-h-[140px] max-h-[160px] overflow-y-auto">
+              <div className="text-white/60 uppercase mb-2 text-xs tracking-widest border-b border-white/5 pb-1">Real-Time User Chat</div>
+              {liveChat.length === 0 && <span className="text-white/50">Chat ocioso. Inicie a stream...</span>}
               {liveChat.map((chat, i) => (
                 <div key={i} className="mb-1 text-white/60">
                   <span className="text-[#FF5F1F] font-bold">@{chat.user}:</span> {chat.text}

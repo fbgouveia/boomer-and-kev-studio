@@ -18,16 +18,12 @@ import {
   BrainCircuit,
   RefreshCcw,
   Zap,
-  Wand2,
   MonitorPlay,
   Volume2,
-  History,
   ShieldCheck,
   Key,
   BookOpen,
   MessageSquare,
-  ExternalLink,
-  ChevronRight,
   Info,
   Upload,
   X,
@@ -46,7 +42,19 @@ import { DNAPanel } from '@/components/studio/DNAPanel';
 import { IntelligenceRadar } from '@/components/studio/IntelligenceRadar';
 import LabsPanel from '@/components/studio/LabsPanel';
 import { FlaskConical, Tv, Target } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
 
+
+// Fonte unica das abas: mobile e desktop liam arrays separados e mostravam
+// icones DIFERENTES para a mesma aba (director: MonitorPlay vs Wand2; dna: Dna vs History).
+const TABS = [
+  { id: 'director', label: 'DIRECTOR', icon: MonitorPlay },
+  { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
+  { id: 'library', label: 'LIBRARY', icon: Tv },
+  { id: 'dna', label: 'ENGINE DNA', icon: Dna },
+  { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
+  { id: 'radar', label: 'RADAR', icon: Target },
+] as const;
 
 export default function Home() {
   const [script, setScript] = useState<ScriptLine[]>([
@@ -241,7 +249,7 @@ export default function Home() {
     }
 
     if (!finalTitle) {
-      alert("⚠️ PRODUCTION_ERROR: No topic detected in the machine. Please type something first!");
+      toast.error('Enter a topic first — the brainstorm needs a subject to work from.');
       console.warn("⚠️ [Neural_Link] Aborted: Empty Title.");
       setIsGenerating(false);
       return;
@@ -813,7 +821,7 @@ export default function Home() {
       setComplianceReport(data);
       setMitigationReport(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Falha na varredura de compliance');
+      toast.error(err instanceof Error ? err.message : 'Compliance scan failed. Check your connection and try again.');
     } finally {
       setIsScanningCompliance(false);
     }
@@ -845,7 +853,7 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error || 'Falha na mitigação de risco');
       setMitigationReport(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Falha ao rodar agente de risco');
+      toast.error(err instanceof Error ? err.message : 'Risk agent failed to run. Check your connection and try again.');
     } finally {
       setIsMitigatingRisk(false);
     }
@@ -861,7 +869,7 @@ export default function Home() {
       };
     });
     setScript(updatedScript);
-    alert("Roteiro mitigado e atualizado na linha do tempo!");
+    toast.success('Script updated with mitigations — review it in the timeline.');
     setActiveFooterModal(null);
   };
 
@@ -1027,18 +1035,11 @@ export default function Home() {
                   </div>
                   <span className="text-white font-black text-sm tracking-tight">MENU</span>
                 </div>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/40 hover:text-white p-1">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/60 hover:text-white p-1">
                   <X size={20} />
                 </button>
               </div>
-              {[
-                { id: 'director', label: 'DIRECTOR', icon: MonitorPlay },
-                { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
-                { id: 'library', label: 'LIBRARY', icon: Tv },
-                { id: 'dna', label: 'ENGINE DNA', icon: Dna },
-                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
-                { id: 'radar', label: 'RADAR', icon: Target },
-              ].map(tab => {
+              {TABS.map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
@@ -1049,7 +1050,7 @@ export default function Home() {
                       "flex items-center gap-3 px-4 py-3 text-xs font-black tracking-widest transition-all",
                       isActive
                         ? "bg-[#FF5F1F] text-white"
-                        : "text-white/40 hover:text-white hover:bg-white/5"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
                     )}
                   >
                     <Icon size={18} />
@@ -1072,7 +1073,7 @@ export default function Home() {
               {/* Hamburger menu — mobile/tablet only */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden p-2 text-white/40 hover:text-[#FF5F1F] transition-colors"
+                className="lg:hidden p-2 text-white/60 hover:text-[#FF5F1F] transition-colors"
                 aria-label="Open menu"
               >
                 <Layers size={22} />
@@ -1082,19 +1083,12 @@ export default function Home() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-sm sm:text-lg font-black tracking-tighter leading-none truncate">BOOMER & KEV <span className="text-[#FF5F1F]">STUDIO</span></h1>
-                <p className="text-[9px] sm:text-[10px] text-white/40 tracking-[0.2em] sm:tracking-[0.3em] font-bold truncate">CINEMATIC ENGINE v3.1</p>
+                <p className="text-xs sm:text-sm text-white/60 tracking-[0.2em] sm:tracking-[0.3em] font-bold truncate">CINEMATIC ENGINE v3.1</p>
               </div>
             </div>
 
             <div className="hidden md:flex gap-1 bg-[#111111]/80 backdrop-blur-md p-1 border border-white/5 shadow-inner overflow-x-auto max-w-full scrollbar-hide">
-              {[
-                { id: 'director', label: 'DIRECTOR', icon: Wand2 },
-                { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
-                { id: 'library', label: 'LIBRARY', icon: Tv },
-                { id: 'dna', label: 'ENGINE DNA', icon: History },
-                { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
-                { id: 'radar', label: 'RADAR', icon: Target }
-              ].map(tab => {
+              {TABS.map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
@@ -1104,13 +1098,13 @@ export default function Home() {
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
                     className={cn(
-                      "flex items-center gap-2 px-3 lg:px-5 py-2 text-[9px] lg:text-[10px] font-black tracking-widest transition-all duration-300 relative overflow-hidden whitespace-nowrap shrink-0",
+                      "flex items-center gap-2 px-3 lg:px-5 py-2 text-xs lg:text-sm font-black tracking-widest transition-all duration-300 relative overflow-hidden whitespace-nowrap shrink-0",
                       isActive 
                         ? "bg-[#FF5F1F] text-white shadow-[0_0_15px_rgba(255,95,31,0.3)] border-l-2 border-white/40" 
-                        : "text-white/40 hover:text-white hover:bg-white/5"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
                     )}
                   >
-                    <Icon size={12} className={cn("transition-colors", isActive ? "text-white" : "text-white/30")} />
+                    <Icon size={12} className={cn("transition-colors", isActive ? "text-white" : "text-white/60")} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1146,20 +1140,20 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth animate-in fade-in duration-700 min-h-0">
                 <div className="flex items-baseline justify-between mb-16 px-2">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/20">TIMELINE</span></h2>
+                    <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/50">TIMELINE</span></h2>
                     
                     {/* Storyboard View Toggle */}
                     <div className="flex border-2 border-white/20 rounded-none overflow-hidden ml-4">
                       <button
                         onClick={() => setStoryboardMode('classic')}
-                        className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
+                        className={cn("px-4 py-2 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
                           storyboardMode === 'classic' ? "bg-[#FF5F1F] text-black" : "bg-black text-white/50 hover:text-white")}
                       >
                         Estúdio Moderno
                       </button>
                       <button
                         onClick={() => setStoryboardMode('ekonte')}
-                        className={cn("px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
+                        className={cn("px-4 py-2 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[36px]",
                           storyboardMode === 'ekonte' ? "bg-[#FF5F1F] text-black" : "bg-black text-white/50 hover:text-white")}
                       >
                         絵コンテ (E-KONTE)
@@ -1168,7 +1162,7 @@ export default function Home() {
 
                     <button
                       onClick={exportToPDF}
-                      className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] ml-4"
+                      className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-sm font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] ml-4"
                     >
                       <Download size={14} /> DOWNLOAD FULL SCRIPT (PDF)
                     </button>
@@ -1177,7 +1171,7 @@ export default function Home() {
                       <a
                         href={assembledVideoUrl}
                         download
-                        className="flex items-center gap-2 px-6 py-2 border border-green-500/30 bg-green-500/5 text-green-500 text-[10px] font-black tracking-widest hover:bg-green-500 hover:text-black transition-all shadow-[4px_4px_0_rgba(34,197,94,0.2)] ml-4 animate-bounce"
+                        className="flex items-center gap-2 px-6 py-2 border border-green-500/30 bg-green-500/5 text-green-500 text-sm font-black tracking-widest hover:bg-green-500 hover:text-black transition-all shadow-[4px_4px_0_rgba(34,197,94,0.2)] ml-4 animate-bounce"
                       >
                         <MonitorPlay size={14} /> DOWNLOAD COMPLETED EPISODE (MP4)
                       </a>
@@ -1205,7 +1199,7 @@ export default function Home() {
                       <div className="w-64 p-8 border-r border-white/5 flex flex-col justify-between">
                         <div className="space-y-6">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Cena {index + 1}</span>
+                            <span className="text-sm font-black text-white/50 uppercase tracking-[0.3em]">Cena {index + 1}</span>
                             <div className={cn("w-1.5 h-1.5 rounded-full transition-all duration-500",
                               line.status === 'COMPLETED' ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" :
                                 line.status === 'PROCESSING' ? "bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.8)]" :
@@ -1219,16 +1213,16 @@ export default function Home() {
 
                           <div className="space-y-4">
                             <div className="space-y-1">
-                              <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Enquadramento / Lente</label>
+                              <label className="text-xs font-black text-white/60 uppercase tracking-widest">Enquadramento / Lente</label>
                               <select
                                 value={line.shotType}
                                 onChange={(e) => updateLine(line.id, 'shotType', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[10px] font-black outline-none cursor-pointer text-white/90"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-black outline-none cursor-pointer text-white/90"
                               >
                                 {SHOT_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                               </select>
                             </div>
-                            <div className="text-[9px] text-white/20 leading-relaxed font-bold italic uppercase tracking-wider">
+                            <div className="text-xs text-white/50 leading-relaxed font-bold italic uppercase tracking-wider">
                               {SHOT_TYPES.find(s => s.id === line.shotType)?.cinematicRule}
                             </div>
                           </div>
@@ -1239,14 +1233,14 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => downloadScenePromptPDF(line, index)}
-                              className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                              className="p-3 border border-white/5 text-white/50 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
                               title="BAIXAR PROMPT DA CENA (PDF)"
                             >
                               <FileText size={18} />
                             </button>
                             <button
                               onClick={() => setSharingLineId(line.id)}
-                              className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                              className="p-3 border border-white/5 text-white/50 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
                               title="COMPARTILHAR CENA"
                             >
                               <Share2 size={18} />
@@ -1268,7 +1262,7 @@ export default function Home() {
                           <select
                             value={line.characterId}
                             onChange={(e) => updateLine(line.id, 'characterId', e.target.value)}
-                            className={cn("px-4 py-1 text-[11px] font-black uppercase tracking-widest border-none outline-none cursor-pointer appearance-none transition-all",
+                            className={cn("px-4 py-1 text-sm font-black uppercase tracking-widest border-none outline-none cursor-pointer appearance-none transition-all",
                               line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white hover:bg-white hover:text-[#FF5F1F]" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white")}
                           >
                             {CHARACTERS.map(c => (
@@ -1276,14 +1270,14 @@ export default function Home() {
                             ))}
                           </select>
                           <div className="flex items-center gap-2">
-                            <div className={cn("px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border",
+                            <div className={cn("px-2 py-0.5 text-xs font-black uppercase tracking-widest border",
                               line.status === 'COMPLETED' ? "border-green-500/30 text-green-500 bg-green-500/5" :
                                 line.status === 'PROCESSING' ? "border-blue-500/30 text-blue-500 bg-blue-500/5 animate-pulse" :
                                   line.status === 'QUEUED' ? "border-yellow-500/30 text-yellow-500 bg-yellow-500/5" :
-                                    "border-white/5 text-white/20")}>
+                                    "border-white/5 text-white/50")}>
                               {line.status}
                             </div>
-                            <div className="text-[10px] font-black text-white/20 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
+                            <div className="text-sm font-black text-white/50 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
                               {line.emotion || 'Neutro'}
                             </div>
                             {line.audioUrl && (
@@ -1295,7 +1289,7 @@ export default function Home() {
                                 className="flex items-center gap-2 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-3 py-1 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all group/audio ml-2"
                               >
                                 <Volume2 size={12} className="group-hover/audio:animate-pulse" />
-                                <span className="text-[8px] font-black tracking-widest uppercase">Ouvir Voz</span>
+                                <span className="text-xs font-black tracking-widest uppercase">Ouvir Voz</span>
                               </button>
                             )}
                           </div>
@@ -1312,8 +1306,8 @@ export default function Home() {
                         <div className="grid grid-cols-2 gap-10 opacity-40 group-hover:opacity-100 transition-opacity">
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Ação do Personagem</span>
-                              <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">DNA_ATIVO</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-[#FF5F1F]">Ação do Personagem</span>
+                              <span className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">DNA_ATIVO</span>
                             </div>
                             <select
                               value={line.action}
@@ -1323,7 +1317,7 @@ export default function Home() {
                                 updateLine(line.id, 'action', e.target.value);
                                 if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
                               }}
-                              className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
+                              className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
                             >
                               <option value={line.action} className="bg-[#0d0d0d]">{line.action || "-- SELECIONE UMA AÇÃO --"}</option>
                               {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
@@ -1334,8 +1328,8 @@ export default function Home() {
                             </select>
                           </div>
                           <div className="space-y-2">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Lógica de Iluminação</span>
-                            <p className="text-[10px] font-bold text-white/30 italic">
+                            <span className="text-xs font-black uppercase tracking-widest text-white/60">Lógica de Iluminação</span>
+                            <p className="text-sm font-bold text-white/60 italic">
                               {CHARACTERS.find(c => c.id === line.characterId)?.lightingKey}
                             </p>
                           </div>
@@ -1345,11 +1339,11 @@ export default function Home() {
                         <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Movimento de Câmera (Preset)</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-[#FF5F1F]">Movimento de Câmera (Preset)</span>
                               <select
                                 value={line.cameraPreset || ''}
                                 onChange={(e) => updateLine(line.id, 'cameraPreset', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
                               >
                                 <option value="" className="bg-[#0d0d0d]">-- CÂMERA FIXA --</option>
                                 <option value="pan_left" className="bg-[#0d0d0d]">Pan Esquerda</option>
@@ -1365,8 +1359,8 @@ export default function Home() {
                             </div>
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Força da Ação (IA)</span>
-                                <span className="text-[10px] font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
+                                <span className="text-xs font-black uppercase tracking-widest text-white/60">Força da Ação (IA)</span>
+                                <span className="text-sm font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
                               </div>
                               <input
                                 type="range"
@@ -1382,23 +1376,23 @@ export default function Home() {
 
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">ID do Avatar (Soul ID)</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-white/60">ID do Avatar (Soul ID)</span>
                               <input
                                 type="text"
                                 placeholder="ex: boomer_master_v3"
                                 value={line.soulId || ''}
                                 onChange={(e) => updateLine(line.id, 'soulId', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/50"
                               />
                             </div>
                             <div className="space-y-2">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Vídeo de Referência (URL)</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-white/60">Vídeo de Referência (URL)</span>
                               <input
                                 type="text"
                                 placeholder="Coloque o link do MP4 de referência..."
                                 value={line.motionRefUrl || ''}
                                 onChange={(e) => updateLine(line.id, 'motionRefUrl', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/50"
                               />
                             </div>
                           </div>
@@ -1407,21 +1401,21 @@ export default function Home() {
                         {/* STORYBOARD PRE-VIS BLOCK */}
                         <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
                           <div className="space-y-2">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Como a Cena Deve Parecer (Prompt)</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-[#FF5F1F]">Como a Cena Deve Parecer (Prompt)</span>
                             <textarea
                               value={line.visualPrompt || ''}
                               onChange={(e) => updateLine(line.id, 'visualPrompt', e.target.value)}
                               placeholder="Descreva o visual, as roupas, a iluminação e o cenário..."
-                              className="w-full bg-[#111111] border border-white/10 p-2.5 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20 h-20 resize-none font-sans"
+                              className="w-full bg-[#111111] border border-white/10 p-2.5 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/50 h-20 resize-none font-sans"
                             />
                           </div>
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Dinâmica de Câmera (Storyboard)</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-white/60">Dinâmica de Câmera (Storyboard)</span>
                               <select
                                 value={line.cameraMovement || 'STATIC'}
                                 onChange={(e) => updateLine(line.id, 'cameraMovement', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                                className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
                               >
                                 <option value="STATIC">CÂMERA ESTÁTICA</option>
                                 <option value="PAN_LEFT">PAN PARA ESQUERDA</option>
@@ -1436,8 +1430,8 @@ export default function Home() {
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block">Alinhamento de Enquadramento</span>
-                              <span className="text-[9px] font-bold text-white/30 uppercase block">Regra dos Terços Ativa (Margem 9:16)</span>
+                              <span className="text-xs font-black uppercase tracking-widest text-white/50 block">Alinhamento de Enquadramento</span>
+                              <span className="text-xs font-bold text-white/60 uppercase block">Regra dos Terços Ativa (Margem 9:16)</span>
                             </div>
                           </div>
                         </div>
@@ -1471,7 +1465,7 @@ export default function Home() {
                               {line.status === 'COMPLETED' ? (
                                 <>
                                   <MonitorPlay size={24} className="text-white group-hover/thumb:scale-125 transition-transform" />
-                                  <span className="text-[7px] font-black text-white/40 tracking-[0.2em] uppercase">VIEW_PLAYBACK</span>
+                                  <span className="text-xs font-black text-white/60 tracking-[0.2em] uppercase">VIEW_PLAYBACK</span>
                                   {line.videoUrl && (
                                     <a
                                       href={line.videoUrl}
@@ -1479,7 +1473,7 @@ export default function Home() {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-all border border-white/10"
+                                      className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-[#FF5F1F] text-white/60 hover:text-white transition-all border border-white/10"
                                       title="DIRECT_DOWNLOAD"
                                     >
                                       <Download size={14} />
@@ -1489,13 +1483,13 @@ export default function Home() {
                               ) : line.status === 'PROCESSING' ? (
                                 <>
                                   <Zap size={20} className="text-[#FF5F1F] animate-bounce" />
-                                  <span className="text-[7px] font-black text-[#FF5F1F] tracking-[0.2em] uppercase">SYNTHESIZING...</span>
+                                  <span className="text-xs font-black text-[#FF5F1F] tracking-[0.2em] uppercase">SYNTHESIZING...</span>
                                 </>
                               ) : (
                                 <>
                                   <Sparkles size={20} className="text-yellow-400 group-hover/thumb:rotate-12 transition-transform" />
-                                  <span className="text-[7px] font-black text-yellow-400 tracking-[0.2em] uppercase">STORYBOARD_STILL</span>
-                                  <span className="text-[5px] font-black text-white/40 uppercase">Pre-vis Concept Still</span>
+                                  <span className="text-xs font-black text-yellow-400 tracking-[0.2em] uppercase">STORYBOARD_STILL</span>
+                                  <span className="text-xs font-black text-white/60 uppercase">Pre-vis Concept Still</span>
                                 </>
                               )}
                             </div>
@@ -1506,7 +1500,7 @@ export default function Home() {
 
                             <div className="absolute bottom-2 left-2 flex items-center gap-1">
                               <div className="w-1 h-3 bg-[#FF5F1F]" />
-                              <span className="text-[6px] font-black opacity-30">CAM_{line.shotType}</span>
+                              <span className="text-xs font-black opacity-30">CAM_{line.shotType}</span>
                             </div>
                           </div>
                         ) : null}
@@ -1517,7 +1511,7 @@ export default function Home() {
                 ) : (
                   /* E-KONTE STORYBOARD SHEET */
                   <div className="border-2 border-white/20 bg-black/60 backdrop-blur-3xl overflow-hidden rounded-none p-6 shadow-[12px_12px_0_rgba(255,95,31,0.1)]">
-                    <div className="grid grid-cols-12 border-b-2 border-white/20 pb-4 text-[10px] font-black text-[#FF5F1F] uppercase tracking-[0.2em] italic">
+                    <div className="grid grid-cols-12 border-b-2 border-white/20 pb-4 text-sm font-black text-[#FF5F1F] uppercase tracking-[0.2em] italic">
                       <div className="col-span-1 text-center">カット (CUT)</div>
                       <div className="col-span-3">画面 (PICTURE)</div>
                       <div className="col-span-4">内容 (ACTION / CAM)</div>
@@ -1537,7 +1531,7 @@ export default function Home() {
                               <span className="text-3xl font-black italic tracking-tighter text-[#FF5F1F]">
                                 #{String(index + 1).padStart(2, '0')}
                               </span>
-                              <span className="text-[7px] text-white/30 uppercase mt-1 tracking-widest font-mono">SC_{line.shotType}</span>
+                              <span className="text-xs text-white/60 uppercase mt-1 tracking-widest font-mono">SC_{line.shotType}</span>
                               {script.length > 1 && (
                                 <button
                                   onClick={() => removeLine(line.id)}
@@ -1575,14 +1569,14 @@ export default function Home() {
                                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-dashed border-[#FF5F1F]/30 pointer-events-none" />
                                   </div>
                                 )}
-                                <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 border border-white/10 text-[6px] font-black text-white/50 uppercase tracking-widest">
+                                <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 border border-white/10 text-xs font-black text-white/50 uppercase tracking-widest">
                                   {line.status}
                                 </div>
                               </div>
                               <select
                                 value={line.shotType}
                                 onChange={(e) => updateLine(line.id, 'shotType', e.target.value)}
-                                className="w-full bg-[#111111] border border-white/10 mt-2 p-1.5 text-[8px] font-black uppercase outline-none cursor-pointer text-white/60 text-center"
+                                className="w-full bg-[#111111] border border-white/10 mt-2 p-1.5 text-xs font-black uppercase outline-none cursor-pointer text-white/60 text-center"
                               >
                                 {SHOT_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                               </select>
@@ -1591,21 +1585,21 @@ export default function Home() {
                             {/* ACTION & CAM COLUMN */}
                             <div className="col-span-4 space-y-4 pr-2">
                               <div>
-                                <span className="text-[7px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">Como a Cena Deve Parecer (Prompt)</span>
+                                <span className="text-xs font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">Como a Cena Deve Parecer (Prompt)</span>
                                 <textarea
                                   value={line.visualPrompt || ''}
                                   onChange={(e) => updateLine(line.id, 'visualPrompt', e.target.value)}
-                                  className="w-full bg-[#111111]/80 border border-white/10 p-2 text-[9px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 h-16 resize-none font-sans"
+                                  className="w-full bg-[#111111]/80 border border-white/10 p-2 text-xs font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 h-16 resize-none font-sans"
                                 />
                               </div>
 
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block mb-1">Dinâmica de Câmera</span>
+                                  <span className="text-xs font-black text-white/60 uppercase tracking-widest block mb-1">Dinâmica de Câmera</span>
                                   <select
                                     value={line.cameraMovement || 'STATIC'}
                                     onChange={(e) => updateLine(line.id, 'cameraMovement', e.target.value)}
-                                    className="w-full bg-[#111111] border border-white/10 p-1 text-[8px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
+                                    className="w-full bg-[#111111] border border-white/10 p-1 text-xs font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
                                   >
                                     <option value="STATIC">CÂMERA ESTÁTICA</option>
                                     <option value="PAN_LEFT">PAN ESQUERDA</option>
@@ -1617,7 +1611,7 @@ export default function Home() {
                                   </select>
                                 </div>
                                 <div>
-                                  <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block mb-1">Ação do Personagem</span>
+                                  <span className="text-xs font-black text-white/60 uppercase tracking-widest block mb-1">Ação do Personagem</span>
                                   <select
                                     value={line.action}
                                     onChange={(e) => {
@@ -1626,7 +1620,7 @@ export default function Home() {
                                       updateLine(line.id, 'action', e.target.value);
                                       if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
                                     }}
-                                    className="w-full bg-[#111111] border border-white/10 p-1 text-[8px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
+                                    className="w-full bg-[#111111] border border-white/10 p-1 text-xs font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
                                   >
                                     <option value={line.action}>{line.action || "-- SELECIONE --"}</option>
                                     {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
@@ -1643,7 +1637,7 @@ export default function Home() {
                                 <select
                                   value={line.characterId}
                                   onChange={(e) => updateLine(line.id, 'characterId', e.target.value)}
-                                  className={cn("px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border-none outline-none cursor-pointer",
+                                  className={cn("px-2 py-0.5 text-xs font-black uppercase tracking-widest border-none outline-none cursor-pointer",
                                     line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white" : "bg-white text-black")}
                                 >
                                   {CHARACTERS.map(c => (
@@ -1659,7 +1653,7 @@ export default function Home() {
                                     className="flex items-center gap-1 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-2 py-0.5 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all min-h-[30px] cursor-pointer"
                                   >
                                     <Volume2 size={10} />
-                                    <span className="text-[6px] font-black tracking-widest uppercase">VOZ</span>
+                                    <span className="text-xs font-black tracking-widest uppercase">VOZ</span>
                                   </button>
                                 )}
                               </div>
@@ -1675,7 +1669,7 @@ export default function Home() {
                             {/* TIME COLUMN */}
                             <div className="col-span-1 flex flex-col items-center justify-center pt-2 font-mono">
                               <div className="text-xl font-black text-white/90">{seconds}s</div>
-                              <div className="text-[7px] text-white/40 uppercase tracking-widest mt-1">({frames}f)</div>
+                              <div className="text-xs text-white/60 uppercase tracking-widest mt-1">({frames}f)</div>
                               <div className="mt-4 w-full flex items-center justify-center">
                                 <input
                                   type="range"
@@ -1705,9 +1699,9 @@ export default function Home() {
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF5F1F]/30 to-transparent"></div>
                     <h2 className="text-xl font-black mb-4 tracking-tighter uppercase flex items-center gap-3">
                       <Tv className="text-[#FF5F1F]" size={20} />
-                      EPISODE ARCHIVE <span className="text-[10px] text-[#FF5F1F] bg-[#FF5F1F]/10 px-2 py-0.5 ml-2 font-bold tracking-widest border border-[#FF5F1F]/20">PUBLIC</span>
+                      EPISODE ARCHIVE <span className="text-sm text-[#FF5F1F] bg-[#FF5F1F]/10 px-2 py-0.5 ml-2 font-bold tracking-widest border border-[#FF5F1F]/20">PUBLIC</span>
                     </h2>
-                    <p className="text-xs text-white/40 mb-8 max-w-2xl font-mono uppercase">
+                    <p className="text-xs text-white/60 mb-8 max-w-2xl font-mono uppercase">
                       All generated episodes that have successfully passed the cinematic pipeline and assembled. Stored in Supabase.
                     </p>
                     <LibraryViewer 
@@ -1757,32 +1751,32 @@ export default function Home() {
               <div className="max-w-2xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[20px_20px_0_rgba(255,95,31,0.1)]">
                 <button
                   onClick={() => setSharingLineId(null)}
-                  className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"
+                  className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors"
                 >
                   <Trash2 size={24} />
                 </button>
 
                 <div className="mb-10">
-                  <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-2 uppercase italic">Exporting Beat</span>
+                  <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] block mb-2 uppercase italic">Exporting Beat</span>
                   <h2 className="text-4xl font-black tracking-tighter uppercase italic">Output Channel</h2>
                 </div>
 
                 <div className="bg-black/50 border border-white/5 p-8 mb-6 overflow-hidden relative">
-                  <div className="absolute top-2 right-4 text-[7px] font-black text-white/10 tracking-[0.5em] uppercase">Beat_Buffer_Raw</div>
+                  <div className="absolute top-2 right-4 text-xs font-black text-white/50 tracking-[0.5em] uppercase">Beat_Buffer_Raw</div>
                   <p className="text-lg font-bold text-white/80 leading-relaxed uppercase mb-4">
                     VOICE OVER: &quot;{script.find(l => l.id === sharingLineId)?.text}&quot;
                   </p>
                   <div className="mt-6 pt-6 border-t border-white/5">
-                    <span className="text-[8px] font-black text-[#FF5F1F] tracking-[0.3em] uppercase block mb-2">AI_Video_Prompt_Synthesis</span>
-                    <p className="text-[10px] text-white/40 italic leading-relaxed">
+                    <span className="text-xs font-black text-[#FF5F1F] tracking-[0.3em] uppercase block mb-2">AI_Video_Prompt_Synthesis</span>
+                    <p className="text-sm text-white/60 italic leading-relaxed">
                       {sharingLineId && getDetailedPrompt(script.find(l => l.id === sharingLineId)!, directorIdea, directorSnippet)}
                     </p>
                   </div>
                 </div>
 
                 <div className="mb-10 p-4 border border-[#FF5F1F]/20 bg-[#FF5F1F]/5">
-                  <span className="text-[8px] font-black text-white/40 tracking-[0.2em] uppercase block mb-1">Visual Asset Remote Repository</span>
-                  <a href={dnaFolderUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#FF5F1F] font-bold hover:underline break-all">
+                  <span className="text-xs font-black text-white/60 tracking-[0.2em] uppercase block mb-1">Visual Asset Remote Repository</span>
+                  <a href={dnaFolderUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-[#FF5F1F] font-bold hover:underline break-all">
                     {dnaFolderUrl}
                   </a>
                 </div>
@@ -1790,7 +1784,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => copyToClipboard(script.find(l => l.id === sharingLineId)?.text || "")}
-                    className={cn("px-8 py-5 font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 transition-all duration-300",
+                    className={cn("px-8 py-5 font-black text-xs tracking-widest uppercase flex items-center justify-center gap-4 transition-all duration-300",
                       isCopied ? "bg-green-500 text-white" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white shadow-[8px_8px_0_rgba(255,255,255,0.1)]")}
                   >
                     {isCopied ? <Plus size={18} className="rotate-45" /> : <Copy size={18} />}
@@ -1810,7 +1804,7 @@ export default function Home() {
                         doc.save(`beat-export-${line.id}.pdf`);
                       }
                     }}
-                    className="px-8 py-5 border border-white/10 text-white font-black text-[12px] tracking-widest uppercase flex items-center justify-center gap-4 hover:bg-white/5 transition-all shadow-[8px_8px_0_rgba(255,255,255,0.05)]"
+                    className="px-8 py-5 border border-white/10 text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-4 hover:bg-white/5 transition-all shadow-[8px_8px_0_rgba(255,255,255,0.05)]"
                   >
                     <Download size={18} /> DOWNLOAD BEAT (PDF)
                   </button>
@@ -1847,40 +1841,29 @@ export default function Home() {
 
       {/* ACTION BAR — controles movidos do topo p/ liberar a nav (pedido Felipe 19/07) */}
       <div className="hidden lg:flex w-full z-[60] px-8 py-2.5 bg-[#0a0a0a] border-t-2 border-[#FF5F1F]/40 justify-between items-center gap-6">
-        <div className="hidden xl:flex items-center gap-6 text-right font-mono text-[9px] text-white/30">
-          <div>
-            <span className="block text-white/50 font-bold">GPU_PIPELINE</span>
-            <span className="text-[#FF5F1F] font-black">RTX-4090 // ACTIVE</span>
-          </div>
-          <div>
-            <span className="block text-white/50 font-bold">VRAM_LOAD</span>
-            <span className="text-blue-400 font-black">14.8GB / 24GB</span>
-          </div>
-          <div>
-            <span className="block text-white/50 font-bold">LATENCY</span>
-            <span className="text-green-400 font-black">18ms // OPTIMAL</span>
-          </div>
-        </div>
+        {/* Removida a telemetria GPU_PIPELINE/VRAM_LOAD/LATENCY: era hardcoded (RTX-4090,
+            14.8GB, 18ms) e o render roda no Kling/Replicate, na nuvem — não em GPU local.
+            Os números à direita são reais (derivados do roteiro e do custo estimado). */}
 
         <div className="flex items-center gap-8 ml-auto">
           <div className="flex flex-col items-end border-r border-white/10 pr-8">
-            <span className="text-[10px] text-white/30 tracking-widest uppercase">Total Duration</span>
+            <span className="text-sm text-white/60 tracking-widest uppercase">Total Duration</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black italic">{Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')} <span className="text-[10px] text-white/40 font-bold ml-1">MINS</span></span>
+              <span className="text-sm font-black italic">{Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')} <span className="text-sm text-white/60 font-bold ml-1">MINS</span></span>
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
             </div>
           </div>
 
           <div className="flex flex-col items-end border-r border-white/10 pr-8">
-            <span className="text-[10px] text-white/30 tracking-widest uppercase">Scene Count</span>
+            <span className="text-sm text-white/60 tracking-widest uppercase">Scene Count</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black italic">{script.length} <span className="text-[10px] text-white/40 font-bold ml-1">BLOCKS</span></span>
+              <span className="text-sm font-black italic">{script.length} <span className="text-sm text-white/60 font-bold ml-1">BLOCKS</span></span>
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
             </div>
           </div>
 
           <div className="flex flex-col items-end border-r border-white/10 pr-8">
-            <span className="text-[10px] text-white/30 tracking-widest uppercase">Production Budget</span>
+            <span className="text-sm text-white/60 tracking-widest uppercase">Production Budget</span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black">${totalCost}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-[#FF5F1F]" />
@@ -1891,7 +1874,7 @@ export default function Home() {
             value={renderEngine}
             onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
             disabled={isRenderingProject}
-            className="bg-black/80 border-2 border-white/20 text-[10px] font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
+            className="bg-black/80 border-2 border-white/20 text-sm font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
           >
             <option value="kling">Kling (Replicate)</option>
             <option value="higgsfield" disabled>Higgsfield.ai (not wired to full pipeline)</option>
@@ -1909,19 +1892,14 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="w-full z-[60] px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-[9px] font-black tracking-[0.2em] text-white/20">
+      <footer className="w-full z-[60] px-8 py-3 bg-[#050505] border-t border-white/5 flex justify-between items-center text-xs font-black tracking-[0.2em] text-white/50">
         <div className="flex gap-10">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-1 bg-green-500 rounded-full animate-ping" />
-            ENGINE_STATUS: OPTIMAL
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-1 bg-[#FF5F1F] rounded-full" />
-            RENDER_CORE: TURBOPACK
-          </div>
+          {/* Removidos "ENGINE_STATUS: OPTIMAL" e "RENDER_CORE: TURBOPACK": strings fixas que
+              não liam estado nenhum (e Turbopack é o bundler do Next, não o motor de render).
+              O saldo ElevenLabs abaixo é real — vem de balanceData. */}
           {balanceData?.elevenlabs?.status === 'AUTHENTICATED' && (
             <div className="flex items-center gap-3 border-l border-white/5 pl-10">
-              <span className="text-white/40 uppercase tracking-widest">ElevenLabs_Buffer:</span>
+              <span className="text-white/60 uppercase tracking-widest">ElevenLabs_Buffer:</span>
               <span className="text-[#FF5F1F] uppercase">{balanceData.elevenlabs.balance}</span>
               <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <div
@@ -1933,7 +1911,7 @@ export default function Home() {
           )}
           {balanceData?.replicate?.status === 'AUTHENTICATED' && (
             <div className="flex items-center gap-3 border-l border-white/5 pl-10">
-              <span className="text-white/40 uppercase tracking-widest">Replicate:</span>
+              <span className="text-white/60 uppercase tracking-widest">Replicate:</span>
               <span className="text-green-500 uppercase">ACTIVE_SIGNAL</span>
             </div>
           )}
@@ -1985,14 +1963,14 @@ export default function Home() {
                     download={`BK_STUDIO_RENDER_${cinemaLineId}.mp4`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#FF5F1F] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
+                    className="text-[#FF5F1F] hover:text-white transition-colors flex items-center gap-2 text-sm font-black tracking-widest"
                   >
                     DOWNLOAD_SIGNAL <Download size={16} />
                   </a>
                 )}
                 <button
                   onClick={() => setCinemaLineId(null)}
-                  className="text-white/30 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black tracking-widest"
+                  className="text-white/60 hover:text-white transition-colors flex items-center gap-2 text-sm font-black tracking-widest"
                 >
                   CLOSE_CONSOLE <X size={16} />
                 </button>
@@ -2015,7 +1993,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h3 className="text-3xl font-black tracking-tighter italic text-white uppercase">Synthetic_Preview_Mode</h3>
-                        <p className="text-[10px] text-white/40 font-bold tracking-[0.4em] uppercase">Connect Replicate Token for Real Synthesis</p>
+                        <p className="text-sm text-white/60 font-bold tracking-[0.4em] uppercase">Connect Replicate Token for Real Synthesis</p>
                       </div>
                     </div>
                   )}
@@ -2026,22 +2004,22 @@ export default function Home() {
                   <div className="flex justify-between items-start">
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
-                        <div className="px-3 py-1 bg-[#FF5F1F] text-black text-[10px] font-black uppercase">LIVE_RENDER</div>
-                        <div className="text-[10px] font-black text-white/40 font-mono tracking-widest uppercase italic">00:0{script.find(l => l.id === cinemaLineId)?.durationEst}:00</div>
+                        <div className="px-3 py-1 bg-[#FF5F1F] text-black text-sm font-black uppercase">LIVE_RENDER</div>
+                        <div className="text-sm font-black text-white/60 font-mono tracking-widest uppercase italic">00:0{script.find(l => l.id === cinemaLineId)?.durationEst}:00</div>
                       </div>
                       <div className="h-0.5 w-32 bg-white/10 overflow-hidden">
                         <div className="h-full bg-[#FF5F1F] animate-progress" />
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] block mb-1">Optical_Engine</span>
-                      <span className="text-[12px] font-black text-[#FF5F1F] uppercase italic">{script.find(l => l.id === cinemaLineId)?.shotType}</span>
+                      <span className="text-xs font-black text-white/50 uppercase tracking-[0.5em] block mb-1">Optical_Engine</span>
+                      <span className="text-xs font-black text-[#FF5F1F] uppercase italic">{script.find(l => l.id === cinemaLineId)?.shotType}</span>
                     </div>
                   </div>
 
                   <div className="space-y-6">
                     <div className="max-w-md">
-                      <p className="text-sm font-black text-white/20 uppercase tracking-[0.3em] mb-2">DIALOGUE_OVERRIDE</p>
+                      <p className="text-sm font-black text-white/50 uppercase tracking-[0.3em] mb-2">DIALOGUE_OVERRIDE</p>
                       <p className="text-2xl font-black italic uppercase leading-none text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                         &quot;{script.find(l => l.id === cinemaLineId)?.text}&quot;
                       </p>
@@ -2049,11 +2027,11 @@ export default function Home() {
                     <div className="flex justify-between items-end bg-white/[0.02] border-t border-white/5 p-6 backdrop-blur-md">
                       <div className="flex gap-12">
                         <div>
-                          <span className="text-[8px] font-black text-white/20 uppercase block">Character</span>
+                          <span className="text-xs font-black text-white/50 uppercase block">Character</span>
                           <span className="text-xs font-black text-white">{CHARACTERS.find(c => c.id === script.find(l => l.id === cinemaLineId)?.characterId)?.name.toUpperCase()}</span>
                         </div>
                         <div>
-                          <span className="text-[8px] font-black text-white/20 uppercase block">Motion</span>
+                          <span className="text-xs font-black text-white/50 uppercase block">Motion</span>
                           <span className="text-xs font-black text-white">{script.find(l => l.id === cinemaLineId)?.action}</span>
                         </div>
                       </div>
@@ -2080,7 +2058,7 @@ export default function Home() {
             <div className="max-w-4xl w-full bg-[#0d0d0d] border border-white/10 p-12 relative shadow-[40px_40px_0_rgba(255,95,31,0.05)] flex flex-col max-h-[90vh]">
               <button
                 onClick={() => setActiveFooterModal(null)}
-                className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors flex items-center gap-2 text-sm font-black uppercase tracking-widest"
               >
                 Close_Terminal <X size={20} />
               </button>
@@ -2090,7 +2068,7 @@ export default function Home() {
                   <div className="mb-12">
                     <div className="flex items-center gap-3 mb-2">
                       <BookOpen size={24} className="text-[#FF5F1F]" />
-                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Operations Manual v2.6</span>
+                      <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Operations Manual v2.6</span>
                     </div>
                     <h2 className="text-5xl font-black tracking-tighter uppercase italic">Documentation</h2>
                   </div>
@@ -2098,39 +2076,39 @@ export default function Home() {
                   <div className="flex-1 overflow-y-auto custom-scrollbar space-y-12 pr-6">
                     <section className="space-y-4">
                       <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">01_The_Narrative_Engine</h3>
-                      <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                      <p className="text-sm font-bold text-white/60 leading-relaxed uppercase">
                         The studio utilizes high-velocity LLM synthesis to transform raw &quot;narrative triggers&quot; into structured cinematic beats.
                         Every script line is metadata-rich, containing character identifiers, motion behaviors, and shot dynamics.
                       </p>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
-                          <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Input_Shorthand</span>
-                          <p className="text-[10px] text-white/60 font-medium">Use high-impact verbs. Instead of &quot;Boomer is happy&quot;, use &quot;Boomer celebrates a huge victory&quot;.</p>
+                          <span className="text-xs font-black text-[#FF5F1F] uppercase tracking-widest">Input_Shorthand</span>
+                          <p className="text-sm text-white/60 font-medium">Use high-impact verbs. Instead of &quot;Boomer is happy&quot;, use &quot;Boomer celebrates a huge victory&quot;.</p>
                         </div>
                         <div className="p-6 bg-white/[0.02] border border-white/5 space-y-2">
-                          <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest">Vibe_Modulation</span>
-                          <p className="text-[10px] text-white/60 font-medium">The engine auto-assigns shot types based on character personality (Wide for Boomer energy, CU for Kev deadpan).</p>
+                          <span className="text-xs font-black text-[#FF5F1F] uppercase tracking-widest">Vibe_Modulation</span>
+                          <p className="text-sm text-white/60 font-medium">The engine auto-assigns shot types based on character personality (Wide for Boomer energy, CU for Kev deadpan).</p>
                         </div>
                       </div>
                     </section>
 
                     <section className="space-y-4">
                       <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">02_Character_DNA</h3>
-                      <p className="text-sm font-bold text-white/40 leading-relaxed uppercase">
+                      <p className="text-sm font-bold text-white/60 leading-relaxed uppercase">
                         Characters are defined by their unique DNA profiles. Each character has a specific &quot;Motion Buffer&quot; and &quot;Catchphrase Registry&quot;.
                       </p>
                       <div className="studio-panel p-6 space-y-6 bg-black/40">
                         <div>
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">BOOMER (Alpha_Roo)</span>
-                          <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                          <span className="text-sm font-black text-white/50 uppercase tracking-[0.2em] block mb-2">BOOMER (Alpha_Roo)</span>
+                          <ul className="text-sm text-white/60 space-y-1 font-bold">
                             <li>• High_Energy_Constraint: ACTIVE</li>
                             <li>• Boxing_Glove_Asset: MANDATORY</li>
                             <li>• Speech_Velocity: 1.5x</li>
                           </ul>
                         </div>
                         <div>
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-2">KEV (Deadpan_Koala)</span>
-                          <ul className="text-[10px] text-white/60 space-y-1 font-bold">
+                          <span className="text-sm font-black text-white/50 uppercase tracking-[0.2em] block mb-2">KEV (Deadpan_Koala)</span>
+                          <ul className="text-sm text-white/60 space-y-1 font-bold">
                             <li>• Kinetic_Damping: 100%</li>
                             <li>• Sarcasm_Multiplier: INFINITE</li>
                             <li>• Eucalyptus_Dependency: HIGH</li>
@@ -2144,7 +2122,7 @@ export default function Home() {
                         <ShieldCheck size={20} className="text-[#FF5F1F]" />
                         <h4 className="text-xs font-black uppercase text-[#FF5F1F] tracking-widest">Production_Protocol_Clearance</h4>
                       </div>
-                      <p className="text-[11px] font-bold text-white/80 leading-relaxed uppercase italic">
+                      <p className="text-sm font-bold text-white/80 leading-relaxed uppercase italic">
                         All generated video assets are temporary biological references. For high-fidelity final renders,
                         use the &quot;Export Beat&quot; function to download the prompt manifest for professional AI video workstations (Kling, Wan, LTX).
                       </p>
@@ -2159,14 +2137,14 @@ export default function Home() {
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <Key size={24} className="text-[#FF5F1F]" />
-                        <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">External Signal Authentication</span>
+                        <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase">External Signal Authentication</span>
                       </div>
                       <h2 className="text-5xl font-black tracking-tighter uppercase italic">API Settings</h2>
                     </div>
                     <button
                       onClick={() => refreshBalance()}
                       disabled={isCheckingBalance}
-                      className="flex items-center gap-2 px-4 py-2 border border-white/10 text-[8px] font-black uppercase tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all"
+                      className="flex items-center gap-2 px-4 py-2 border border-white/10 text-xs font-black uppercase tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all"
                     >
                       <RefreshCcw size={12} className={cn(isCheckingBalance && "animate-spin")} />
                       Refresh_Signal_Stats
@@ -2176,19 +2154,19 @@ export default function Home() {
                   <div className="space-y-10">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                          Replicate_API_Token <Info size={12} className="text-white/20" />
+                        <label className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                          Replicate_API_Token <Info size={12} className="text-white/50" />
                         </label>
                         <div className="flex items-center gap-3">
                           {balanceData?.replicate && (
                             <span className={cn(
-                              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                              "text-xs font-black uppercase tracking-widest px-2 py-0.5 border",
                               balanceData.replicate.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
                             )}>
                               {balanceData.replicate.status}: {balanceData.replicate.balance}
                             </span>
                           )}
-                          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Network: KLING_V2.6_SDK</span>
+                          <span className="text-xs font-black text-white/50 uppercase tracking-widest">Network: KLING_V2.6_SDK</span>
                         </div>
                       </div>
                       <div className="relative group">
@@ -2204,26 +2182,26 @@ export default function Home() {
                           placeholder="R8_********************************"
                           className="w-full bg-black/40 border border-white/5 p-6 font-mono text-sm text-white/60 focus:border-[#FF5F1F] focus:text-[#FF5F1F] transition-all outline-none"
                         />
-                        <Key className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#FF5F1F] transition-colors" size={20} />
+                        <Key className="absolute right-6 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-[#FF5F1F] transition-colors" size={20} />
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                          ElevenLabs_API_Key <Info size={12} className="text-white/20" />
+                        <label className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                          ElevenLabs_API_Key <Info size={12} className="text-white/50" />
                         </label>
                         <div className="flex items-center gap-3">
                           {balanceData?.elevenlabs && (
                             <div className="flex items-center gap-4">
                               <span className={cn(
-                                "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border",
+                                "text-xs font-black uppercase tracking-widest px-2 py-0.5 border",
                                 balanceData.elevenlabs.status === 'AUTHENTICATED' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10"
                               )}>
                                 {balanceData.elevenlabs.status}
                               </span>
                               <div className="flex flex-col items-end">
-                                <span className="text-[8px] font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
+                                <span className="text-xs font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
                                 {balanceData.elevenlabs.percent !== undefined && (
                                   <div className="w-24 h-1 bg-white/5 mt-1">
                                     <div className="h-full bg-[#FF5F1F]" style={{ width: `${balanceData.elevenlabs.percent}%` }} />
@@ -2253,10 +2231,10 @@ export default function Home() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <BrainCircuit size={18} className="text-[#FF5F1F]" />
-                          <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">Gemini_Neural_Core</span>
+                          <span className="text-sm font-black text-white/60 tracking-[0.4em] uppercase">Gemini_Neural_Core</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-white/5 text-[8px] font-black text-white/40 uppercase">GEMINI_1.5_FLASH</span>
+                          <span className="px-2 py-0.5 bg-white/5 text-xs font-black text-white/60 uppercase">GEMINI_1.5_FLASH</span>
                         </div>
                       </div>
                       <input
@@ -2273,10 +2251,10 @@ export default function Home() {
                     </div>
 
                     <div className="p-8 bg-white/[0.01] border border-white/5 flex items-start gap-4">
-                      <ShieldCheck size={24} className="text-white/20 mt-1" />
+                      <ShieldCheck size={24} className="text-white/50 mt-1" />
                       <div>
-                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Security_Notice</p>
-                        <p className="text-[9px] font-bold text-white/20 leading-relaxed uppercase">
+                        <p className="text-sm font-black text-white/60 uppercase tracking-widest mb-1">Security_Notice</p>
+                        <p className="text-xs font-bold text-white/50 leading-relaxed uppercase">
                           Keys are stored locally in your browser&apos;s persistent storage. We never transmit these tokens to our central server.
                           Signal is encrypted during biological transmission.
                         </p>
@@ -2291,7 +2269,7 @@ export default function Home() {
                   <div className="mb-12">
                     <div className="flex items-center gap-3 mb-2">
                       <MessageSquare size={24} className="text-[#FF5F1F]" />
-                      <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Human-Agent Hybrid Interface</span>
+                      <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Human-Agent Hybrid Interface</span>
                     </div>
                     <h2 className="text-5xl font-black tracking-tighter uppercase italic">Support Channel</h2>
                   </div>
@@ -2299,7 +2277,7 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-12 flex-1 min-h-0">
                     <div className="space-y-10">
                       <div className="space-y-4">
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Operational_Status</span>
+                        <span className="text-sm font-black text-white/50 uppercase tracking-widest block">Operational_Status</span>
                         <div className="grid grid-cols-1 gap-1">
                           {[
                             { label: 'Narrative_Engine', status: 'Optimal', color: '#22c55e' },
@@ -2308,50 +2286,27 @@ export default function Home() {
                             { label: 'Regional_Trends_Signal', status: 'Stable', color: '#22c55e' }
                           ].map((node, i) => (
                             <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5">
-                              <span className="text-[10px] font-black text-white/60 uppercase">{node.label}</span>
+                              <span className="text-sm font-black text-white/60 uppercase">{node.label}</span>
                               <div className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.color }} />
-                                <span className="text-[8px] font-black uppercase" style={{ color: node.color }}>{node.status}</span>
+                                <span className="text-xs font-black uppercase" style={{ color: node.color }}>{node.status}</span>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      <div className="p-8 bg-[#FF5F1F] text-black space-y-4">
-                        <h4 className="text-sm font-black uppercase tracking-tight italic">Emergency_Down_Under_Line</h4>
-                        <p className="text-[10px] font-black leading-tight uppercase">
-                          Having issues with the Roo? Koala not deadpan enough? Our tactical response team is on standby.
-                        </p>
-                        <button className="w-full bg-black text-white py-4 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-                          Initiate_High_Velocity_Support
-                        </button>
-                      </div>
+                      {/* Removido o card de suporte: o botão não tinha onClick — parecia clicável
+                          e não fazia nada. Volta quando existir um canal de contato real. */}
                     </div>
 
                     <div className="space-y-8">
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block">Tactical_Channels</span>
-                      <div className="space-y-3">
-                        {[
-                          { label: 'Engine_Updates', channel: 'Discord_Terminal', icon: <ChevronRight size={14} /> },
-                          { label: 'Directorial_Hacks', channel: 'YouTube_Central', icon: <ExternalLink size={14} /> },
-                          { label: 'Studio_Vlog', channel: 'Instagram_Feed', icon: <ExternalLink size={14} /> }
-                        ].map((channel, i) => (
-                          <button key={i} className="w-full group/channel flex items-center justify-between p-6 border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/20 transition-all">
-                            <div className="text-left">
-                              <span className="text-[8px] font-black text-[#FF5F1F] uppercase tracking-widest block mb-1">{channel.label}</span>
-                              <span className="text-xs font-black text-white uppercase group-hover/channel:text-[#FF5F1F] transition-colors">{channel.channel}</span>
-                            </div>
-                            <div className="text-white/10 group-hover/channel:text-white transition-colors">
-                              {channel.icon}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                      {/* Removidos os 3 "Tactical_Channels": botões sem onClick e sem URL de
+                          destino. Voltam quando existirem os links reais (Discord/YouTube/Instagram). */}
 
                       <div className="p-6 border border-white/5 opacity-20">
-                        <span className="text-[7px] font-black text-white uppercase tracking-[0.5em] block mb-4">Diagnostic_Packet_0101</span>
-                        <div className="font-mono text-[7px] text-white/60 break-all">
+                        <span className="text-xs font-black text-white uppercase tracking-[0.5em] block mb-4">Diagnostic_Packet_0101</span>
+                        <div className="font-mono text-xs text-white/60 break-all">
                           UA: {typeof window !== 'undefined' ? window.navigator.userAgent : 'SERVER_NODE'}
                           <br />REF: {typeof window !== 'undefined' ? window.location.origin : 'BK_STUDIO'}
                         </div>
@@ -2367,7 +2322,7 @@ export default function Home() {
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <ShieldCheck size={24} className="text-[#FF5F1F]" />
-                        <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Tactical_Legal_Compliance_Agent</span>
+                        <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Tactical_Legal_Compliance_Agent</span>
                       </div>
                       <h2 className="text-5xl font-black tracking-tighter uppercase italic">Scenario Compliance Scanner</h2>
                     </div>
@@ -2387,7 +2342,7 @@ export default function Home() {
                               }}
                               className="accent-[#FF5F1F]"
                             />
-                            <span className="text-[10px] font-black text-white">{country}</span>
+                            <span className="text-sm font-black text-white">{country}</span>
                           </label>
                         ))}
                       </div>
@@ -2413,8 +2368,8 @@ export default function Home() {
                   <div className="flex-1 overflow-y-auto pr-4 space-y-8 min-h-0">
                     {!complianceReport && !isScanningCompliance && (
                       <div className="p-12 border-2 border-dashed border-white/10 text-center space-y-4">
-                        <p className="text-sm font-bold text-white/40 uppercase">Ready to scan the active script for defamation, right of publicity, and brand trademark risks.</p>
-                        <p className="text-[10px] text-white/20 font-bold uppercase leading-relaxed">
+                        <p className="text-sm font-bold text-white/60 uppercase">Ready to scan the active script for defamation, right of publicity, and brand trademark risks.</p>
+                        <p className="text-sm text-white/50 font-bold uppercase leading-relaxed">
                           Checks against: Australian Defamation Act, US right of publicity (unauthorized synthetic likeness), EU AI Act transparency/watermarking obligations, and global trademark protections.
                         </p>
                       </div>
@@ -2424,7 +2379,7 @@ export default function Home() {
                       <div className="p-12 border border-white/5 bg-white/[0.01] text-center space-y-4 animate-pulse">
                         <div className="w-10 h-10 border-4 border-[#FF5F1F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                         <p className="text-sm font-black text-white uppercase tracking-widest">Scanning scripts against international laws...</p>
-                        <p className="text-[10px] text-white/40 font-mono uppercase">Evaluating 2026 court precedents & synthetic media guidelines</p>
+                        <p className="text-sm text-white/60 font-mono uppercase">Evaluating 2026 court precedents & synthetic media guidelines</p>
                       </div>
                     )}
 
@@ -2438,11 +2393,11 @@ export default function Home() {
                           "bg-green-500/10 border-green-500 text-green-500"
                         )}>
                           <div>
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] block mb-1">Overall_Litiation_Risk</span>
+                            <span className="text-xs font-black uppercase tracking-[0.4em] block mb-1">Overall_Litiation_Risk</span>
                             <span className="text-3xl font-black italic tracking-tighter uppercase">{complianceReport.overallRisk} RISK LEVEL</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[9px] font-black uppercase tracking-widest block mb-1">EU AI Act Labeling:</span>
+                            <span className="text-xs font-black uppercase tracking-widest block mb-1">EU AI Act Labeling:</span>
                             <span className={cn(
                               "px-3 py-1 text-xs font-black uppercase border",
                               complianceReport.watermarkingRequired ? "bg-red-500 text-black border-red-500" : "bg-green-500/10 text-green-500 border-green-500/30"
@@ -2454,9 +2409,9 @@ export default function Home() {
 
                         {/* List of Flags */}
                         <div className="space-y-4">
-                          <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Compliance Flags & Warnings</span>
+                          <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Compliance Flags & Warnings</span>
                           {complianceReport.flags.length === 0 ? (
-                            <div className="p-6 bg-white/[0.01] border border-white/5 text-center text-xs font-bold text-white/40 uppercase">
+                            <div className="p-6 bg-white/[0.01] border border-white/5 text-center text-xs font-bold text-white/60 uppercase">
                               🎉 No compliance flags detected! The script appears clean of target litigation risks.
                             </div>
                           ) : (
@@ -2464,20 +2419,20 @@ export default function Home() {
                               {complianceReport.flags.map((flag, idx) => (
                                 <div key={idx} className="p-6 bg-[#0c0c0e] border border-white/5 flex gap-6 items-start">
                                   <div className={cn(
-                                    "px-3 py-1.5 text-[10px] font-black uppercase border text-center min-w-[120px]",
+                                    "px-3 py-1.5 text-sm font-black uppercase border text-center min-w-[120px]",
                                     flag.riskLevel === 'HIGH' ? "border-red-500 text-red-500 bg-red-500/5" :
                                     flag.riskLevel === 'MEDIUM' ? "border-yellow-500 text-yellow-500 bg-yellow-500/5" :
                                     "border-green-500 text-green-500 bg-green-500/5"
                                   )}>
                                     {flag.category}
-                                    <span className="block text-[8px] font-bold opacity-60">RISK: {flag.riskLevel}</span>
+                                    <span className="block text-xs font-bold opacity-60">RISK: {flag.riskLevel}</span>
                                   </div>
                                   <div className="flex-1 space-y-2">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-black text-white uppercase">{flag.description}</span>
-                                      <span className="px-2 py-0.5 bg-white/5 border border-white/15 text-[8px] font-black text-[#FF5F1F] uppercase">{flag.targetCountry}</span>
+                                      <span className="px-2 py-0.5 bg-white/5 border border-white/15 text-xs font-black text-[#FF5F1F] uppercase">{flag.targetCountry}</span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-white/40 leading-relaxed uppercase">
+                                    <p className="text-sm font-bold text-white/60 leading-relaxed uppercase">
                                       💡 <span className="text-white/60">Recommendation:</span> {flag.recommendation}
                                     </p>
                                   </div>
@@ -2491,13 +2446,13 @@ export default function Home() {
                         {complianceReport.suggestedDisclaimer && (
                           <div className="space-y-3 bg-[#111] border border-white/10 p-6">
                             <div className="flex justify-between items-center">
-                              <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">Required Video Satire / AI Disclaimer</span>
+                              <span className="text-xs font-black text-white/60 tracking-widest uppercase">Required Video Satire / AI Disclaimer</span>
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(complianceReport.suggestedDisclaimer);
-                                  alert("Disclaimer copiado com sucesso!");
+                                  toast.success('Disclaimer copied to clipboard.');
                                 }}
-                                className="text-[8px] font-black text-[#FF5F1F] uppercase hover:underline"
+                                className="text-xs font-black text-[#FF5F1F] uppercase hover:underline"
                               >
                                 [Copy Disclaimer]
                               </button>
@@ -2513,7 +2468,7 @@ export default function Home() {
                           <div className="p-12 border border-white/5 bg-white/[0.01] text-center space-y-4 animate-pulse">
                             <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                             <p className="text-sm font-black text-white uppercase tracking-widest">Risk Agent Communicating with Attorney Agent...</p>
-                            <p className="text-[10px] text-white/40 font-mono uppercase">Negotiating fine print & drafting platform strike bypasses</p>
+                            <p className="text-sm text-white/60 font-mono uppercase">Negotiating fine print & drafting platform strike bypasses</p>
                           </div>
                         )}
 
@@ -2522,7 +2477,7 @@ export default function Home() {
                           <div className="border-2 border-yellow-400 p-6 bg-yellow-400/5 space-y-8 animate-in fade-in duration-300">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
                               <div>
-                                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] block mb-1">Risk_Mitigation_Bypass_Strategy</span>
+                                <span className="text-xs font-black text-yellow-400 uppercase tracking-[0.4em] block mb-1">Risk_Mitigation_Bypass_Strategy</span>
                                 <h3 className="text-2xl font-black uppercase italic text-yellow-400">Tactical Safe-Pass Blueprint</h3>
                               </div>
                               <button
@@ -2535,7 +2490,7 @@ export default function Home() {
 
                             {/* Platform Strike Risk Meters */}
                             <div className="space-y-4">
-                              <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Estudo de Risco por Plataforma (Strikes)</span>
+                              <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Estudo de Risco por Plataforma (Strikes)</span>
                               <div className="grid grid-cols-3 gap-6">
                                 {[
                                   { label: 'TikTok', risk: mitigationReport.platformStrikeRisk.tiktok, color: '#00f2fe' },
@@ -2544,7 +2499,7 @@ export default function Home() {
                                 ].map((p, i) => (
                                   <div key={i} className="bg-black/60 border border-white/5 p-4 flex flex-col justify-between">
                                     <div className="flex justify-between items-baseline mb-2">
-                                      <span className="text-[10px] font-black text-white">{p.label.toUpperCase()}</span>
+                                      <span className="text-sm font-black text-white">{p.label.toUpperCase()}</span>
                                       <span className="text-xs font-black font-mono" style={{ color: p.color }}>{p.risk}%</span>
                                     </div>
                                     <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
@@ -2558,16 +2513,16 @@ export default function Home() {
                             {/* Loophole Strategy & Tricks */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                               <div className="space-y-3">
-                                <span className="text-[9px] font-black text-white/40 tracking-widest uppercase block">Loophole / Fine Print Analysis</span>
+                                <span className="text-xs font-black text-white/60 tracking-widest uppercase block">Loophole / Fine Print Analysis</span>
                                 <p className="text-xs font-bold leading-relaxed text-white/80 uppercase">
                                   {mitigationReport.loopholeStrategy}
                                 </p>
                               </div>
                               <div className="space-y-3">
-                                <span className="text-[9px] font-black text-white/40 tracking-widest uppercase block">Required Audio/Visual Hacks</span>
+                                <span className="text-xs font-black text-white/60 tracking-widest uppercase block">Required Audio/Visual Hacks</span>
                                 <div className="grid grid-cols-1 gap-1">
                                   {mitigationReport.requiredProductionTricks.map((trick, i) => (
-                                    <div key={i} className="p-3 bg-black/40 border border-white/5 text-[10px] font-bold text-yellow-400 uppercase">
+                                    <div key={i} className="p-3 bg-black/40 border border-white/5 text-sm font-bold text-yellow-400 uppercase">
                                       ⚠️ {trick}
                                     </div>
                                   ))}
@@ -2577,19 +2532,19 @@ export default function Home() {
 
                             {/* Modified script comparison preview */}
                             <div className="space-y-4 pt-4 border-t border-white/10">
-                              <span className="text-[10px] font-black text-white/40 tracking-widest uppercase block">Surgical Script Bypass Changes</span>
+                              <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Surgical Script Bypass Changes</span>
                               <div className="space-y-2">
                                 {mitigationReport.modifiedScript.map((line, idx) => {
                                   const originalText = script.find(ol => ol.id === line.id)?.text || '';
                                   const isChanged = originalText !== line.text;
                                   return (
                                     <div key={line.id} className={cn(
-                                      "p-4 border text-[11px] font-mono leading-tight",
-                                      isChanged ? "bg-yellow-400/10 border-yellow-400 text-yellow-200" : "bg-black/30 border-white/5 text-white/40"
+                                      "p-4 border text-sm font-mono leading-tight",
+                                      isChanged ? "bg-yellow-400/10 border-yellow-400 text-yellow-200" : "bg-black/30 border-white/5 text-white/60"
                                     )}>
                                       <div className="flex justify-between items-center mb-1">
                                         <span className="font-black text-[#FF5F1F]">{line.characterId.toUpperCase()}</span>
-                                        {isChanged && <span className="text-[8px] font-black uppercase text-yellow-400 border border-yellow-400 px-1 py-0.5 animate-pulse">MODIFIED FOR BYPASS</span>}
+                                        {isChanged && <span className="text-xs font-black uppercase text-yellow-400 border border-yellow-400 px-1 py-0.5 animate-pulse">MODIFIED FOR BYPASS</span>}
                                       </div>
                                       {isChanged && (
                                         <div className="text-red-400 line-through mb-1 opacity-60">
@@ -2622,14 +2577,14 @@ export default function Home() {
 function ClockInput({ value, onChange }: { value: number, onChange: (val: number) => void }) {
   return (
     <div className="flex items-center gap-3 bg-[#111111] border border-white/10 px-4 py-2 hover:border-[#FF5F1F] transition-all group/clock">
-      <span className="text-[9px] font-black text-white/20 uppercase">Dur</span>
+      <span className="text-xs font-black text-white/50 uppercase">Dur</span>
       <input
         type="number"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-10 bg-transparent text-xs font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-right"
       />
-      <span className="text-[9px] font-black text-white/20 uppercase">Sec</span>
+      <span className="text-xs font-black text-white/50 uppercase">Sec</span>
     </div>
   );
 }

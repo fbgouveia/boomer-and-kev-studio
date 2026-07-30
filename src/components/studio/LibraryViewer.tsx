@@ -4,6 +4,7 @@ import { Play, Download, Calendar, Loader2, RefreshCw, Trash2, Search, X, Code2,
 import { cn } from '@/lib/utils';
 import { ScriptLine } from '@/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
 
 interface Episode {
   id: string;
@@ -78,7 +79,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
   if (episodes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 border border-white/5 bg-black/50">
-        <p className="text-xs font-mono uppercase tracking-widest text-white/40">No assembled episodes found in the archive.</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-white/60">No assembled episodes found in the archive.</p>
       </div>
     );
   }
@@ -90,19 +91,19 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-grow md:flex-grow-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={14} className="text-white/40" />
+              <Search size={14} className="text-white/60" />
             </div>
             <input
               type="text"
               placeholder="SEARCH EPISODES..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-64 bg-white/5 border border-white/10 text-white text-xs px-10 py-2 focus:outline-none focus:border-[#FF5F1F]/50 uppercase placeholder:text-white/20"
+              className="w-full md:w-64 bg-white/5 border border-white/10 text-white text-xs px-10 py-2 focus:outline-none focus:border-[#FF5F1F]/50 uppercase placeholder:text-white/50"
             />
           </div>
           <button 
             onClick={fetchEpisodes}
-            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#FF5F1F]/20 border border-white/10 hover:border-[#FF5F1F] transition-colors text-[10px] font-black uppercase tracking-widest text-[#FF5F1F]"
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#FF5F1F]/20 border border-white/10 hover:border-[#FF5F1F] transition-colors text-sm font-black uppercase tracking-widest text-[#FF5F1F]"
           >
             <RefreshCw size={14} className={cn(isLoading && "animate-spin")} />
             Refresh Sync
@@ -122,14 +123,14 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs font-mono text-white/20">NO_VIDEO_SIGNAL</span>
+                <span className="text-xs font-mono text-white/50">NO_VIDEO_SIGNAL</span>
               </div>
             )}
           </div>
           
           <div className="p-4 flex flex-col flex-grow min-w-0">
             <h3 className="font-black text-sm mb-2 uppercase line-clamp-2 truncate whitespace-normal">{ep.topic || "Untitled Transmission"}</h3>
-            <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono mb-4">
+            <div className="flex items-center gap-2 text-sm text-white/60 font-mono mb-4">
               <Calendar size={12} />
               <span>{new Date(ep.created_at).toLocaleDateString()}</span>
             </div>
@@ -139,14 +140,14 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                 href={ep.video_url} 
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 hover:bg-[#FF5F1F]/20 border border-white/10 hover:border-[#FF5F1F] transition-colors text-[10px] font-black uppercase tracking-widest"
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 hover:bg-[#FF5F1F]/20 border border-white/10 hover:border-[#FF5F1F] transition-colors text-sm font-black uppercase tracking-widest"
               >
                 <Download size={12} />
                 DL
               </a>
               <button
                 onClick={(e) => { e.stopPropagation(); deleteEpisode(ep.id); }}
-                className="flex items-center justify-center px-3 py-2 bg-black hover:bg-red-900/50 border border-white/10 hover:border-red-500/50 transition-colors text-white/40 hover:text-red-500"
+                className="flex items-center justify-center px-3 py-2 bg-black hover:bg-red-900/50 border border-white/10 hover:border-red-500/50 transition-colors text-white/60 hover:text-red-500"
                 title="Delete Episode"
               >
                 <Trash2 size={12} />
@@ -167,9 +168,9 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
             {/* Modal Header */}
             <div className="flex justify-between items-center p-4 border-b border-white/10 bg-white/5">
               <h2 className="text-lg font-black uppercase tracking-tighter text-[#FF5F1F]">
-                Episode X-Ray <span className="text-white/40 font-mono text-xs ml-2">[{selectedEpisode.id.split('-')[0]}]</span>
+                Episode X-Ray <span className="text-white/60 font-mono text-xs ml-2">[{selectedEpisode.id.split('-')[0]}]</span>
               </h2>
-              <button onClick={() => setSelectedEpisode(null)} className="text-white/40 hover:text-white p-2">
+              <button onClick={() => setSelectedEpisode(null)} className="text-white/60 hover:text-white p-2">
                 <X size={20} />
               </button>
             </div>
@@ -188,7 +189,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                 
                 <div className="p-4 flex-grow flex flex-col gap-2 bg-white/5">
                   <h3 className="font-black text-sm uppercase">{selectedEpisode.topic || "Untitled"}</h3>
-                  <div className="text-[10px] font-mono text-white/40 mb-4">{new Date(selectedEpisode.created_at).toLocaleString()}</div>
+                  <div className="text-sm font-mono text-white/60 mb-4">{new Date(selectedEpisode.created_at).toLocaleString()}</div>
                   
                   {onRemix && (
                     <button 
@@ -213,7 +214,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                     <h4 className="font-black text-xs uppercase tracking-widest">Director's Concept</h4>
                   </div>
                   <div className="bg-white/5 border border-white/10 p-4 font-mono text-xs text-white/70">
-                    <p><span className="text-white/40">Topic:</span> {selectedEpisode.director_idea || selectedEpisode.topic}</p>
+                    <p><span className="text-white/60">Topic:</span> {selectedEpisode.director_idea || selectedEpisode.topic}</p>
                     {selectedEpisode.director_snippet && (
                       <p className="mt-2 text-white/90">"{selectedEpisode.director_snippet}"</p>
                     )}
@@ -234,7 +235,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                               "font-black uppercase text-xs",
                               line.characterId === 'boomer' ? 'text-[#FF5F1F]' : 'text-[#00f2fe]'
                             )}>{line.characterId}</span>
-                            <span className="text-[10px] font-mono text-white/40">[{line.shotType}]</span>
+                            <span className="text-sm font-mono text-white/60">[{line.shotType}]</span>
                           </div>
                           <p className="text-sm font-medium text-white mb-2 leading-relaxed">"{line.text}"</p>
                           {line.action && (
@@ -248,7 +249,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                           {/* Technical Breakdown Expander */}
                           <button 
                             onClick={() => setExpandedSceneIdx(expandedSceneIdx === idx ? null : idx)}
-                            className="mt-3 flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-[#FF5F1F] transition-colors"
+                            className="mt-3 flex items-center gap-1 text-sm font-mono text-white/60 hover:text-[#FF5F1F] transition-colors"
                           >
                             {expandedSceneIdx === idx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                             {expandedSceneIdx === idx ? 'HIDE TECHNICAL DATA' : 'VIEW TECHNICAL DATA'}
@@ -258,21 +259,21 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                             <div className="mt-3 p-3 bg-black/50 border border-white/5 space-y-2">
                               {line.technicalPrompt ? (
                                 <div>
-                                  <div className="text-[9px] text-[#FF5F1F] font-black uppercase mb-1">Engine Prompt</div>
-                                  <p className="text-[10px] font-mono text-white/60 leading-tight">{line.technicalPrompt}</p>
+                                  <div className="text-xs text-[#FF5F1F] font-black uppercase mb-1">Engine Prompt</div>
+                                  <p className="text-sm font-mono text-white/60 leading-tight">{line.technicalPrompt}</p>
                                 </div>
                               ) : (
-                                <div className="text-[10px] font-mono text-white/30 italic">No prompt data available.</div>
+                                <div className="text-sm font-mono text-white/60 italic">No prompt data available.</div>
                               )}
                               
                               <div className="flex gap-4 pt-2 border-t border-white/5">
                                 <div>
-                                  <div className="text-[9px] text-white/40 font-black uppercase mb-1">Duration</div>
-                                  <div className="text-[10px] font-mono text-white/80">{line.durationEst}s</div>
+                                  <div className="text-xs text-white/60 font-black uppercase mb-1">Duration</div>
+                                  <div className="text-sm font-mono text-white/80">{line.durationEst}s</div>
                                 </div>
                                 <div>
-                                  <div className="text-[9px] text-white/40 font-black uppercase mb-1">Emotion</div>
-                                  <div className="text-[10px] font-mono text-white/80">{line.emotion}</div>
+                                  <div className="text-xs text-white/60 font-black uppercase mb-1">Emotion</div>
+                                  <div className="text-sm font-mono text-white/80">{line.emotion}</div>
                                 </div>
                               </div>
                             </div>
@@ -280,7 +281,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                         </div>
                       ))
                     ) : (
-                      <div className="text-white/40 font-mono text-xs p-4 bg-white/5 border border-white/10">
+                      <div className="text-white/60 font-mono text-xs p-4 bg-white/5 border border-white/10">
                         No script data found in this archive record.
                       </div>
                     )}
@@ -291,9 +292,9 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                           onClick={() => {
                             const textToCopy = selectedEpisode.script_json!.map(l => `${l.characterId.toUpperCase()}: ${l.text}`).join('\n\n');
                             navigator.clipboard.writeText(textToCopy);
-                            alert('Script copied to clipboard!');
+                            toast.success('Script copied to clipboard.');
                           }}
-                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest"
+                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-sm font-black uppercase tracking-widest"
                         >
                           Copy Script
                         </button>
@@ -309,7 +310,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                             document.body.removeChild(a);
                             URL.revokeObjectURL(url);
                           }}
-                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest"
+                          className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors text-sm font-black uppercase tracking-widest"
                         >
                           Download JSON Data
                         </button>

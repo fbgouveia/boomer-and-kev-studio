@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-27 AEST (v4.0)
+# Boomer & Kev Studio | Atualizado: 2026-07-30 AEST (v5.0)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -50,6 +50,86 @@
 | `src/data/radar.json` | Banco de benchmarks do mercado |
 | `next.config.ts` | Config Next.js (`output: 'standalone'`) |
 | `.env.local` | Chaves de API (dev local) |
+
+---
+
+## 🎨 SESSÃO 30/07/2026 — AUDITORIA DE UI/UX + FASE 1 DA REFATORAÇÃO
+
+**Contexto:** Felipe apontou que a interface é o que trava o lançamento — sem confiança de que
+todos os botões funcionam, copy sem linguagem clara para usuário final, UX/UI ruim, e a
+preocupação de fundo de exportar como white-label. Pedido: medir tudo e refatorar.
+
+### 📊 Medição da interface (números reais, não impressão)
+
+| Eixo | Achado medido |
+|---|---|
+| Tipografia | **345** ocorrências entre 5px e 11px; apenas 3 em 12px. Interface inteira abaixo do piso legível |
+| Contraste | **223** violações WCAG AA sobre `#000`: `white/20` = 1.66:1, `white/30` = 2.45:1, `white/40` = 3.66:1. O laranja `#FF5F1F` passa (6.91:1) |
+| Feedback | **9** `alert()` nativos como sistema de erro/sucesso |
+| Botões mortos | 2 sem `onClick` (suporte + 3 canais sociais) |
+| Idioma | Labels EN + erros PT no mesmo fluxo |
+| Monolito | `app/page.tsx` com **2.635 linhas**, 6 abas dentro |
+| Nav | Arrays duplicados mobile/desktop com **ícones divergentes** para a mesma aba |
+| White-label | **265** referências hardcoded a Boomer/Kev/Aussie/Roo/Koala em `.ts`/`.tsx` |
+
+### 🚨 Descoberta grave: métricas inventadas na UI
+
+A barra de status exibia telemetria **hardcoded**, violando a lei de honestidade do CLAUDE.md:
+`RTX-4090 // ACTIVE`, `VRAM_LOAD 14.8GB / 24GB`, `LATENCY 18ms // OPTIMAL`,
+`Confidence: 98.4%`, `ENGINE_STATUS: OPTIMAL`, `RENDER_CORE: TURBOPACK`.
+Não existe GPU local — o render roda no Kling/Replicate, na nuvem. Turbopack é o bundler do
+Next, não motor de render. Numa demo white-label isso é um comprador técnico derrubando o
+produto em 30 segundos. **Tudo removido.** Métricas reais mantidas (duração, contagem de
+cenas, custo estimado, saldo ElevenLabs via `balanceData`).
+
+A rota `/admin` inteira era falsa: cenas hardcoded, `handleDownloadAssets()` e
+`handleGenerateLocalTTS()` que só chamavam `alert()` descrevendo trabalho que não acontecia,
+amarelo `#DFE104` violando o design system, e texto afirmando "montagem final é 100% MANUAL no
+Adobe Premiere" — contradizendo o produto. Era órfã (nada linkava). **Removida.**
+
+### ✅ Fase 1 executada (mecânica, sem decisão de design pendente)
+
+- Piso tipográfico de 12px (`text-xs`) + degrau de 14px (`text-sm`) — zero abaixo de 12px
+- Contraste: `white/10,/20`→`/50` (5.32:1); `/30,/40`→`/60` (7.37:1) — zero reprovações
+- `src/components/ui/Toast.tsx` **novo** (~70 linhas, sem dependência nova — ponytail):
+  auto-dismiss 5s, `aria-live="polite"`, ícone + cor (nunca só cor), `role="alert"` em erro.
+  Montado no `layout.tsx`. Substituiu os 9 `alert()`
+- Mensagens de erro traduzidas para inglês com **causa + caminho de recuperação**
+- `TABS` como fonte única das abas (corrige ícones divergentes mobile/desktop)
+- Rótulo visível no textarea principal (antes só placeholder)
+- 4 imports órfãos criados pela mudança, removidos
+
+**Verificação real:** `tsc --noEmit` limpo · build compila · **25/25 testes** · dev server
+inspecionado em 1440px e 375px, `hasHorizontalScroll: false`. Ganho lateral: sem a telemetria
+falsa, as métricas reais pararam de quebrar em duas linhas.
+
+**Limite da verificação:** só as telas que renderizam sem autenticar em serviço externo foram
+navegadas. Production/Library/Engine DNA/Studio Labs/Radar receberam as mesmas mudanças
+mecânicas e compilam, mas **não foram inspecionadas visualmente aba por aba**.
+
+### 🔴 Pendências desta frente
+
+1. **Fase 2 (white-label de verdade):** hex cru → tokens semânticos + migrar os 265 hardcodes
+   para consumir `src/data/characters.ts`. A fundação existe: o tipo `Character` já é bem
+   modelado (voz, motion, wardrobe, âncora). É migração, não arquitetura nova. Ver [[white-label-vision]].
+2. **Fase 3 (copy/IA):** renomear abas para linguagem de usuário — `ENGINE DNA` não diz a um
+   comprador que é ali que se configuram os personagens. Idioma definido: **inglês só**.
+3. **Fase 4:** quebrar o monolito de 2.635 linhas. Refactor puro, não muda nada para o usuário.
+4. **Felipe deve fornecer:** URLs reais dos canais (Discord/YouTube/Instagram) e um contato de
+   suporte, para os botões removidos voltarem funcionando.
+5. **Passada visual aba por aba** nas 5 abas não inspecionadas.
+
+### 📌 Achado do pipeline registrado nesta sessão (não é UI)
+
+Auditoria do render 9:16 a $0: repliquei `reframeAnchorToAspect()` nas três âncoras.
+`master_boomer` → ótimo (personagem inteiro, centrado); `master_kev` → passa mas
+descentralizado, corpo cortado na borda direita; `master_wide` → **nenhum personagem**, só
+mesa e mixer. O código já protege esse caso (`route.ts` linha ~470 só usa o two-shot em 16:9).
+**Risco não provado:** um `shotType: 'WIDE'` em 9:16 ainda recebe `ANGLE_SPECS.wide` no prompt
+(linha ~189) enquanto a âncora entregue é solo — o Kling recebe "plano aberto com os dois" e
+uma imagem com um só, e pode inventar o segundo personagem sem âncora. É a rota mais provável
+para a infidelidade de personagem que o Felipe percebeu. **O render pago de validação resolve.**
+Ver [[analise-rigorosa]] e [[formato-selecionavel]].
 
 ---
 
@@ -274,6 +354,16 @@ cena4 (`Piloto/`) = **voz ideal do Boomer** (confirmado Felipe). Sample de clone
 ---
 
 ## 📅 HISTÓRICO DE SESSÕES
+
+### Sessão 2026-07-30 (v4.0 → v5.0)
+**Agente:** Claude Opus 5
+**Foco:** Auditoria medida da engine + auditoria de UI/UX + Fase 1 da refatoração de interface
+**Entregue:** medição do pipeline (pastas de produção vazias, zero renders de validação pagos,
+fix de aspecto existe mas nunca foi provado); auditoria de UI com números (345 fontes < 12px,
+223 violações de contraste, 9 `alert()`, 265 hardcodes de marca); Fase 1 executada e verificada
+(build + 25/25 testes + inspeção visual 1440/375px); remoção de toda métrica inventada da UI e
+da rota `/admin` falsa.
+**Não deployado.** Ver seção "SESSÃO 30/07/2026" acima para pendências.
 
 ### Sessão 2026-07-19 (v3.0 → v3.1)
 **Agente:** Gemini (Antigravity CLI) + Claude Opus 4.6

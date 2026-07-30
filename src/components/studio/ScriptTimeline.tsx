@@ -18,14 +18,14 @@ interface ScriptTimelineProps {
 function ClockInput({ value, onChange }: { value: number, onChange: (val: number) => void }) {
   return (
     <div className="flex items-center gap-3 bg-[#111111] border border-white/10 px-4 py-2 hover:border-[#FF5F1F] transition-all group/clock">
-      <span className="text-[9px] font-black text-white/20 uppercase">Dur</span>
+      <span className="text-xs font-black text-white/50 uppercase">Dur</span>
       <input
         type="number"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-10 bg-transparent text-xs font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-right"
       />
-      <span className="text-[9px] font-black text-white/20 uppercase">Sec</span>
+      <span className="text-xs font-black text-white/50 uppercase">Sec</span>
     </div>
   );
 }
@@ -46,10 +46,10 @@ export function ScriptTimeline({
     <div className="flex-1 overflow-y-auto px-12 py-12 scroll-smooth animate-in fade-in duration-700 min-h-0">
       <div className="flex items-baseline justify-between mb-16 px-2">
         <div className="flex items-center gap-4">
-          <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/20">TIMELINE</span></h2>
+          <h2 className="text-5xl font-black tracking-tighter">PRODUCTION <span className="text-white/50">TIMELINE</span></h2>
           <button
             onClick={exportToPDF}
-            className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)]"
+            className="flex items-center gap-2 px-6 py-2 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-sm font-black tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)]"
           >
             <Download size={14} /> DOWNLOAD FULL SCRIPT (PDF)
           </button>
@@ -72,7 +72,7 @@ export function ScriptTimeline({
             <div className="w-64 p-8 border-r border-white/5 flex flex-col justify-between">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Shot {index + 1}</span>
+                  <span className="text-sm font-black text-white/50 uppercase tracking-[0.3em]">Shot {index + 1}</span>
                   <div className={cn("w-1.5 h-1.5 rounded-full transition-all duration-500",
                     line.status === 'COMPLETED' ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" :
                       line.status === 'PROCESSING' ? "bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.8)]" :
@@ -86,16 +86,16 @@ export function ScriptTimeline({
 
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">LENS OPTIC</label>
+                    <label className="text-xs font-black text-white/60 uppercase tracking-widest">LENS OPTIC</label>
                     <select
                       value={line.shotType}
                       onChange={(e) => updateLine(line.id, 'shotType', e.target.value)}
-                      className="w-full bg-[#111111] border border-white/10 p-2 text-[10px] font-black outline-none cursor-pointer"
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-black outline-none cursor-pointer"
                     >
                       {SHOT_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </select>
                   </div>
-                  <div className="text-[9px] text-white/20 leading-relaxed font-bold italic uppercase tracking-wider">
+                  <div className="text-xs text-white/50 leading-relaxed font-bold italic uppercase tracking-wider">
                     {SHOT_TYPES.find(s => s.id === line.shotType)?.cinematicRule}
                   </div>
                 </div>
@@ -106,14 +106,14 @@ export function ScriptTimeline({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => downloadScenePromptPDF(line, index)}
-                    className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                    className="p-3 border border-white/5 text-white/50 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
                     title="DOWNLOAD INDIVIDUAL PROMPT CARD"
                   >
                     <FileText size={18} />
                   </button>
                   <button
                     onClick={() => setSharingLineId(line.id)}
-                    className="p-3 border border-white/5 text-white/20 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
+                    className="p-3 border border-white/5 text-white/50 hover:text-white hover:border-white/20 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center grayscale"
                     title="SHARE SCENE"
                   >
                     <Share2 size={18} />
@@ -135,7 +135,7 @@ export function ScriptTimeline({
                 <select
                   value={line.characterId}
                   onChange={(e) => updateLine(line.id, 'characterId', e.target.value)}
-                  className={cn("px-4 py-1 text-[11px] font-black uppercase tracking-widest border-none outline-none cursor-pointer appearance-none transition-all",
+                  className={cn("px-4 py-1 text-sm font-black uppercase tracking-widest border-none outline-none cursor-pointer appearance-none transition-all",
                     line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white hover:bg-white hover:text-[#FF5F1F]" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white")}
                 >
                   {CHARACTERS.map(c => (
@@ -143,14 +143,14 @@ export function ScriptTimeline({
                   ))}
                 </select>
                 <div className="flex items-center gap-2">
-                  <div className={cn("px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border",
+                  <div className={cn("px-2 py-0.5 text-xs font-black uppercase tracking-widest border",
                     line.status === 'COMPLETED' ? "border-green-500/30 text-green-500 bg-green-500/5" :
                       line.status === 'PROCESSING' ? "border-blue-500/30 text-blue-500 bg-blue-500/5 animate-pulse" :
                         line.status === 'QUEUED' ? "border-yellow-500/30 text-yellow-500 bg-yellow-500/5" :
-                          "border-white/5 text-white/20")}>
+                          "border-white/5 text-white/50")}>
                     {line.status}
                   </div>
-                  <div className="text-[10px] font-black text-white/20 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
+                  <div className="text-sm font-black text-white/50 tracking-[0.2em] px-2 py-1 border border-white/5 uppercase">
                     {line.emotion || 'Neutral'}
                   </div>
                   {line.audioUrl && (
@@ -162,7 +162,7 @@ export function ScriptTimeline({
                       className="flex items-center gap-2 bg-[#FF5F1F]/10 border border-[#FF5F1F]/30 px-3 py-1 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-white transition-all group/audio ml-2"
                     >
                       <Volume2 size={12} className="group-hover/audio:animate-pulse" />
-                      <span className="text-[8px] font-black tracking-widest uppercase">Sonic_Preview</span>
+                      <span className="text-xs font-black tracking-widest uppercase">Sonic_Preview</span>
                     </button>
                   )}
                 </div>
@@ -178,8 +178,8 @@ export function ScriptTimeline({
               <div className="grid grid-cols-2 gap-10 opacity-40 group-hover:opacity-100 transition-opacity">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Physical Motion</span>
-                    <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">DNA_SOURCE_ACTIVE</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-[#FF5F1F]">Physical Motion</span>
+                    <span className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">DNA_SOURCE_ACTIVE</span>
                   </div>
                   <select
                     value={line.action}
@@ -189,7 +189,7 @@ export function ScriptTimeline({
                       updateLine(line.id, 'action', e.target.value);
                       if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
                     }}
-                    className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
+                    className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
                   >
                     <option value={line.action} className="bg-[#0d0d0d]">{line.action || "-- SELECT MOTION --"}</option>
                     {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
@@ -200,8 +200,8 @@ export function ScriptTimeline({
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Lighting Logic</span>
-                  <p className="text-[10px] font-bold text-white/30 italic">
+                  <span className="text-xs font-black uppercase tracking-widest text-white/60">Lighting Logic</span>
+                  <p className="text-sm font-bold text-white/60 italic">
                     {CHARACTERS.find(c => c.id === line.characterId)?.lightingKey}
                   </p>
                 </div>
@@ -211,11 +211,11 @@ export function ScriptTimeline({
               <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-10 opacity-30 group-hover:opacity-100 transition-opacity">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#FF5F1F]">Camera Motion Preset</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-[#FF5F1F]">Camera Motion Preset</span>
                     <select
                       value={line.cameraPreset || ''}
                       onChange={(e) => updateLine(line.id, 'cameraPreset', e.target.value)}
-                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer"
                     >
                       <option value="" className="bg-[#0d0d0d]">-- DEFAULT STATIC --</option>
                       <option value="pan_left" className="bg-[#0d0d0d]">Pan Left</option>
@@ -231,8 +231,8 @@ export function ScriptTimeline({
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Motion Weight</span>
-                      <span className="text-[10px] font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
+                      <span className="text-xs font-black uppercase tracking-widest text-white/60">Motion Weight</span>
+                      <span className="text-sm font-bold text-[#FF5F1F]">{line.motionWeight ?? 0.5}</span>
                     </div>
                     <input
                       type="range"
@@ -248,23 +248,23 @@ export function ScriptTimeline({
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Character Soul ID</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white/60">Character Soul ID</span>
                     <input
                       type="text"
                       placeholder="e.g. boomer_master_v3"
                       value={line.soulId || ''}
                       onChange={(e) => updateLine(line.id, 'soulId', e.target.value)}
-                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/50"
                     />
                   </div>
                   <div className="space-y-2">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Motion Ref Video (URL)</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white/60">Motion Ref Video (URL)</span>
                     <input
                       type="text"
                       placeholder="Upload MP4 motion reference..."
                       value={line.motionRefUrl || ''}
                       onChange={(e) => updateLine(line.id, 'motionRefUrl', e.target.value)}
-                      className="w-full bg-[#111111] border border-white/10 p-2 text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/20"
+                      className="w-full bg-[#111111] border border-white/10 p-2 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 placeholder:text-white/50"
                     />
                   </div>
                 </div>
@@ -293,7 +293,7 @@ export function ScriptTimeline({
                     {line.status === 'COMPLETED' ? (
                       <>
                         <MonitorPlay size={24} className="text-white group-hover/thumb:scale-125 transition-transform" />
-                        <span className="text-[7px] font-black text-white/40 tracking-[0.2em] uppercase">VIEW_PLAYBACK</span>
+                        <span className="text-xs font-black text-white/60 tracking-[0.2em] uppercase">VIEW_PLAYBACK</span>
                         {line.videoUrl && (
                           <a
                             href={line.videoUrl}
@@ -301,7 +301,7 @@ export function ScriptTimeline({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-[#FF5F1F] text-white/40 hover:text-white transition-all border border-white/10"
+                            className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-[#FF5F1F] text-white/60 hover:text-white transition-all border border-white/10"
                             title="DIRECT_DOWNLOAD"
                           >
                             <Download size={14} />
@@ -311,7 +311,7 @@ export function ScriptTimeline({
                     ) : (
                       <>
                         <Zap size={20} className="text-[#FF5F1F] animate-bounce" />
-                        <span className="text-[7px] font-black text-[#FF5F1F] tracking-[0.2em] uppercase">SYNTHESIZING...</span>
+                        <span className="text-xs font-black text-[#FF5F1F] tracking-[0.2em] uppercase">SYNTHESIZING...</span>
                       </>
                     )}
                   </div>
@@ -322,7 +322,7 @@ export function ScriptTimeline({
 
                   <div className="absolute bottom-2 left-2 flex items-center gap-1">
                     <div className="w-1 h-3 bg-[#FF5F1F]" />
-                    <span className="text-[6px] font-black opacity-30">CAM_{line.shotType}</span>
+                    <span className="text-xs font-black opacity-30">CAM_{line.shotType}</span>
                   </div>
                 </div>
               ) : null}

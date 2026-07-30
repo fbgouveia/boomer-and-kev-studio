@@ -142,7 +142,7 @@ export function DirectorTerminal({
             <h2 className="text-5xl md:text-6xl font-black tracking-tighter uppercase italic text-white/90">
               Feed the <span className="text-[#FF5F1F]">Machine.</span>
             </h2>
-            <p className="text-xs md:text-sm text-white/40 font-bold uppercase tracking-[0.2em] max-w-xl leading-relaxed">
+            <p className="text-xs md:text-sm text-white/60 font-bold uppercase tracking-[0.2em] max-w-xl leading-relaxed">
               The engine will synthesize storytelling, character motion, and cinematic framing from your core idea.
             </p>
           </div>
@@ -159,11 +159,11 @@ export function DirectorTerminal({
                   <div className="w-8 h-8 rounded-none bg-white/5 flex items-center justify-center border border-white/10">
                     <Zap size={14} className="text-[#FF5F1F]" />
                   </div>
-                  <span className="text-[9px] font-black tracking-[0.2em] uppercase text-white/70">Narrative Terminal</span>
+                  <span className="text-xs font-black tracking-[0.2em] uppercase text-white/70">Narrative Terminal</span>
                 </div>
                 {directorIdea.length > 0 && (
                   <div className="flex items-center gap-3 bg-black/40 px-4 py-2 border border-white/10 rounded-none">
-                    <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">Signal</span>
+                    <span className="text-xs font-black text-white/60 uppercase tracking-[0.2em]">Signal</span>
                     <div className="flex gap-1">
                       {[...Array(5)].map((_, i) => (
                         <div
@@ -180,14 +180,19 @@ export function DirectorTerminal({
 
               {/* Scrollable Entry Field */}
               <div className="flex-1 overflow-y-auto custom-scrollbar relative pr-2">
+                {/* Rótulo visível: o placeholder some quando o usuário digita e deixava o campo sem identificação. */}
+                <label htmlFor="director-idea" className="block text-xs font-black text-white/60 uppercase tracking-widest mb-2">
+                  Episode topic and directorial notes
+                </label>
                 <textarea
+                  id="director-idea"
                   value={directorIdea}
                   onChange={(e) => {
                     console.log("⌨️ [Neural_Input] Stream detected:", e.target.value.substring(0, 10));
                     setDirectorIdea(e.target.value);
                   }}
                   placeholder={`Topic (e.g. NRL vs AFL)\nDirectorial Notes (e.g. Kev wearing NRL Jersey)`}
-                  className="w-full bg-transparent border-none text-2xl md:text-3xl font-black italic uppercase placeholder:text-white/10 focus:ring-0 outline-none resize-none min-h-full tracking-tight leading-[1.3] py-2 text-[#FF5F1F]/90"
+                  className="w-full bg-transparent border-none text-2xl md:text-3xl font-black italic uppercase placeholder:text-white/50 focus:ring-0 outline-none resize-none min-h-full tracking-tight leading-[1.3] py-2 text-[#FF5F1F]/90"
                 />
               </div>
 
@@ -200,14 +205,12 @@ export function DirectorTerminal({
                       triggerInstructor();
                     }}
                     disabled={!directorIdea || isGenerating || isInterviewing}
-                    className="px-6 py-3 border-2 border-[#FF5F1F]/40 bg-[#FF5F1F]/5 text-[#FF5F1F] text-[10px] font-black tracking-widest uppercase hover:bg-[#FF5F1F] hover:text-white hover:border-[#FF5F1F] backdrop-blur-md transition-all flex items-center gap-2 group active:scale-95 disabled:opacity-30 min-h-[44px]"
+                    className="px-6 py-3 border-2 border-[#FF5F1F]/40 bg-[#FF5F1F]/5 text-[#FF5F1F] text-sm font-black tracking-widest uppercase hover:bg-[#FF5F1F] hover:text-white hover:border-[#FF5F1F] backdrop-blur-md transition-all flex items-center gap-2 group active:scale-95 disabled:opacity-30 min-h-[44px]"
                   >
                     <BrainCircuit size={14} className="group-hover:rotate-12 transition-transform" />
                     Plan with Instructor
                   </button>
-                  <div className="hidden sm:block px-4 py-2 border border-white/5 bg-black/40 text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-                    Confidence: 98.4%
-                  </div>
+                  {/* Removido "Confidence: 98.4%": número hardcoded, não calculado de nada. */}
                 </div>
 
                 <button
@@ -237,7 +240,7 @@ export function DirectorTerminal({
                       </div>
                       <div>
                         <h3 className="text-lg font-black tracking-tight text-white/90 uppercase">Instructor Analysis</h3>
-                        <p className="text-[8px] text-white/40 font-black tracking-widest uppercase mt-1">Neural Psychology Module v2.7</p>
+                        <p className="text-xs text-white/60 font-black tracking-widest uppercase mt-1">Neural Psychology Module v2.7</p>
                       </div>
                     </div>
                     <button 
@@ -252,14 +255,14 @@ export function DirectorTerminal({
                   {isGeneratingQuestions ? (
                     <div className="py-24 flex flex-col items-center justify-center space-y-5">
                       <RefreshCcw size={32} className="text-[#FF5F1F] animate-spin" />
-                      <p className="text-[9px] font-black tracking-[0.2em] uppercase text-white/40">Synthesizing inquiries...</p>
+                      <p className="text-xs font-black tracking-[0.2em] uppercase text-white/60">Synthesizing inquiries...</p>
                     </div>
                   ) : (
                     <div className="space-y-8">
                       {interviewQuestions.map((q, i) => (
                         <div key={i} className="space-y-4 bg-black/40 p-6 rounded-none border border-white/5">
                           <div className="flex items-start gap-4">
-                            <div className="mt-1 w-6 h-6 rounded-none bg-[#FF5F1F]/20 text-[#FF5F1F] flex items-center justify-center text-[10px] font-bold shrink-0">
+                            <div className="mt-1 w-6 h-6 rounded-none bg-[#FF5F1F]/20 text-[#FF5F1F] flex items-center justify-center text-sm font-bold shrink-0">
                               {i + 1}
                             </div>
                             <p className="text-sm font-bold text-white/80 tracking-tight leading-relaxed uppercase">{q}</p>
@@ -274,7 +277,7 @@ export function DirectorTerminal({
                                 setCurrentAnswers(newAnswers);
                               }}
                               placeholder="Type your response..."
-                              className="w-full bg-white/5 rounded-none border-b-2 border-white/20 px-5 py-4 text-white font-medium placeholder:text-white/10 focus:border-[#FF5F1F] focus:bg-white/10 outline-none transition-all"
+                              className="w-full bg-white/5 rounded-none border-b-2 border-white/20 px-5 py-4 text-white font-medium placeholder:text-white/50 focus:border-[#FF5F1F] focus:bg-white/10 outline-none transition-all"
                             />
                           </div>
                         </div>
@@ -312,12 +315,12 @@ export function DirectorTerminal({
                     <div className="w-8 h-8 rounded-none bg-[#FF5F1F]/20 flex items-center justify-center">
                       <Sparkles size={14} className="text-[#FF5F1F]" />
                     </div>
-                    <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">Refined Directive</span>
+                    <span className="text-sm font-black text-white/90 uppercase tracking-widest">Refined Directive</span>
                   </div>
                   <button 
                     onClick={() => setDirectorSnippet("")} 
                     aria-label="Delete directive"
-                    className="w-8 h-8 rounded-none bg-white/5 flex items-center justify-center hover:bg-white/10 hover:text-white text-white/40 transition-all min-w-[44px] min-h-[44px]"
+                    className="w-8 h-8 rounded-none bg-white/5 flex items-center justify-center hover:bg-white/10 hover:text-white text-white/60 transition-all min-w-[44px] min-h-[44px]"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -341,7 +344,7 @@ export function DirectorTerminal({
           {/* Header Controls */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-              <span className="text-[#FF5F1F] text-[10px] font-black uppercase tracking-[0.3em] block mb-2 italic">Global Signal Aggregator</span>
+              <span className="text-[#FF5F1F] text-sm font-black uppercase tracking-[0.3em] block mb-2 italic">Global Signal Aggregator</span>
               <h3 className="text-3xl font-black tracking-tighter uppercase italic text-white/90">Viral Signals & Hot Topics</h3>
             </div>
             
@@ -349,16 +352,16 @@ export function DirectorTerminal({
             <div className="flex rounded-none overflow-hidden border-2 border-white/20 p-0.5 bg-black/60">
               <button
                 onClick={() => setFeedMode('LIVE')}
-                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[40px] flex items-center gap-2",
-                  feedMode === 'LIVE' ? "bg-[#FF5F1F] text-black" : "text-white/40 hover:text-white hover:bg-white/5")}
+                className={cn("px-5 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[40px] flex items-center gap-2",
+                  feedMode === 'LIVE' ? "bg-[#FF5F1F] text-black" : "text-white/60 hover:text-white hover:bg-white/5")}
               >
                 <TrendingUp size={12} />
                 LIVE WIRE
               </button>
               <button
                 onClick={() => setFeedMode('CALENDAR')}
-                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[40px] flex items-center gap-2",
-                  feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-black" : "text-white/40 hover:text-white hover:bg-white/5")}
+                className={cn("px-5 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[40px] flex items-center gap-2",
+                  feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-black" : "text-white/60 hover:text-white hover:bg-white/5")}
               >
                 <CalendarIcon size={12} />
                 2026 PLANNER
@@ -370,15 +373,15 @@ export function DirectorTerminal({
           {feedMode === 'LIVE' && (
             <div className="flex flex-wrap items-center justify-between gap-6 bg-[#080808]/90 border border-white/5 p-4 rounded-none">
               <div className="flex items-center gap-3">
-                <span className="text-[8px] font-black text-white/30 uppercase tracking-widest font-mono">Select Region:</span>
+                <span className="text-xs font-black text-white/60 uppercase tracking-widest font-mono">Select Region:</span>
                 <div className="flex flex-wrap gap-1">
                   {REGIONS.map((region) => (
                     <button
                       key={region.id}
                       onClick={() => handleRegionChange(region.id)}
                       className={cn(
-                        "px-3 py-1.5 text-[9px] font-black transition-all uppercase tracking-tighter border border-transparent",
-                        geo === region.id ? "bg-[#FF5F1F]/15 text-[#FF5F1F] border-[#FF5F1F]/30" : "hover:bg-white/5 text-white/40"
+                        "px-3 py-1.5 text-xs font-black transition-all uppercase tracking-tighter border border-transparent",
+                        geo === region.id ? "bg-[#FF5F1F]/15 text-[#FF5F1F] border-[#FF5F1F]/30" : "hover:bg-white/5 text-white/60"
                       )}
                     >
                       {region.name}
@@ -386,7 +389,7 @@ export function DirectorTerminal({
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-[8px] font-mono text-white/30 uppercase">
+              <div className="flex items-center gap-3 text-xs font-mono text-white/60 uppercase">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                 Signal Sync: {lastSyncTime || '--:--'}
                 <button
@@ -422,7 +425,7 @@ export function DirectorTerminal({
                   
                   <div className="space-y-5">
                     {/* Badge details */}
-                    <div className="flex justify-between items-center text-[8px] font-mono text-white/30 uppercase tracking-widest">
+                    <div className="flex justify-between items-center text-xs font-mono text-white/60 uppercase tracking-widest">
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-white/70">Live Signal</span>
                       <span className="text-[#FF5F1F] font-bold">{trend.traffic} Searches</span>
                     </div>
@@ -437,7 +440,7 @@ export function DirectorTerminal({
 
                     {/* Speech take preview */}
                     {trend.directorialIntelligence && (
-                      <div className="p-4 bg-black/40 border-l border-[#FF5F1F]/40 font-mono text-[10px] text-white/40 leading-snug">
+                      <div className="p-4 bg-black/40 border-l border-[#FF5F1F]/40 font-mono text-sm text-white/60 leading-snug">
                         <span className="text-[#FF5F1F] font-black mr-1">{trend.directorialIntelligence.take.character}:</span>
                         &quot;{trend.directorialIntelligence.take.text.substring(0, 80)}...&quot;
                       </div>
@@ -446,13 +449,13 @@ export function DirectorTerminal({
                     {/* News reports */}
                     {trend.news.length > 0 && (
                       <div className="space-y-2 pt-4 border-t border-white/5">
-                        <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-1">
+                        <span className="text-xs font-black text-white/50 uppercase tracking-[0.2em] flex items-center gap-1">
                           <Newspaper size={8} /> Intel Reports:
                         </span>
                         {trend.news.map((item, i) => (
-                          <div key={i} className="flex items-center justify-between text-[9px] text-white/30 hover:text-white/60">
+                          <div key={i} className="flex items-center justify-between text-xs text-white/60 hover:text-white/60">
                             <span className="font-bold underline truncate max-w-[80%]">{item.title}</span>
-                            <span className="text-[7px] font-mono text-[#FF5F1F]/70">{item.source}</span>
+                            <span className="text-xs font-mono text-[#FF5F1F]/70">{item.source}</span>
                           </div>
                         ))}
                       </div>
@@ -463,7 +466,7 @@ export function DirectorTerminal({
                   <div className="mt-8 pt-6 border-t border-white/5">
                     <button
                       onClick={() => handleFeedMachine(trend)}
-                      className="w-full py-3 bg-[#FF5F1F]/10 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-black border border-[#FF5F1F]/30 hover:border-transparent text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 group-hover:scale-[1.01]"
+                      className="w-full py-3 bg-[#FF5F1F]/10 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-black border border-[#FF5F1F]/30 hover:border-transparent text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 group-hover:scale-[1.01]"
                     >
                       <Zap size={10} fill="currentColor" />
                       Feed Machine
@@ -484,7 +487,7 @@ export function DirectorTerminal({
                 >
                   <div className="space-y-5">
                     {/* Badge details */}
-                    <div className="flex justify-between items-center text-[8px] font-mono text-white/30 uppercase tracking-widest">
+                    <div className="flex justify-between items-center text-xs font-mono text-white/60 uppercase tracking-widest">
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-white/70">{event.category}</span>
                       <span className="text-[#FF5F1F] font-bold">{event.date} // 2026</span>
                     </div>
@@ -495,11 +498,11 @@ export function DirectorTerminal({
 
                     {/* Speech take previews */}
                     <div className="space-y-2 pt-2">
-                      <div className="p-3 bg-black/40 border-l border-[#FF5F1F]/40 font-mono text-[9px] text-white/40 leading-snug">
+                      <div className="p-3 bg-black/40 border-l border-[#FF5F1F]/40 font-mono text-xs text-white/60 leading-snug">
                         <span className="text-[#FF5F1F] font-black mr-1">BOOMER:</span>
                         &quot;{event.boomerTake.substring(0, 80)}...&quot;
                       </div>
-                      <div className="p-3 bg-black/40 border-l border-white/20 font-mono text-[9px] text-white/40 leading-snug">
+                      <div className="p-3 bg-black/40 border-l border-white/20 font-mono text-xs text-white/60 leading-snug">
                         <span className="text-white/60 font-black mr-1">KEV:</span>
                         &quot;{event.kevTake.substring(0, 80)}...&quot;
                       </div>
@@ -522,7 +525,7 @@ export function DirectorTerminal({
                           viralPotential: 92
                         }
                       })}
-                      className="w-full py-3 bg-[#FF5F1F]/10 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-black border border-[#FF5F1F]/30 hover:border-transparent text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-[#FF5F1F]/10 hover:bg-[#FF5F1F] text-[#FF5F1F] hover:text-black border border-[#FF5F1F]/30 hover:border-transparent text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2"
                     >
                       <Zap size={10} fill="currentColor" />
                       Feed Machine

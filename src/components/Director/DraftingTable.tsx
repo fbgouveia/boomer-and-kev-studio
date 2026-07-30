@@ -267,11 +267,11 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
             <div className="flex justify-between items-start mb-6 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-[#FF5F1F] animate-pulse" : "bg-white/20")} />
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Block_Variant_0{index + 1}</span>
+                    <span className="text-sm font-black text-white/60 uppercase tracking-[0.2em]">Block_Variant_0{index + 1}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-black/40 px-3 py-1 border border-white/5">
                     <BarChart3 size={12} className="text-[#FF5F1F]" />
-                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-tighter uppercase">{option.retentionScore}% Momentum</span>
+                    <span className="text-sm font-black text-[#FF5F1F] tracking-tighter uppercase">{option.retentionScore}% Momentum</span>
                 </div>
             </div>
 
@@ -282,9 +282,9 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
             <div className="p-4 bg-black/60 border border-white/10 relative z-10 group-hover:border-[#FF5F1F]/30 transition-all">
                 <div className="flex items-center gap-2 mb-2">
                     <Sparkles size={10} className="text-[#FF5F1F]/60" />
-                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Generative Insight</span>
+                    <span className="text-xs font-black text-white/60 uppercase tracking-widest">Generative Insight</span>
                 </div>
-                <p className="text-[11px] text-white/70 font-medium italic leading-relaxed">
+                <p className="text-sm text-white/70 font-medium italic leading-relaxed">
                     {option.reasoning}
                 </p>
             </div>
@@ -321,8 +321,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                         </div>
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <span className="px-2 py-0.5 bg-[#FF5F1F] text-white text-[8px] font-black uppercase tracking-widest animate-pulse">Neural_Synthesis_v2.7</span>
-                                <span className="text-[10px] font-black text-white/20 tracking-[0.4em] uppercase">Intelligence_HUD</span>
+                                <span className="px-2 py-0.5 bg-[#FF5F1F] text-white text-xs font-black uppercase tracking-widest animate-pulse">Neural_Synthesis_v2.7</span>
+                                <span className="text-sm font-black text-white/50 tracking-[0.4em] uppercase">Intelligence_HUD</span>
                             </div>
                             <h2 className="text-4xl font-black tracking-tighter uppercase italic">
                                 <span className="text-[#FF5F1F]">NEURAL</span> DRAFTING MODE
@@ -334,7 +334,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                         {/* Simulated Search Intent Indicators */}
                         <div className="flex gap-4">
                             <div className="flex flex-col items-end">
-                                <div className="flex items-center gap-2 text-[8px] font-black text-white/40 uppercase mb-1">
+                                <div className="flex items-center gap-2 text-xs font-black text-white/60 uppercase mb-1">
                                     <Youtube size={12} /> YouTube Intent
                                 </div>
                                 <div className="h-1 w-20 bg-white/5">
@@ -342,7 +342,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                 </div>
                             </div>
                             <div className="flex flex-col items-end">
-                                <div className="flex items-center gap-2 text-[8px] font-black text-white/40 uppercase mb-1">
+                                <div className="flex items-center gap-2 text-xs font-black text-white/60 uppercase mb-1">
                                     <Instagram size={12} /> IG Velocity
                                 </div>
                                 <div className="h-1 w-20 bg-white/5">
@@ -365,7 +365,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
 
                     {/* LEFT NAV */}
                     <nav className="w-80 border-r border-white/5 bg-black/40 flex flex-col pt-10 px-4">
-                        <span className="text-[8px] font-black text-white/20 tracking-[0.3em] uppercase block mb-8 px-6 italic">Engine_Section_Streams</span>
+                        <span className="text-xs font-black text-white/50 tracking-[0.3em] uppercase block mb-8 px-6 italic">Engine_Section_Streams</span>
                         <div className="space-y-3">
                             {sections.map((section, idx) => {
                                 const Icon = section.icon;
@@ -385,7 +385,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                         onClick={() => setActiveSection(section.id)}
                                         className={cn(
                                             "w-full text-left flex items-center gap-6 px-6 py-4 transition-all relative group stagger-item border-l-2 outline-none",
-                                            isActive ? "bg-[#FF5F1F]/10 border-[#FF5F1F]" : "text-white/20 hover:text-white/60 border-transparent hover:bg-white/5",
+                                            isActive ? "bg-[#FF5F1F]/10 border-[#FF5F1F]" : "text-white/50 hover:text-white/60 border-transparent hover:bg-white/5",
                                             isComplete && !isActive && "text-white/60"
                                         )}
                                         style={{ animationDelay: `${idx * 100}ms` }}
@@ -394,8 +394,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                             <Icon size={18} className={cn(isActive && "text-[#FF5F1F]")} />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40">Section 0{idx + 1}</span>
-                                            <span className="text-[11px] font-black uppercase tracking-widest">{section.label}</span>
+                                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-40">Section 0{idx + 1}</span>
+                                            <span className="text-sm font-black uppercase tracking-widest">{section.label}</span>
                                         </div>
                                         {isComplete && (
                                             <div className="absolute right-6 w-1.5 h-1.5 bg-[#FF5F1F] rounded-full shadow-[0_0_10px_rgba(255,95,31,0.5)]" />
@@ -407,17 +407,17 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
 
                         <div className="pt-12">
                             <div className="p-4 border border-white/5 bg-white/[0.02]">
-                                <span className="text-[8px] font-black text-[#FF5F1F] tracking-widest block mb-2 uppercase italic">Target Analytics</span>
+                                <span className="text-xs font-black text-[#FF5F1F] tracking-widest block mb-2 uppercase italic">Target Analytics</span>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-[9px] font-bold text-white/60">
+                                    <div className="flex justify-between items-center text-xs font-bold text-white/60">
                                         <span>RETENTION GOAL</span>
                                         <span className="text-white">90%+</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[9px] font-bold text-white/60">
+                                    <div className="flex justify-between items-center text-xs font-bold text-white/60">
                                         <span>ENGAGEMENT VELOCITY</span>
                                         <span className="text-white">EXTREME</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[9px] font-bold text-white/60">
+                                    <div className="flex justify-between items-center text-xs font-bold text-white/60">
                                         <span>ALGORITHM BIAS</span>
                                         <span className="text-white">FAVORABLE</span>
                                     </div>
@@ -431,13 +431,13 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                         <div className="max-w-4xl mx-auto">
                             <div className="flex justify-between items-end mb-12">
                                 <div>
-                                    <span className="text-[10px] font-black text-[#FF5F1F] tracking-[0.5em] block mb-2 uppercase">Neural_Selection_Terminal</span>
+                                    <span className="text-sm font-black text-[#FF5F1F] tracking-[0.5em] block mb-2 uppercase">Neural_Selection_Terminal</span>
                                     <h3 className="text-5xl font-black tracking-tighter uppercase italic">{sections.find(s => s.id === activeSection)?.label}</h3>
                                 </div>
                                 <button
                                     onClick={fetchBrainstorm}
                                     disabled={isLoading}
-                                    className="px-6 py-2 border border-white/10 text-[10px] font-black tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all flex items-center gap-2 group disabled:opacity-20"
+                                    className="px-6 py-2 border border-white/10 text-sm font-black tracking-widest hover:border-[#FF5F1F] hover:text-[#FF5F1F] transition-all flex items-center gap-2 group disabled:opacity-20"
                                 >
                                     <RefreshCcw size={14} className={cn(isLoading && "animate-spin")} /> REROLL_STUBS
                                 </button>
@@ -456,7 +456,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                     </div>
                                     <div>
                                         <h4 className="text-xl font-black text-red-500 uppercase italic">Neural_Link_Severed</h4>
-                                        <p className="text-sm font-bold text-white/40 uppercase mt-2">
+                                        <p className="text-sm font-bold text-white/60 uppercase mt-2">
                                             {error}
                                         </p>
                                     </div>
@@ -464,7 +464,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                         onClick={fetchBrainstorm}
                                         disabled={retryCountdown > 0}
                                         className={cn(
-                                            "px-8 py-3 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-red-500 transition-all disabled:opacity-30 disabled:cursor-wait",
+                                            "px-8 py-3 bg-red-500 text-white text-sm font-black uppercase tracking-widest hover:bg-white hover:text-red-500 transition-all disabled:opacity-30 disabled:cursor-wait",
                                             retryCountdown > 0 && "cursor-not-allowed"
                                         )}
                                     >
@@ -484,7 +484,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                 </div>
                             ) : (
                                 <div className="p-12 border-2 border-white/5 bg-white/[0.02] text-center">
-                                    <p className="text-sm font-bold text-white/20 uppercase tracking-widest">No variants synthesized. Reroll to attempt again.</p>
+                                    <p className="text-sm font-bold text-white/50 uppercase tracking-widest">No variants synthesized. Reroll to attempt again.</p>
                                 </div>
                             )}
                         </div>
@@ -510,7 +510,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                     (activeSection === 'closings' && selectedClosing === null) ||
                                     activeSection === 'closings'
                                 }
-                                className="px-10 py-4 border border-[#FF5F1F] text-[#FF5F1F] text-[10px] font-black uppercase tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all flex items-center gap-3 disabled:opacity-20"
+                                className="px-10 py-4 border border-[#FF5F1F] text-[#FF5F1F] text-sm font-black uppercase tracking-widest hover:bg-[#FF5F1F] hover:text-white transition-all flex items-center gap-3 disabled:opacity-20"
                             >
                                 Next Section <ChevronRight size={14} />
                             </button>
@@ -520,7 +520,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                     {/* PREVIEW BAR */}
                     <div className="w-96 border-l border-white/5 bg-black/40 p-10 flex flex-col justify-between">
                         <div>
-                            <span className="text-[8px] font-black text-white/20 tracking-[0.3em] uppercase block mb-8">Assembled_Blueprint</span>
+                            <span className="text-xs font-black text-white/50 tracking-[0.3em] uppercase block mb-8">Assembled_Blueprint</span>
 
                             <div className="space-y-6">
                                 {sections.map(section => {
@@ -548,12 +548,12 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                                 activeSection === section.id ? "bg-[#FF5F1F] border-[#FF5F1F]" : "bg-[#0d0d0d] border-white/20 group-hover:border-[#FF5F1F]"
                                             )} />
                                             <span className={cn(
-                                                "text-[7px] font-black uppercase tracking-widest block mb-1",
-                                                activeSection === section.id ? "text-[#FF5F1F]" : "text-white/20"
+                                                "text-xs font-black uppercase tracking-widest block mb-1",
+                                                activeSection === section.id ? "text-[#FF5F1F]" : "text-white/50"
                                             )}>{section.label}</span>
                                             <p className={cn(
-                                                "text-[10px] font-bold uppercase italic leading-tight transition-all",
-                                                selectedText === "..." ? "text-white/10" : "text-white"
+                                                "text-sm font-bold uppercase italic leading-tight transition-all",
+                                                selectedText === "..." ? "text-white/50" : "text-white"
                                             )}>
                                                 {selectedText?.length > 80 ? selectedText.substring(0, 80) + "..." : (selectedText || "...")}
                                             </p>
@@ -567,7 +567,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                             <div className="p-4 border border-[#FF5F1F]/20 bg-[#FF5F1F]/5">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Sparkles size={12} className="text-[#FF5F1F]" />
-                                    <span className="text-[8px] font-black text-[#FF5F1F] tracking-widest uppercase">Directorial Confidence</span>
+                                    <span className="text-xs font-black text-[#FF5F1F] tracking-widest uppercase">Directorial Confidence</span>
                                 </div>
                                 <div className="text-2xl font-black text-white flex items-baseline gap-1 italic tracking-tighter">
                                     {Math.floor(
@@ -579,14 +579,14 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                                             (selectedInteraction1 !== null ? 1 : 0) +
                                             (selectedInteraction2 !== null ? 1 : 0) +
                                             (selectedClosing !== null ? 1 : 0)) * (100 / 8)
-                                    )}<span className="text-[10px] text-white/40">%</span>
+                                    )}<span className="text-sm text-white/60">%</span>
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleAssemble}
                                 disabled={selectedHook === null || selectedBridge === null || selectedReaction === null || selectedSponsorPitch === null || selectedSponsorRebuttal === null || selectedInteraction1 === null || selectedInteraction2 === null || selectedClosing === null}
-                                className="w-full bg-white text-black py-4 font-black text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-3 hover:bg-[#FF5F1F] hover:text-white transition-all disabled:opacity-20 shadow-[10px_10px_0_rgba(255,95,31,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none btn-signal"
+                                className="w-full bg-white text-black py-4 font-black text-sm tracking-[0.3em] uppercase flex items-center justify-center gap-3 hover:bg-[#FF5F1F] hover:text-white transition-all disabled:opacity-20 shadow-[10px_10px_0_rgba(255,95,31,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none btn-signal"
                             >
                                 <Terminal size={14} className="neural-sparkle" /> Commit to Timeline
                             </button>

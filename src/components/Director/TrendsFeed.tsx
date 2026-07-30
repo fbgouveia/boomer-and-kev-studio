@@ -98,8 +98,8 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             <button
                                 onClick={() => setFeedMode('LIVE')}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFeedMode('LIVE'); } }}
-                                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
-                                    feedMode === 'LIVE' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/40 hover:text-white")}
+                                className={cn("px-5 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
+                                    feedMode === 'LIVE' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/60 hover:text-white")}
                             >
                                 <TrendingUp size={12} className="inline mr-2 mb-0.5" />
                                 LIVE WIRE
@@ -114,8 +114,8 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                         // logic will be in render
                                     }
                                 }}
-                                className={cn("px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
-                                    feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/40 hover:text-white")}
+                                className={cn("px-5 py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer min-h-[44px]",
+                                    feedMode === 'CALENDAR' ? "bg-[#FF5F1F] text-black font-black" : "bg-white/5 text-white/60 hover:text-white")}
                             >
                                 <CalendarIcon size={12} className="inline mr-2 mb-0.5" />
                                 2026 PLANNER
@@ -124,7 +124,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
 
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-[9px] font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">
+                                <span className="text-xs font-black text-[#FF5F1F] tracking-[0.4em] block mb-1 uppercase">
                                     {feedMode === 'LIVE' ? 'Global Signal' : 'Future Events'}
                                 </span>
                                 <h3 className="text-xl font-black tracking-tighter uppercase italic">Aggregator</h3>
@@ -145,7 +145,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                     {/* Region Selector - Premium Brutalist Style */}
                     {feedMode === 'LIVE' && (
                         <div className="space-y-2">
-                            <span className="text-[8px] font-black text-white/30 tracking-[0.2em] uppercase">Regional Signal</span>
+                            <span className="text-xs font-black text-white/60 tracking-[0.2em] uppercase">Regional Signal</span>
                             <div className="grid grid-cols-3 gap-1">
                                 {REGIONS.map((region) => (
                                     <button
@@ -153,8 +153,8 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                         onClick={() => handleRegionChange(region.id)}
                                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRegionChange(region.id); } }}
                                         className={cn(
-                                            "py-2 px-1 text-[9px] font-black transition-all border border-white/5 uppercase tracking-tighter",
-                                            geo === region.id ? "bg-[#FF5F1F] text-white border-[#FF5F1F] shadow-[0_0_10px_rgba(255,95,31,0.2)]" : "hover:bg-white/5 text-white/30"
+                                            "py-2 px-1 text-xs font-black transition-all border border-white/5 uppercase tracking-tighter",
+                                            geo === region.id ? "bg-[#FF5F1F] text-white border-[#FF5F1F] shadow-[0_0_10px_rgba(255,95,31,0.2)]" : "hover:bg-white/5 text-white/60"
                                         )}
                                     >
                                         {region.name}
@@ -164,7 +164,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 text-[8px] font-black text-white/20 uppercase tracking-widest">
+                    <div className="flex items-center gap-2 text-xs font-black text-white/50 uppercase tracking-widest">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                         Last Sync: {lastSyncTime || '--:--'}
                     </div>
@@ -187,10 +187,10 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             )}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[11px] font-black text-white/90 uppercase tracking-tight">{trend.title}</span>
-                                <span className="text-[8px] font-black text-[#FF5F1F] tracking-tighter">{trend.traffic}</span>
+                                <span className="text-sm font-black text-white/90 uppercase tracking-tight">{trend.title}</span>
+                                <span className="text-xs font-black text-[#FF5F1F] tracking-tighter">{trend.traffic}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-[8px] font-bold text-white/20 uppercase">
+                            <div className="flex items-center gap-3 text-xs font-bold text-white/50 uppercase">
                                 <span className="flex items-center gap-1"><Clock size={8} /> {trend.published || 'Active'}</span>
                                 {selectedTrend?.title === trend.title && <div className="w-1 h-1 bg-[#FF5F1F] rounded-full animate-pulse" />}
                             </div>
@@ -227,10 +227,10 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                 )}
                             >
                                 <div className="flex justify-between items-start mb-1">
-                                    <span className="text-[11px] font-black text-white/90 uppercase tracking-tight">{event.name}</span>
-                                    <span className="px-1.5 py-0.5 bg-white/10 text-[7px] font-black text-white tracking-tighter rounded uppercase">{event.category}</span>
+                                    <span className="text-sm font-black text-white/90 uppercase tracking-tight">{event.name}</span>
+                                    <span className="px-1.5 py-0.5 bg-white/10 text-xs font-black text-white tracking-tighter rounded uppercase">{event.category}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-[8px] font-bold text-white/20 uppercase mt-2">
+                                <div className="flex items-center gap-3 text-xs font-bold text-white/50 uppercase mt-2">
                                     <span className="text-[#FF5F1F]">{event.date}</span>
                                     <span>•</span>
                                     <span>2026</span>
@@ -245,7 +245,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
 
                     {feedMode === 'LIVE' && !isLoading && trends.length > 5 && (
                         <div className="py-8 text-center opacity-10 animate-pulse">
-                            <div className="text-[8px] font-black tracking-[0.5em] uppercase italic">Scroll for more intelligence</div>
+                            <div className="text-xs font-black tracking-[0.5em] uppercase italic">Scroll for more intelligence</div>
                         </div>
                     )}
                 </div>
@@ -259,14 +259,14 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             <div className="flex justify-between items-start mb-8">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="px-2 py-0.5 bg-[#FF5F1F] text-white text-[8px] font-black uppercase">Live_Trend</span>
-                                        <span className="text-[10px] font-black text-white/20 tracking-widest uppercase italic">{selectedTrend.traffic} Searches</span>
+                                        <span className="px-2 py-0.5 bg-[#FF5F1F] text-white text-xs font-black uppercase">Live_Trend</span>
+                                        <span className="text-sm font-black text-white/50 tracking-widest uppercase italic">{selectedTrend.traffic} Searches</span>
                                     </div>
                                     <h2 className="text-5xl font-black tracking-tighter uppercase italic">{selectedTrend.title}</h2>
                                 </div>
                                 <button
                                     onClick={() => onSelectTrend(selectedTrend)}
-                                    className="bg-white text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase flex items-center gap-3 hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[8px_8px_0_rgba(255,255,255,0.1)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+                                    className="bg-white text-black px-6 py-3 font-black text-sm tracking-widest uppercase flex items-center gap-3 hover:bg-[#FF5F1F] hover:text-white transition-all shadow-[8px_8px_0_rgba(255,255,255,0.1)] active:translate-x-1 active:translate-y-1 active:shadow-none"
                                 >
                                     <Plus size={14} /> Feed Machine
                                 </button>
@@ -284,7 +284,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                         />
                                     ))}
                                 </div>
-                                <div className="absolute top-2 right-4 flex items-center gap-2 text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">
+                                <div className="absolute top-2 right-4 flex items-center gap-2 text-xs font-black text-white/50 uppercase tracking-[0.4em]">
                                     <BarChart3 size={10} className="text-[#FF5F1F]" /> 24H_INTEREST_VELOCITY
                                 </div>
                             </div>
@@ -296,14 +296,14 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                 <div className="p-6 border border-white/5 bg-white/[0.02] relative overflow-hidden group">
                                     <div className="flex justify-between items-end mb-4">
                                         <div>
-                                            <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] block mb-1">Viral_Signal_Strength</span>
+                                            <span className="text-xs font-black text-white/50 uppercase tracking-[0.4em] block mb-1">Viral_Signal_Strength</span>
                                             <span className="text-4xl font-black italic tracking-tighter text-[#FF5F1F] leading-none">
                                                 {selectedTrend.directorialIntelligence.viralPotential}%
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] block">Confidence_Interval</span>
-                                            <span className="text-[10px] font-black text-white uppercase italic">Optimal</span>
+                                            <span className="text-xs font-black text-white/50 uppercase tracking-[0.2em] block">Confidence_Interval</span>
+                                            <span className="text-sm font-black text-white uppercase italic">Optimal</span>
                                         </div>
                                     </div>
                                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
@@ -320,20 +320,20 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                 <div className="space-y-4 relative">
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
-                                            "w-10 h-10 flex items-center justify-center font-black text-[10px] border-2",
+                                            "w-10 h-10 flex items-center justify-center font-black text-sm border-2",
                                             selectedTrend.directorialIntelligence.take.character === 'BOOMER'
                                                 ? "border-[#FF5F1F] text-[#FF5F1F] bg-[#FF5F1F]/10"
-                                                : "border-white/40 text-white/40 bg-white/5"
+                                                : "border-white/40 text-white/60 bg-white/5"
                                         )}>
                                             {selectedTrend.directorialIntelligence.take.character[0]}
                                         </div>
                                         <div>
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest block">Character_Response</span>
-                                            <span className="text-[10px] font-black text-white uppercase">{selectedTrend.directorialIntelligence.take.character} TERMINAL</span>
+                                            <span className="text-xs font-black text-white/50 uppercase tracking-widest block">Character_Response</span>
+                                            <span className="text-sm font-black text-white uppercase">{selectedTrend.directorialIntelligence.take.character} TERMINAL</span>
                                         </div>
                                     </div>
                                     <div className="p-8 bg-[#111111] border-l-4 border-[#FF5F1F] relative">
-                                        <div className="absolute top-2 right-4 text-[7px] font-bold text-white/5 tracking-[0.5em] uppercase italic">Raw_Audio_Intercept</div>
+                                        <div className="absolute top-2 right-4 text-xs font-bold text-white/5 tracking-[0.5em] uppercase italic">Raw_Audio_Intercept</div>
                                         <p className="text-xl font-black italic leading-tight text-white/80 uppercase">
                                             &quot;{selectedTrend.directorialIntelligence.take.text}&quot;
                                         </p>
@@ -344,7 +344,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             {/* Creative Hooks / Scene Suggestions */}
                             {selectedTrend.directorialIntelligence && (
                                 <div className="space-y-6">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-[#FF5F1F] tracking-widest uppercase">
+                                    <div className="flex items-center gap-2 text-sm font-black text-[#FF5F1F] tracking-widest uppercase">
                                         <TrendingUp size={12} /> Sugggested Narrative Hooks
                                     </div>
                                     <div className="grid grid-cols-1 gap-2">
@@ -359,7 +359,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                             >
                                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/5 group-hover/hook:bg-[#FF5F1F] transition-colors" />
                                                 <div className="flex items-start gap-4">
-                                                    <span className="text-[10px] font-black text-white/10 group-hover/hook:text-[#FF5F1F]/40 transition-colors">0{i + 1}</span>
+                                                    <span className="text-sm font-black text-white/50 group-hover/hook:text-[#FF5F1F]/40 transition-colors">0{i + 1}</span>
                                                     <p className="text-sm font-bold text-white/60 group-hover/hook:text-white uppercase transition-colors italic leading-snug">
                                                         {hook}
                                                     </p>
@@ -373,7 +373,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                             {/* News Feed Items */}
                             {selectedTrend.news.length > 0 && (
                                 <div className="space-y-6 pt-6 border-t border-white/5">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-white/30 tracking-widest uppercase">
+                                    <div className="flex items-center gap-2 text-sm font-black text-white/60 tracking-widest uppercase">
                                         <Newspaper size={12} /> Intelligence Reports
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
@@ -386,10 +386,10 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                                 className="flex items-center justify-between p-6 bg-[#080808] border border-white/5 hover:border-white/20 transition-all group"
                                             >
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[9px] font-black text-[#FF5F1F] uppercase">{item.source}</span>
+                                                    <span className="text-xs font-black text-[#FF5F1F] uppercase">{item.source}</span>
                                                     <span className="text-sm font-bold text-white/80 group-hover:text-white transition-colors">{item.title}</span>
                                                 </div>
-                                                <ChevronRight size={18} className="text-white/10 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                                <ChevronRight size={18} className="text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                             </a>
                                         ))}
                                     </div>
@@ -400,7 +400,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center space-y-4 opacity-20">
                         <Zap size={48} />
-                        <span className="text-[10px] font-black tracking-[0.5em] uppercase">NO_SIGNAL_DETECTED</span>
+                        <span className="text-sm font-black tracking-[0.5em] uppercase">NO_SIGNAL_DETECTED</span>
                     </div>
                 )}
             </div>
