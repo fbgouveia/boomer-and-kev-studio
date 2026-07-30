@@ -1078,9 +1078,16 @@ export default function Home() {
               >
                 <Layers size={22} />
               </button>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#FF5F1F] flex items-center justify-center rounded-none shadow-[0_0_20px_rgba(255,95,31,0.3)] neural-sparkle shrink-0">
-                <BrainCircuit size={20} className="text-white" />
-              </div>
+              {/* Marca Boomer & Kev. Era um ícone genérico (BrainCircuit da Lucide) num quadrado
+                  laranja — placeholder do scaffold que nunca foi trocado. A marca já traz o
+                  laranja, então dispensa o container colorido. */}
+              <img
+                src="/assets/branding/boomer-kev-studio-mark.png"
+                alt="Boomer &amp; Kev"
+                width={40}
+                height={40}
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0"
+              />
               <div className="min-w-0">
                 <h1 className="text-sm sm:text-lg font-black tracking-tighter leading-none truncate">BOOMER & KEV <span className="text-[#FF5F1F]">STUDIO</span></h1>
                 <p className="text-xs sm:text-sm text-white/60 tracking-[0.2em] sm:tracking-[0.3em] font-bold truncate">CINEMATIC ENGINE v3.1</p>
