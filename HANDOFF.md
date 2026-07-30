@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-30 AEST (v5.0)
+# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.1)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -185,6 +185,12 @@ não quebrou chamador nenhum. **Antes de reativar:** adaptar o chamador n8n para
    dias, porque o alerta dependia do nó morto. Falta um alerta que dispare na AUSÊNCIA de sonda.
 10. **Pré-voo obrigatório:** com a sentinela verde, torná-la gate antes de qualquer render pago —
     era exatamente para isso que ela foi criada (`deriva.yml`: `frequencia_sentinela: diaria + pre-voo`).
+11. **Marca em SVG:** a do header é raster. Felipe decide entre vetorizar no Illustrator e passar
+    o arquivo, ou autorizar redesenho do símbolo. Sem isso, a cor da marca não vira token na Fase 2.
+12. **Deployar `c68569e`** (marca) — pode ir junto com `672939d` no próximo deploy.
+13. **Marca ainda é hardcoded no JSX** (`<img src="/assets/branding/...">`). Em white-label, logo
+    fixo no componente é o mesmo problema dos 265 hardcodes de personagem: precisa entrar na
+    camada de dados junto com a Fase 2, não virar mais um caminho fixo.
 
 ### 🚦 O QUE REALMENTE TRAVA O LANÇAMENTO
 
@@ -241,6 +247,40 @@ junto com o render de validação, para o efeito aparecer já na primeira execu�
 📌 **Divergência conhecida:** `getDetailedPrompt` está duplicado em `page.tsx`. A cópia de lá só
 alimenta a exportação de PDF (quem renderiza é o pipeline) e **não recebeu estes fixes** — os
 manifestos em PDF vão mostrar o prompt antigo até alguém unificar as duas.
+
+### 🎨 MARCA — o logo nunca tinha sido colocado (`c68569e`, NÃO deployado)
+
+**Descoberta:** não era logo errado, era ausência de logo. Os dois pontos de marca ainda
+tinham placeholder do scaffold:
+- header: ícone genérico `BrainCircuit` da Lucide dentro de um quadrado laranja
+- favicon: o **padrão do Next.js** (círculo preto com triângulo), arquivo datado de **04/02** —
+  o dia em que o projeto foi criado. Seis meses no ar assim.
+
+O único ativo de marca do projeto era `boomer-kev-commercial-creatives-logo.png`, que traz o
+lockup da sub-linha comercial (símbolo + "BOOMER & KEV" + "COMMERCIAL CREATIVES").
+
+**Como a variante Studio foi extraída.** Uma primeira tentativa por crop levou à conclusão
+FALSA de que os colchetes de moldura estavam entrelaçados com as orelhas — as coordenadas do
+recorte é que estavam erradas. Rotulagem de **componentes conectados** desfez o engano: são 7
+componentes, e as 4 molduras são blocos isolados nos cantos, separáveis sem tocar no canguru
+(70.566 px), no coala (83.497 px) e no play (19.739 px). Molduras e textos removidos por
+componente, não por crop → fidelidade preservada, não é redesenho.
+
+**Dois assets, decisões diferentes:**
+- `public/assets/branding/boomer-kev-studio-mark.png` — fundo transparente. O quadrado laranja
+  do header saiu junto: a marca já carrega o laranja, o container duplicava.
+- `src/app/icon.png` — fundo **preto**, não transparente: o coala é branco e sumiria numa aba
+  de tema claro.
+- `src/app/favicon.ico` (padrão do Next) removido — tinha precedência sobre o `icon.png`.
+
+**Verificado:** marca renderiza a 40px no header, `<link rel="icon">` emitido para `icon.png`,
+build compila, 33/33 testes. Testado a 32px: legível sem as molduras, que eram o ruído.
+
+⚠️ **Limitação:** é **raster**. Para logo, SVG seria melhor (escala e troca de cor por token,
+que a Fase 2 vai exigir). Não há vetorizador nesta máquina (sem potrace/imagemagick/inkscape) e
+recortar não separa as curvas do tufo do coala com fidelidade — um SVG honesto exigiria
+redesenhar o símbolo, o que muda a marca. Decisão do Felipe: vetorizar no Illustrator e passar
+o arquivo, ou autorizar redesenho.
 
 ### 🧹 Nota de processo: CRLF
 
@@ -484,7 +524,8 @@ da rota `/admin` falsa.
 **Também nesta sessão:** sentinela estava cega há 4 dias (401 desde o deploy de Basic Auth) —
 corrigida no n8n e no código; bug de deploy que apagava o `.env` de produção — achado por um
 deploy real que falhou e reverteu sozinho, corrigido com regressão; 3 causas de infidelidade de
-personagem corrigidas (`672939d`).
+personagem corrigidas (`672939d`); marca do Studio colocada no header e no favicon (`c68569e`)
+— até então eram placeholders do scaffold, o favicon era o padrão do Next desde 04/02.
 **Deployado em 30/07** — produção saiu de `21f09ae` para `d8d8b61` (33 commits).
 Sentinela GREEN nas 4 sondas pós-deploy. `672939d` fica NÃO deployado de propósito, para subir
 junto com o render de validação. Ver seção "SESSÃO 30/07/2026" acima.
