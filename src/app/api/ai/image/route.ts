@@ -10,12 +10,42 @@ import {
   type PaidOperationReservation,
 } from '@/lib/paid-operation';
 
-const imageSchema = z.object({
+export const imageSchema = z.object({
   prompt: z.string().trim().min(1).max(20_000),
-  aspectRatio: z.enum(['1:1', '4:3', '16:9']).default('1:1'),
+  // 9:16 faltava — sem ele não dava para gerar capa vertical (TikTok/Reels/Shorts).
+  aspectRatio: z.enum(['1:1', '4:3', '16:9', '9:16']).default('1:1'),
+  // Âncora de personagem. Sem ela o modelo inventa outro canguru a cada geração —
+  // mesma causa da infidelidade que quebrou o pipeline de vídeo. Só caminhos sob
+  // /assets: o valor vem do cliente e não pode virar leitura arbitrária de disco.
+  // O lookahead barra `..` em qualquer posição: sem ele `/assets/../../etc/passwd.png`
+  // passava no regex e só a checagem de caminho resolvido segurava.
+  anchorAsset: z.string().regex(/^\/assets\/(?!.*\.\.)[A-Za-z0-9._\/-]+\.(png|jpg|jpeg)$/).max(256).optional(),
   clientApiKey: z.string().trim().min(1).max(512).optional(),
   approval: z.unknown().optional(),
 });
+
+const ASPECT_HINT: Record<string, string> = {
+  '16:9': 'aspect ratio 16:9 landscape',
+  '9:16': 'aspect ratio 9:16 vertical portrait',
+  '4:3': 'aspect ratio 4:3',
+  '1:1': 'aspect ratio 1:1 square',
+};
+
+/** Lê a âncora do disco como inlineData. Rejeita qualquer coisa fora de public/assets. */
+export async function anchorPart(assetPath: string | undefined) {
+  if (!assetPath) return null;
+  const assetsRoot = path.resolve(process.cwd(), 'public', 'assets');
+  const resolved = path.resolve(process.cwd(), 'public', `.${assetPath}`);
+  // Defesa em profundidade: mesmo com o regex, confere que o caminho resolvido não escapou.
+  if (resolved !== assetsRoot && !resolved.startsWith(assetsRoot + path.sep)) return null;
+  try {
+    const bytes = await fs.readFile(resolved);
+    const mimeType = resolved.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    return { inlineData: { mimeType, data: bytes.toString('base64') } };
+  } catch {
+    return null; // âncora ausente não deve derrubar a geração — degrada para texto puro
+  }
+}
 
 export async function POST(req: Request) {
   let paidReservation: PaidOperationReservation | undefined;
@@ -46,13 +76,15 @@ export async function POST(req: Request) {
     }
     paidReservation = paidOperation.reservation;
 
-    const { prompt, aspectRatio, clientApiKey } = validation.data;
+    const { prompt, aspectRatio, clientApiKey, anchorAsset } = validation.data;
     const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       const responseBody = { error: 'Missing Gemini API Key' };
       completePaidOperation(paidReservation, { status: 400, body: responseBody });
       return NextResponse.json(responseBody, { status: 400 });
     }
+
+    const anchor = await anchorPart(anchorAsset);
 
     const { response } = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent?key=${apiKey}`,
@@ -61,9 +93,12 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
-            parts: [{
-              text: `${prompt} (${aspectRatio === '16:9' ? 'aspect ratio 16:9 landscape' : aspectRatio === '4:3' ? 'aspect ratio 4:3' : 'aspect ratio 1:1 square'})`,
-            }],
+            // A âncora vem ANTES do texto: o modelo trata a imagem como referência do
+            // sujeito e o texto como direção do que fazer com ele.
+            parts: [
+              ...(anchor ? [anchor] : []),
+              { text: `${prompt} (${ASPECT_HINT[aspectRatio]})` },
+            ],
           }],
         }),
       },
