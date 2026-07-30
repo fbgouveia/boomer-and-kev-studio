@@ -176,6 +176,28 @@ não quebrou chamador nenhum. **Antes de reativar:** adaptar o chamador n8n para
 4. **Felipe deve fornecer:** URLs reais dos canais (Discord/YouTube/Instagram) e um contato de
    suporte, para os botões removidos voltarem funcionando.
 5. **Passada visual aba por aba** nas 5 abas não inspecionadas.
+6. **Deployar `672939d`** (fixes de fidelidade de personagem) — de propósito segurado para subir
+   junto com o render de validação.
+7. **Unificar `getDetailedPrompt`** (duplicado em `page.tsx`, só p/ PDF, sem os fixes de 30/07).
+8. **Segredo dedicado para a sonda:** hoje a sentinela usa a Basic Auth humana do studio. O
+   padrão mais limpo — já adotado por Radar e trend cron — é um Bearer próprio que falha fechado.
+9. **Dead-man's switch:** o buraco de 27–29/07 não foi a sonda falhar, foi ninguém saber por 4
+   dias, porque o alerta dependia do nó morto. Falta um alerta que dispare na AUSÊNCIA de sonda.
+10. **Pré-voo obrigatório:** com a sentinela verde, torná-la gate antes de qualquer render pago —
+    era exatamente para isso que ela foi criada (`deriva.yml`: `frequencia_sentinela: diaria + pre-voo`).
+
+### 🚦 O QUE REALMENTE TRAVA O LANÇAMENTO
+
+Registrado explícito para não se perder entre as tarefas técnicas: **a engine nunca produziu um
+episódio validado.** Pastas `Kling_Renders/`, `TikTok_Renders/`, `Instagram_Renders/`, `Scripts/`
+e `Storyboards/` estão VAZIAS. Zero renders de validação pagos.
+
+Todo trabalho de código a partir daqui é polir uma máquina não provada. O portão é:
+1. Felipe recarrega crédito Replicate (hoje <US$5 → throttle 6/min bloqueia render de 8 cenas)
+2. Autoriza ~US$3–6 por render, 2 renders (9:16 + 16:9)
+3. Deployar `672939d` junto
+4. Comparar frame a frame contra o `oatmilk.mp4` original do T5 EVO
+5. Decidir lipsync animal (aceitar sem sync / testar engine que aceite focinho / Kling nativo)
 
 ### 📌 Achado do pipeline registrado nesta sessão (não é UI)
 
@@ -183,11 +205,49 @@ Auditoria do render 9:16 a $0: repliquei `reframeAnchorToAspect()` nas três ân
 `master_boomer` → ótimo (personagem inteiro, centrado); `master_kev` → passa mas
 descentralizado, corpo cortado na borda direita; `master_wide` → **nenhum personagem**, só
 mesa e mixer. O código já protege esse caso (`route.ts` linha ~470 só usa o two-shot em 16:9).
-**Risco não provado:** um `shotType: 'WIDE'` em 9:16 ainda recebe `ANGLE_SPECS.wide` no prompt
-(linha ~189) enquanto a âncora entregue é solo — o Kling recebe "plano aberto com os dois" e
-uma imagem com um só, e pode inventar o segundo personagem sem âncora. É a rota mais provável
-para a infidelidade de personagem que o Felipe percebeu. **O render pago de validação resolve.**
 Ver [[analise-rigorosa]] e [[formato-selecionavel]].
+
+### ✅ FIDELIDADE DE PERSONAGEM — 2 CAUSAS CORRIGIDAS (`672939d`, ainda NÃO deployado)
+
+O "risco não provado" acima foi confirmado lendo o código e corrigido. Eram **três** defeitos:
+
+**1. Prompt pedia DOIS personagens com âncora de UM (causa provável do que o Felipe percebeu).**
+Em 9:16 a âncora é solo, mas o prompt seguia mandando a `cinematicRule` do `SHOT_TYPES`:
+`WIDE` = "shows both characters", `OTS_BOOMER` = "over Kev's shoulder at Boomer". O Kling
+recebia "os dois" com referência de um só e **inventava o segundo do zero, sem âncora**.
+→ `SOLO_SHOTS_IN_VERTICAL` (WIDE / OTS_BOOMER / GOPRO_FISHEYE) + regra de enquadramento solo
+vertical explícita: `no second host in frame`, `never cropped at the top`.
+
+**2. `--ar` cravado em 9:16** mesmo com 16:9 selecionado — o formato era "selecionável" e o
+prompt afirmava o contrário. → `--ar ${aspect}`.
+
+**3. Âncora do Kev mal recortada.** O recorte 16:9→9:16 era sempre centrado, mas Kev está à
+direita na arte: metade do quadro virava TV/Vegemite e a orelha saía cortada. Comparados
+visualmente x=472 (atual) / 650 / 730 / 810 → **730** é o único com rosto centrado e as duas
+orelhas inteiras.
+→ **`Character.anchorFocusX`** (0..1 normalizado, não pixels — sobrevive a troca de arte em
+outra resolução e serve white-label, onde a âncora é de outro personagem). `kev: 0.687`;
+Boomer fica no default `0.5`, que já estava correto.
+→ `anchorCropFilter()` extraído com `clip()` que prende o recorte dentro da imagem.
+
+**Verificação:** expressão ffmpeg == recorte manual x=729 conferido por md5 (1px do alvo, por
+arredondamento); **Boomer byte-idêntico** ao anterior (sem regressão); focus 0.99 / `NaN` /
+`Infinity` / negativos não estouram. Suíte 25 → **33 testes**, e confirmei que os novos
+**falham sem o fix** e passam com ele (`tests/prompt-aspect.test.ts`).
+
+⚠️ **Não deployado de propósito:** muda o comportamento do render pago. Faz mais sentido subir
+junto com o render de validação, para o efeito aparecer já na primeira execução.
+
+📌 **Divergência conhecida:** `getDetailedPrompt` está duplicado em `page.tsx`. A cópia de lá só
+alimenta a exportação de PDF (quem renderiza é o pipeline) e **não recebeu estes fixes** — os
+manifestos em PDF vão mostrar o prompt antigo até alguém unificar as duas.
+
+### 🧹 Nota de processo: CRLF
+
+Scripts Python de reescrita em massa converteram CRLF→LF em `characters.ts`,
+`DraftingTable.tsx` e `TrendsFeed.tsx`, inflando o diff (360 linhas para uma mudança de 11).
+Restaurado e conferido com `--ignore-all-space`. **Ao editar em lote neste repo, preservar o
+final de linha original** — parte dos arquivos é CRLF.
 
 ---
 
@@ -421,8 +481,14 @@ fix de aspecto existe mas nunca foi provado); auditoria de UI com números (345 
 223 violações de contraste, 9 `alert()`, 265 hardcodes de marca); Fase 1 executada e verificada
 (build + 25/25 testes + inspeção visual 1440/375px); remoção de toda métrica inventada da UI e
 da rota `/admin` falsa.
+**Também nesta sessão:** sentinela estava cega há 4 dias (401 desde o deploy de Basic Auth) —
+corrigida no n8n e no código; bug de deploy que apagava o `.env` de produção — achado por um
+deploy real que falhou e reverteu sozinho, corrigido com regressão; 3 causas de infidelidade de
+personagem corrigidas (`672939d`).
 **Deployado em 30/07** — produção saiu de `21f09ae` para `d8d8b61` (33 commits).
-Sentinela GREEN pós-deploy. Ver seção "SESSÃO 30/07/2026" acima.
+Sentinela GREEN nas 4 sondas pós-deploy. `672939d` fica NÃO deployado de propósito, para subir
+junto com o render de validação. Ver seção "SESSÃO 30/07/2026" acima.
+**Suíte de testes:** 25 → 33.
 
 ### Sessão 2026-07-19 (v3.0 → v3.1)
 **Agente:** Gemini (Antigravity CLI) + Claude Opus 4.6
