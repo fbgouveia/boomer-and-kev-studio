@@ -81,17 +81,21 @@ export function buildCoverPrompt(spec: CoverSpec): string {
     throw new Error("capa 'versus' exige dois personagens diferentes");
   }
 
+  // `defaultOutfit` já começa com "Wearing" e as descrições já terminam em ponto —
+  // concatenar cru gerava "Wearing Wearing ..." e ponto duplo no prompt real.
+  const sentence = (s: string) => s.trim().replace(/\.+$/, '') + '.';
+
   // Ordem dos pilares = ordem do ebook. O mais importante primeiro.
   const subject =
-    `${char.imagePromptContext}. Wearing ${char.defaultOutfit} ` +
-    `Visual DNA: ${char.visualDescription}`;
+    `${sentence(char.imagePromptContext)} ${sentence(char.defaultOutfit)} ` +
+    `Visual DNA: ${sentence(char.visualDescription)}`;
 
   const expression =
     `EXPRESSION: ${emotion} — exaggerated and unmistakable at thumbnail size: ` +
     `eyes wide, brow driven, mouth open mid-shout. The emotion must read in under one second.`;
 
   const secondSubject = opponent
-    ? ` SECOND HOST: ${opponent.imagePromptContext}. Visual DNA: ${opponent.visualDescription}. ` +
+    ? ` SECOND HOST: ${sentence(opponent.imagePromptContext)} Visual DNA: ${sentence(opponent.visualDescription)} ` +
       `Opposing reaction, clearly a different animal from the first — never a duplicate of the same character.`
     : ' Only ONE host in frame. No second character.';
 
@@ -114,7 +118,7 @@ export function buildCoverPrompt(spec: CoverSpec): string {
 
   return [
     `SOCIAL COVER IMAGE, photorealistic.`,
-    subject + '.',
+    subject,
     expression,
     secondSubject,
     composition,

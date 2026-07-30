@@ -31,6 +31,28 @@ describe('buildCoverPrompt — regras que são restrição técnica, não estilo
     assert.match(p, /boxing gloves/i, 'perdeu o figurino canônico');
   });
 
+  test('não repete palavra nem pontuação ao concatenar os campos do personagem', () => {
+    // O output real trazia "Wearing Wearing ..." e ".." — defeito que só apareceu
+    // imprimindo o prompt, nao nos asserts de presenca. Achado 31/07.
+    const specs: CoverSpec[] = [];
+    for (const id of ['boomer', 'kev']) {
+      for (const aspect of ['9:16', '16:9'] as const) {
+        specs.push({ ...base, characterId: id, aspect });
+        specs.push({ ...base, characterId: id, aspect, type: 'versus', opponentId: id === 'boomer' ? 'kev' : 'boomer' });
+      }
+    }
+    for (const spec of specs) {
+      {
+        const id = `${spec.characterId}/${spec.type}`;
+        const aspect = spec.aspect;
+        const p = buildCoverPrompt(spec);
+        assert.doesNotMatch(p, /\bWearing Wearing\b/, `${id}/${aspect}: "Wearing" duplicado`);
+        assert.doesNotMatch(p, /\.\./, `${id}/${aspect}: pontuação duplicada`);
+        assert.doesNotMatch(p, /\b(\w+) \1\b/i, `${id}/${aspect}: palavra repetida em sequência`);
+      }
+    }
+  });
+
   test('o tema entra como contexto de cena, não como legenda', () => {
     const p = buildCoverPrompt({ ...base, topic: 'Oat milk banned in Australia' });
     assert.match(p, /Oat milk banned in Australia/);
