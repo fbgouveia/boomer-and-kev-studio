@@ -107,6 +107,64 @@ falsa, as métricas reais pararam de quebrar em duas linhas.
 navegadas. Production/Library/Engine DNA/Studio Labs/Radar receberam as mesmas mudanças
 mecânicas e compilam, mas **não foram inspecionadas visualmente aba por aba**.
 
+### 🚨 A SENTINELA ESTAVA CEGA HÁ 4 DIAS (achado e corrigido 30/07)
+
+Execuções do workflow `CmHQvdzX5Sk23n7y`: **success** até 26/07, **error** em 27, 28 e 29/07.
+Erro no nó `Rodar Sondas`: `Authorization failed — Authentication required.`
+
+**Causa-raiz:** o deploy de segurança de 27/07 (`b58f955`) pôs Basic Auth na borda. A sonda
+batia em `https://boomerandkev.fgss.io/api/sentinel` **sem credencial** → 401 diário. Nenhum
+alerta disparou, porque o alerta depende justamente do nó que morreu. Quatro dias sem
+vigilância de contrato. Só apareceu porque o hook de sessão reclamou de "91h sem sonda".
+
+**Duas correções, camadas diferentes:**
+1. **n8n:** credencial `httpBasicAuth` criada (`Z9MEMLwSrFzbK6oe`, restrita ao domínio
+   `boomerandkev.fgss.io`) e ligada ao nó `Rodar Sondas`. Backup do workflow anterior tirado
+   antes do PUT.
+2. **Código (`d9d83ab`):** o probe `gemini_roteirista` faz self-call
+   `fetch(${SELF}/api/ai/script)` e também tomava 401. Adicionado `selfAuthHeader()` lendo
+   `STUDIO_AUTH_USER/PASSWORD` (ambas já presentes no `.env` da VPS). O assert ganhou dica
+   explícita no 401 p/ não re-diagnosticar isso.
+
+**O produto NÃO estava afetado** — o único self-call do código é o da própria sonda.
+
+### 🔥 BUG DE DEPLOY QUE APAGAVA O .ENV DE PRODUÇÃO (achado e corrigido 30/07)
+
+O primeiro deploy dos 33 commits **falhou e reverteu sozinho**. Diagnóstico medido:
+
+- o standalone do Next não contém `.env`
+- `rsync -avz --delete .next/standalone/ → DEST_DIR/` portanto **apaga o `.env` remoto**
+- o script antigo compensava reenviando `.env.local` incondicionalmente
+- `38ec9bd` tornou o envio condicional a `DEPLOY_ENV_FILE`, **mas manteve o `--delete`**
+- com `DEPLOY_ENV_FILE` vazio (o padrão): env apagado, nada enviado, app sobe sem variável
+  nenhuma → health check vermelho → rollback
+
+A mensagem `🔐 Ambiente remoto preservado` afirmava o oposto do que acontecia. O rollback de
+`c83877c` funcionou exatamente como projetado e é o único motivo do site ter continuado no ar.
+
+**Fix (`d8d8b61`):** `--exclude='.env'` no rsync do standalone + regressão em
+`tools/test-deploy-script.mjs`, verificada nas duas direções (falha sem o fix, passa com ele).
+O contrato anterior dizia "env seguro" e não pegava isto.
+
+### ✅ DEPLOY CONCLUÍDO — produção agora em `d8d8b61`
+
+Segundo deploy passou no health check na tentativa 1. Produção saiu de `21f09ae` e recebeu
+**33 commits** de uma vez: toda a linha de robustez represada desde 27/07 + a Fase 1 de UI.
+
+**Sentinela pós-deploy: GREEN nas 4 sondas** (primeira vez desde 26/07):
+- `gemini_roteirista` — 8 cenas, tópico referenciado, balanço boomer/kev 5/3
+- `elevenlabs_voz` — 18.4KB de áudio
+- `replicate_kling` — kwaivgi/kling-v2.6 acessível, versão b13f36d03049
+- `supabase_sydney` — escrita OK, RLS bloqueia anon
+
+Verificado também: `401` sem credencial e `200` com credencial na borda pública; interface nova
+confirmada visualmente em produção.
+
+⚠️ **`Boomer & Kev Production Orchestrator` (`n6qm9qMxEFvvkU8C`) segue INATIVO** — confirmado
+via API antes do deploy. Por isso o contrato novo das APIs pagas (Idempotency-Key + aprovação)
+não quebrou chamador nenhum. **Antes de reativar:** adaptar o chamador n8n para enviar
+`Idempotency-Key` + aprovação `n8n_manual` só depois do gate humano no Telegram.
+
 ### 🔴 Pendências desta frente
 
 1. **Fase 2 (white-label de verdade):** hex cru → tokens semânticos + migrar os 265 hardcodes
@@ -363,7 +421,8 @@ fix de aspecto existe mas nunca foi provado); auditoria de UI com números (345 
 223 violações de contraste, 9 `alert()`, 265 hardcodes de marca); Fase 1 executada e verificada
 (build + 25/25 testes + inspeção visual 1440/375px); remoção de toda métrica inventada da UI e
 da rota `/admin` falsa.
-**Não deployado.** Ver seção "SESSÃO 30/07/2026" acima para pendências.
+**Deployado em 30/07** — produção saiu de `21f09ae` para `d8d8b61` (33 commits).
+Sentinela GREEN pós-deploy. Ver seção "SESSÃO 30/07/2026" acima.
 
 ### Sessão 2026-07-19 (v3.0 → v3.1)
 **Agente:** Gemini (Antigravity CLI) + Claude Opus 4.6
