@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.1)
+# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.2)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -191,6 +191,14 @@ não quebrou chamador nenhum. **Antes de reativar:** adaptar o chamador n8n para
 13. **Marca ainda é hardcoded no JSX** (`<img src="/assets/branding/...">`). Em white-label, logo
     fixo no componente é o mesmo problema dos 265 hardcodes de personagem: precisa entrar na
     camada de dados junto com a Fase 2, não virar mais um caminho fixo.
+14. **Camada de texto da capa** (passo 6 do workflow do ebook): o título sobre a imagem. **Decisão
+    pendente do Felipe** — o ffmpeg desta máquina **não tem o filtro `drawtext`** (descoberto em
+    30/07 tentando rotular testes). Ou recompila com libfreetype, ou faz por `sharp`/canvas em
+    Node, que seria **dependência nova**. Sem isso a capa sai sem título.
+15. **Ligar o gerador de capa na UI e no pipeline.** Ele está pronto e testado, mas ninguém o
+    chama. De propósito: plugar junto com o render de validação, para o episódio sair com vídeo
+    e capa no mesmo ciclo. Custo marginal baixo (Nano Banana é barato perto do Kling).
+16. **Deployar `3eaefff` + `36be9e8`** junto com `672939d` e `c68569e` no próximo deploy.
 
 ### 🚦 O QUE REALMENTE TRAVA O LANÇAMENTO
 
@@ -281,6 +289,53 @@ que a Fase 2 vai exigir). Não há vetorizador nesta máquina (sem potrace/image
 recortar não separa as curvas do tufo do coala com fidelidade — um SVG honesto exigiria
 redesenhar o símbolo, o que muda a marca. Decisão do Felipe: vetorizar no Illustrator e passar
 o arquivo, ou autorizar redesenho.
+
+### 🖼️ GERADOR DE CAPA / THUMBNAIL (`3eaefff` + `36be9e8`, NÃO deployado, $0 gasto)
+
+**Origem:** Felipe pediu para internalizar o ebook `Ebook - Criando Thumbnail com IA
+[Pack Prompts]` (74 páginas, método "Nano Banana Pro") e propor próximos passos.
+
+**Descoberta que mudou a conversa:** `/api/ai/image` **já roda `gemini-3-pro-image`** — o
+código tem a string literal `"Nano Banana Pro model"`. O ebook foi escrito exatamente para o
+modelo que a engine já tem ligado. E **não existia passo de capa**: `thumbnailUrl` estava em
+`src/types/index.ts` mas nada o preenchia. O fluxo ia roteiro → voz → Kling → montagem e parava.
+Sem capa não há episódio publicável.
+
+**O que o método entrega, e o que dele NÃO se aplica.** O valor não são os 50 prompts — é a
+arquitetura, que é quase idêntica à que o pipeline de vídeo já implementa (`characters.ts` ↔
+`subject`, `SHOT_TYPES`/`ANGLE_SPECS` ↔ `camera`, `lightingKey` ↔ `lighting`, `negative_prompt`,
+`aspect`). Não se aplica: o ebook é **YouTube-cêntrico** (CTR, clique, 16:9) e o B&K é vertical —
+no TikTok/Reels não existe thumbnail nesse sentido, o vídeo já começa tocando. Vale de fato para
+YouTube e para a **Commercial Creatives** (peça estática de cliente). E os 50 prompts são para
+sujeitos **humanos**: copiar sem ancorar produziria outro canguru a cada capa.
+
+⚠️ **Dois números do ebook não devem ser repetidos como fato:** "90% da decisão de clique" e
+"3-5 versões = 35% mais views". Sem fonte citada. Direção plausível, precisão de marketing.
+
+**`src/lib/cover-prompt.ts`** (puro, testável a $0):
+- 7 pilares na ordem do método (tokens no início pesam mais)
+- personagem SEMPRE de `characters.ts` + âncora mestre como `inlineData`
+- tipos `reaction` (1 personagem) e `versus` (Boomer × Kev, formato natural de podcast de debate)
+- 9:16 **empilha** o versus — split lado a lado não cabe em vertical, mesma lição do vídeo
+- espaço negativo p/ o título: faixa inferior no vertical, terço esquerdo no horizontal
+- negativo de texto: modelo generativo escreve letra deformada
+- `buildCoverVariations()` p/ o passo "gere 4-6, escolha as 3 melhores"
+
+**`/api/ai/image`:** `aspectRatio` ganhou `9:16` (faltava, bloqueava capa vertical) e
+`anchorAsset`, enviado como `inlineData` ANTES do texto.
+
+**🔒 Furo de segurança que eu mesmo escrevi e fechei.** `anchorAsset` vem do cliente e vira
+leitura de disco no servidor. O regex inicial **aceitava** `/assets/../../etc/passwd.png` — eu
+só havia barrado traversal *sem* extensão de imagem. Fechado com lookahead contra `..` + a
+checagem de caminho resolvido como segunda camada. Verificado nas duas direções: sem o
+lookahead o teste falha nomeando o payload aceito.
+
+**🐛 Defeito que só apareceu imprimindo o output real.** `defaultOutfit` já começa com "Wearing"
+e as descrições já terminam em ponto → o prompt saía com `Wearing Wearing large red boxing
+gloves` e `friendly expression..`. Os asserts de presença passavam. **Lição:** para gerador de
+prompt, imprimir a saída real é parte do teste — asserção de presença não vê repetição.
+
+Testes: 33 → **54**. Nenhuma chamada paga feita.
 
 ### 🧹 Nota de processo: CRLF
 
@@ -529,7 +584,9 @@ personagem corrigidas (`672939d`); marca do Studio colocada no header e no favic
 **Deployado em 30/07** — produção saiu de `21f09ae` para `d8d8b61` (33 commits).
 Sentinela GREEN nas 4 sondas pós-deploy. `672939d` fica NÃO deployado de propósito, para subir
 junto com o render de validação. Ver seção "SESSÃO 30/07/2026" acima.
-**Suíte de testes:** 25 → 33.
+**Em 31/07:** marca do Studio (`c68569e`) e gerador de capa pelo método Nano Banana Pro
+(`3eaefff` + `36be9e8`), este último com $0 gasto — nenhuma chamada paga.
+**Suíte de testes:** 25 → **54**.
 
 ### Sessão 2026-07-19 (v3.0 → v3.1)
 **Agente:** Gemini (Antigravity CLI) + Claude Opus 4.6
