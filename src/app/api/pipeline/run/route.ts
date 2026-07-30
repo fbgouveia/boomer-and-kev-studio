@@ -178,18 +178,27 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
   });
 }
 
-// Prompt generator helper (mirrors page.tsx)
-const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }) => {
+// Prompt generator helper (a cópia em page.tsx é só p/ exportar PDF; quem renderiza é esta).
+// `aspect` importa: em 9:16 a âncora enviada ao Kling é SOLO (o two-shot lado-a-lado não cabe,
+// ver escolha da anchorImage abaixo). Pedir "shows both characters" com uma âncora de um só faz
+// o Kling INVENTAR o segundo personagem sem referência — infidelidade de personagem. Achado 30/07.
+const SOLO_SHOTS_IN_VERTICAL = new Set(['WIDE', 'OTS_BOOMER', 'GOPRO_FISHEYE']);
+
+export const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16') => {
   const char = CHARACTERS.find(c => c.id === line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
   if (!char) return "";
+
+  // Em 9:16 esses planos viram solo vertical: mesma cena, mas enquadrando UM personagem.
+  const forceSolo = aspect === '9:16' && !!shot && SOLO_SHOTS_IN_VERTICAL.has(shot.id);
 
   let angleSpec = ANGLE_SPECS.main;
   if (shot?.id === 'WIDE') angleSpec = ANGLE_SPECS.wide;
   else if (shot?.id.includes('CU')) angleSpec = ANGLE_SPECS.close;
   else if (shot?.id.includes('OTS')) angleSpec = ANGLE_SPECS.side;
   else if (shot?.id === 'GOPRO_FISHEYE') angleSpec = ANGLE_SPECS.wide;
+  if (forceSolo) angleSpec = ANGLE_SPECS.main;
 
   let outfitBase = `Wearing ${char.defaultOutfit}.`;
   if (wardrobe && line.characterId === 'boomer' && wardrobe.boomer) {
@@ -208,7 +217,12 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
 
   const actionBlock = `BEHAVIOR: ${line.action}. ${personalityLogic}. EMOTION: ${line.emotion}. Talking actively into the microphone, lips articulating words clearly and naturally.`;
 
-  const cameraBlock = `Highly photorealistic, 8k RAW, movie grade textures, cinematic depth, subsurface scattering on fur, ray-traced lighting, masterpiece. CAMERA: ${shot?.label}, ${shot?.cinematicRule}. ${angleSpec.desc}, ${angleSpec.requirements.join(', ')}.`;
+  // Em vertical, sobrescreve a regra do plano: o SHOT_TYPES fala em "shows both characters" /
+  // "over Kev's shoulder at Boomer", e isso contradiz a âncora solo que o Kling recebe.
+  const cameraRule = forceSolo
+    ? `vertical solo framing on ${char.name} ONLY — no second host in frame, single subject centered, head and shoulders fully inside the frame, never cropped at the top`
+    : shot?.cinematicRule;
+  const cameraBlock = `Highly photorealistic, 8k RAW, movie grade textures, cinematic depth, subsurface scattering on fur, ray-traced lighting, masterpiece. CAMERA: ${forceSolo ? `${shot?.label} (vertical solo)` : shot?.label}, ${cameraRule}. ${angleSpec.desc}, ${angleSpec.requirements.join(', ')}.`;
 
   let activeProps = STUDIO_SETTING.props.filter(p => !p.includes(line.characterId === 'boomer' ? 'Tablet' : 'Gloves')).slice(0, 4).join(', ');
   let tvGraphics = directorIdea;
@@ -227,7 +241,8 @@ const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSn
   // WP 1.6: cada clipe deve parecer um TRECHO de transmissão contínua, não um vídeo com início/fim.
   const continuityDirective = `CONTINUITY: This is a segment of an ONGOING live podcast broadcast. The character is ALREADY mid-conversation when the shot begins — no settling in, no greeting gesture, no looking for position. The shot ENDS mid-energy, as if the camera simply cut away; never a wrap-up pose, never a fade-out feeling.`;
 
-  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar 9:16 --v 6.0`;
+  // --ar seguia cravado em 9:16 mesmo com o formato 16:9 selecionado (achado 30/07).
+  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar ${aspect} --v 6.0`;
 };
 
 // Replicate polling helper
@@ -264,15 +279,25 @@ async function createKlingPrediction(replicate: Replicate, input: any, maxRetrie
 }
 
 // Kling herda o aspect da start_image, não do param aspect_ratio. Para o formato
-// (9:16/16:9) valer de verdade, a âncora local é recortada (centralizada) via
-// ffmpeg pro aspect escolhido e vira data URI. Remoto/ausente → devolve como está.
-async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16' | '16:9', tmpDir: string, tag: string): Promise<string | undefined> {
+// (9:16/16:9) valer de verdade, a âncora local é recortada via ffmpeg pro aspect
+// escolhido e vira data URI. Remoto/ausente → devolve como está.
+// `focusX` (0..1) diz ONDE está o personagem: o recorte centrado assumia o sujeito no
+// meio da arte, o que corta quem está fora do centro (caso do Kev). Ver Character.anchorFocusX.
+// clip() prende o recorte dentro da imagem: focus perto das bordas não gera x negativo nem
+// estoura a largura — degrada para o recorte flush na borda. Exportado só para teste.
+export function anchorCropFilter(aspect: '9:16' | '16:9', focusX = 0.5): string {
+  if (aspect === '16:9') return `crop=iw:'min(ih,iw*9/16)'`;
+  const fx = Math.min(1, Math.max(0, Number.isFinite(focusX) ? focusX : 0.5));
+  return `crop='min(iw,ih*9/16)':ih:'clip(iw*${fx.toFixed(4)}-ow/2,0,iw-ow)':0`;
+}
+
+async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16' | '16:9', tmpDir: string, tag: string, focusX = 0.5): Promise<string | undefined> {
   if (!assetUrl) return undefined;
   if (!assetUrl.startsWith('/')) return assetUrl;
   const src = path.join(process.cwd(), 'public', assetUrl);
   if (!existsSync(src)) return undefined;
   const out = path.resolve(tmpDir, `anchor_${tag}.jpg`);
-  const crop = aspect === '9:16' ? `crop='min(iw,ih*9/16)':ih` : `crop=iw:'min(ih,iw*9/16)'`;
+  const crop = anchorCropFilter(aspect, focusX);
   await new Promise<void>((resolve, reject) => {
     const ff = spawn('ffmpeg', ['-y', '-i', src, '-vf', crop, '-frames:v', '1', out], { stdio: ['ignore', 'ignore', 'inherit'] });
     ff.on('error', reject);
@@ -453,7 +478,7 @@ async function processPipeline(
         scenesToProcess.push({
           sceneId, index, predictionId: null as string | null, audioDataUri, status: "CHAINED",
           chainFrom,
-          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe), duration: line.durationEst <= 5 ? 5 : 10 }
+          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect), duration: line.durationEst <= 5 ? 5 : 10 }
         });
         continue;
       }
@@ -461,17 +486,21 @@ async function processPipeline(
       if (replicate) {
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
-          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe);
+          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect);
           const character = CHARACTERS.find(c => c.id === line.characterId);
           
           // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
           // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
           // ponytail: two-shot vertical de verdade (OTS/empilhado) exige arte nova — P0a item 4.
+          // Mesma regra do prompt (SOLO_SHOTS_IN_VERTICAL): two-shot so em 16:9. Se estas duas
+          // condicoes divergirem, o prompt volta a pedir dois personagens com ancora de um.
           const anchorImage = (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER'))
             ? '/assets/master_wide.png'
             : character?.referenceImage;
 
-          const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`);
+          // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
+          const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
+          const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`, anchorFocusX);
 
           const prediction = await createKlingPrediction(replicate, {
             prompt: prompt,

@@ -24,6 +24,12 @@ export type Character = {
         speakerBoost: boolean;
     };
     referenceImage?: string; // URL to the master reference image for I2V
+    // Onde o personagem está na âncora, no eixo X, normalizado (0 = borda esquerda, 1 = direita).
+    // Usado ao recortar a âncora 16:9 para 9:16: o recorte centrado assumia que o personagem
+    // estava no meio, o que é falso para arte com o sujeito fora do centro. Normalizado (e não
+    // em pixels) para sobreviver a troca de arte em outra resolução — e para funcionar em
+    // white-label, onde a âncora é de outro personagem. Ausente = 0.5 (centro).
+    anchorFocusX?: number;
 };
 
 // Emoções "quentes" empurram a entrega (menos estável, mais estilo → mais expressivo/cômico);
@@ -107,7 +113,11 @@ export const CHARACTERS: Character[] = [
         lightingKey: 'Soft-box diffused lighting, cool tones, minimal shadows, gentle top light for fluffiness',
         voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Laid-Back, Casual, Resonant
         voice: { modelId: 'eleven_multilingual_v2', stability: 0.82, style: 0.15, similarityBoost: 0.80, speakerBoost: true },
-        referenceImage: '/assets/master_kev.png'
+        referenceImage: '/assets/master_kev.png',
+        // Kev fica a DIREITA na arte: o recorte centrado (x=472) pegava metade de TV e cortava
+        // a orelha dele. Medido em 30/07 comparando x=472/650/730/810 -> 730 e o unico com o
+        // rosto centrado e as duas orelhas inteiras. (730+432/2)/1376 = 0.687
+        anchorFocusX: 0.687
     }
 ];
 
