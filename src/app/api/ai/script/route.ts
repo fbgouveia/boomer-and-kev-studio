@@ -39,10 +39,11 @@ export async function POST(req: Request) {
       - MUST aggressively use authentic Australian slang and idioms (e.g., "Strewth", "No wuckas", "Flat out like a lizard drinking", "Cactus", "Mad as a cut snake", "Fair dinkum", "Bloody oath", "Mate", "Yeah nah"). The script should sound like a true Aussie pub conversation.
 
       RETENTION & NEUROMARKETING (SHORT-FORM VIDEO):
-      - 3-SECOND AMYGDALA HIJACK: Scene 1 MUST be a high-arousal visual and auditory hook. No "hello" or slow intros. Start mid-sentence with shock, intense curiosity, or immediate tension to stop the scroll.
+      - IMMEDIATE HOOK: Scene 1 MUST begin inside conflict, surprise, or a specific curiosity gap. No "hello", intro, or slow setup. High arousal is useful when the topic earns it, but never manufacture shouting.
       - ANTICIPATION LOOPS: Introduce a high-stakes problem, bold claim, or tension in Scene 1-2, but DELAY the resolution until Scene 8. The brain seeks closure; use this to force them to watch to the end.
-      - PATTERN INTERRUPTS: Every scene must shift visual or emotional pacing. Alternate between high-energy (Boomer MCU) and deadpan (Kev CU) to prevent neural habituation.
-      - MIXED EMOTIONS: Shift rapidly from tension to comedy, or confusion to realization. Do not let the emotional tone stay flat for more than 4 seconds.
+      - PURPOSEFUL CONTRAST: Use shot, emotion, dialogue rhythm, or silence to mark a meaningful change. Do not add a visual effect merely to satisfy a timing quota.
+      - DEADPAN IS A PATTERN INTERRUPT: Kev's pause and low energy are deliberate contrast against Boomer. Preserve comedic breathing room instead of making every scene frantic.
+      - MIXED EMOTIONS: Build a readable tension curve from hook to payoff. Vary intensity when the story changes; no unsupported fixed-seconds rule.
       - PAYOFF ENDING: Scene 8 must deliver the payoff and end abruptly immediately after the punchline or value is delivered to create a perfect looping effect.
 
       CHARACTER BALANCE (HARD RULE — scripts violating this are REJECTED by automated validation):

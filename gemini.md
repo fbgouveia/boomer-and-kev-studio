@@ -383,6 +383,12 @@ YOUTUBE_CLIENT_SECRET=...
 1. **Livre de Distrações:** Edições limpas, música leve, sem abuso de legendas piscantes ou efeitos frenéticos.
 2. **Marcação de Capítulos:** Usar transições visuais claras para definir capítulos e gerenciar as expectativas do público.
 3. **Saída Subliminar:** No final de um capítulo ou cena, o elemento em destaque (ex: carro ou personagem) deve sair fisicamente do quadro para sinalizar o fim daquele bloco.
+4. **Retenção sem quota:** Gancho, contraste, mudança de energia e payoff orientam a montagem; não existe obrigação de cortar ou aplicar efeito a cada N segundos.
+5. **Deadpan é edição:** A pausa e a baixa energia do Kev são pattern interrupts deliberados, não trechos a serem automaticamente acelerados.
+6. **Áudio segue beats:** Trilha, ducking, rufo, risada e silêncio são posicionados pela estrutura do roteiro, nunca por percentuais arbitrários da duração.
+
+Fonte operacional: `docs/editing-retention-constitution.md`. Números sem fonte do material de
+referência são hipóteses para teste, não fatos do produto nem gates determinísticos.
 
 ### 🖼️ 5. Thumbnails e Identidade Visual
 1. **Foco no Centro/Terços:** O objeto principal deve estar centralizado ou nos terços para reduzir o esforço ocular.

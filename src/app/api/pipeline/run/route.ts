@@ -9,6 +9,7 @@ import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor }
 import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
 import { cleanupPipelineIntermediates } from '@/lib/pipeline-storage';
+import { buildEditingPlan, type EditingPlan } from '@/lib/editing-policy';
 
 // Zod Input Validation
 const runPipelineSchema = z.object({
@@ -93,11 +94,18 @@ type Target = { width: number; height: number; fps: number };
 const aspectTarget = (aspect: string): Target =>
   aspect === '16:9' ? { width: 1920, height: 1080, fps: 30 } : { width: 1080, height: 1920, fps: 30 };
 
-async function assembleVideo(clips: string[], outPath: string, target: Target, transitions?: { type: string; dur: number }[]): Promise<string> {
+async function assembleVideo(
+  clips: string[],
+  outPath: string,
+  target: Target,
+  editingPlan?: Pick<EditingPlan, 'transitions' | 'comedyCues'>,
+): Promise<string> {
   if (!clips.length) throw new Error('assembleVideo: nenhum clipe fornecido');
   for (const c of clips) {
     if (!existsSync(c)) throw new Error(`clipe não encontrado: ${c}`);
   }
+  const durs = await Promise.all(clips.map(probeDuration));
+  const transitions = editingPlan?.transitions;
 
   const norm = clips.map((_, i) =>
     `[${i}:v]scale=${target.width}:${target.height}:force_original_aspect_ratio=increase,` +
@@ -109,7 +117,6 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
 
   if (transitions && transitions.length === clips.length - 1 && clips.length > 1) {
     // WP 1.7: cadeia de xfade/acrossfade com offsets pelas durações REAIS (ffprobe).
-    const durs = await Promise.all(clips.map(probeDuration));
     const anorm = clips.map((_, i) => `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}]`);
 
     let vPrev = 'v0', aPrev = 'a0', elapsed = durs[0];
@@ -129,7 +136,7 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
   } else {
     // Fallback: concat original (corte seco em tudo)
     const concatIn = clips.map((_, i) => `[v${i}][${i}:a]`).join('');
-    duration = (await Promise.all(clips.map(probeDuration))).reduce((sum, dur) => sum + dur, 0);
+    duration = durs.reduce((sum, dur) => sum + dur, 0);
     filter = `${norm.join(';')};${concatIn}concat=n=${clips.length}:v=1:a=1[outv][outa]`;
   }
 
@@ -145,8 +152,16 @@ async function assembleVideo(clips: string[], outPath: string, target: Target, t
     const bedIndex = clips.length;
     const drumsIndex = bedIndex + 1;
     const laughIndex = bedIndex + 2;
-    const drumsDelay = Math.round(duration * 0.42 * 1000);
-    const laughDelay = Math.round(duration * 0.72 * 1000);
+    const sceneStartMs = (index: number) => {
+      const safeIndex = Math.max(0, Math.min(index, durs.length - 1));
+      const rawStart = durs.slice(0, safeIndex).reduce((sum, dur) => sum + dur, 0);
+      const overlap = editingPlan?.transitions
+        .slice(0, safeIndex)
+        .reduce((sum, transition) => sum + transition.dur, 0) || 0;
+      return Math.round(Math.max(0, rawStart - overlap) * 1000);
+    };
+    const drumsDelay = editingPlan ? sceneStartMs(editingPlan.comedyCues.drumsSceneIndex) : Math.round(duration * 0.42 * 1000);
+    const laughDelay = editingPlan ? sceneStartMs(editingPlan.comedyCues.laughSceneIndex) : Math.round(duration * 0.72 * 1000);
     filter +=
       `;[outa]asplit=2[voice][key]` +
       `;[${bedIndex}:a]aloop=loop=-1:size=2147483647,atrim=duration=${duration.toFixed(3)},volume=0.22[bed]` +
@@ -334,17 +349,6 @@ function extractLastFrameDataUri(videoPath: string, tmpDir: string, tag: string)
       resolve(`data:image/jpeg;base64,${readFileSync(framePath).toString('base64')}`);
     });
   });
-}
-
-// WP 1.7: transição por par de cenas, decidida pelo roteiro (determinístico).
-// 'cut' vira xfade de 1 frame (≈ corte seco) p/ manter um único filter graph.
-type Transition = { type: string; dur: number };
-function pickTransition(prev: any, next: any, nextIdx: number): Transition {
-  if (nextIdx === 3 || nextIdx === 5) return { type: 'fadeblack', dur: 0.5 }; // entra/sai do fake sponsor break
-  if (prev.characterId === next.characterId) return { type: 'fade', dur: 0.04 }; // encadeada (1.6): a continuidade É a transição
-  const emotion = String(next.emotion || '').toUpperCase();
-  const intensa = ['INTENSE', 'EXCITED', 'ANGRY', 'SHOCKED'].includes(emotion);
-  return intensa ? { type: 'fade', dur: 0.04 } : { type: 'fade', dur: 0.35 }; // troca de personagem: corte TV se quente, crossfade se calma
 }
 
 // Background Job Worker
@@ -663,15 +667,19 @@ async function processPipeline(
 
     const finalVideoPath = path.resolve(tmpDir, `final_${jobId}.mp4`);
 
-    // WP 1.7: plano de transições derivado do roteiro (só quando 1 clipe por cena).
-    const transitions = finalClipPaths.length === script.length && script.length > 1
-      ? script.slice(1).map((next, k) => pickTransition(script[k], next, k + 1))
+    // Constituição de edição: beats, transições e SFX derivam do roteiro.
+    const editingPlan = finalClipPaths.length === script.length
+      ? buildEditingPlan(script)
       : undefined;
-    if (transitions) {
-      updateJob({ logs: [`🎞️ Transições: ${transitions.map(t => `${t.type}${t.dur >= 0.1 ? '' : '(corte)'}`).join(' → ')}`] });
+    if (editingPlan) {
+      updateJob({ logs: [
+        `🧭 Beats: ${editingPlan.beats.join(' → ')}`,
+        `🎞️ Transições: ${editingPlan.transitions.map(t => `${t.type}${t.dur >= 0.1 ? '' : '(corte)'}`).join(' → ')}`,
+        `🔊 SFX por beat: rufo=cena ${editingPlan.comedyCues.drumsSceneIndex + 1}, risada=cena ${editingPlan.comedyCues.laughSceneIndex + 1}`,
+      ] });
     }
 
-    await assembleVideo(finalClipPaths, finalVideoPath, target, transitions);
+    await assembleVideo(finalClipPaths, finalVideoPath, target, editingPlan);
 
     let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
     try {

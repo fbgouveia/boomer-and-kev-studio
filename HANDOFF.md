@@ -1,11 +1,85 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.2)
+# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.3)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
 > que nunca podem ser quebradas. Atualize-o ANTES de encerrar sua sessão.
 >
 > **Hierarquia de leitura:** HANDOFF.md → GEMINI.md → CLAUDE.md → AGENTS.md
+
+---
+
+## 🎬 SESSÃO 31/07/2026 — EBOOKS INTERNALIZADOS COMO CONTRATOS
+
+Felipe aprovou a incorporação complementar dos dois materiais:
+
+1. `Ebook - Criando Thumbnail com IA [Pack Prompts]` → embalagem/capa.
+2. `Ebook - Entenda a Estrutura e Como editar Vídeos Virais` → montagem, ritmo e retenção.
+
+O primeiro já estava materializado no gerador de capa (ver seção própria abaixo), mas ainda não
+ligado à UI/pipeline e não deployado. O segundo foi incorporado agora sem copiar alegações não
+referenciadas como fatos.
+
+### O que mudou
+
+- `docs/editing-retention-constitution.md`: fonte operacional adaptada. Gancho, open loop,
+  contraste, mudança de bloco, pico e payoff são princípios; quotas rígidas de cortes/efeitos não.
+- `GEMINI.md`: constituição atualizada antes do código. Deadpan do Kev passa a ser explicitamente
+  um pattern interrupt; áudio segue beats narrativos.
+- `src/lib/editing-policy.ts`: plano puro e determinístico que converte posição da cena,
+  personagem e emoção em `beats`, transições e cues de comédia.
+- `/api/ai/script`: remove linguagem pseudocientífica/rigidez de “amygdala hijack” e “tom muda
+  a cada 4 segundos”; preserva gancho imediato, contraste e payoff.
+- `/api/pipeline/run`: substitui percentuais fixos de 42%/72% para rufo/risada por cenas
+  escolhidas pelo plano editorial. Transições usam a mesma fonte de verdade. Logs do job agora
+  mostram beats, transições e cenas dos SFX.
+
+### Limites honestos
+
+- Nenhuma chamada Gemini/ElevenLabs/Replicate, nenhum render pago e nenhum deploy.
+- Captions, B-roll e publicação continuam não construídos; o ebook não altera esse estado.
+- O fallback percentual do mix permanece apenas para chamadores sem plano editorial; o pipeline
+  normal fornece o plano.
+- A qualidade perceptiva ainda exige o primeiro render real e comparação com `oatmilk.mp4`.
+
+### Descobertas duráveis
+
+1. **O segundo ebook não exigia uma nova arquitetura:** roteiro, transições e mix já existiam.
+   A menor mudança causal era criar uma fonte de verdade para a intenção editorial e ligar os
+   componentes existentes a ela.
+2. **O mix estava semanticamente cego:** rufo e risada entravam em 42% e 72% da duração,
+   independentemente do que acontecia nessas cenas. Agora seguem sponsor beat e clímax.
+3. **Pattern interrupt não significa hiperatividade:** a troca Boomer→Kev, uma pausa ou o
+   deadpan já quebram o padrão. Efeito visual sem função pode reduzir clareza e identidade.
+4. **Estrutura é contrato; timing é hipótese:** a sequência gancho→payoff é reutilizável, mas
+   números universais de segundos/cortes sem fonte devem ser validados em episódios reais.
+5. **Os ebooks são complementares:** thumbnail resolve embalagem/clique; edição resolve a
+   experiência depois que o espectador entra. Nenhum dos dois substitui roteiro, personagem ou
+   medição real de retenção.
+
+### Próximos passos — ordem causal
+
+1. **Ligar o gerador de capa à UI e ao pipeline**, preenchendo `thumbnailUrl` sem ainda gerar
+   texto dentro do modelo.
+2. **Escolher a composição determinística do título da capa:** recompilar ffmpeg com `drawtext`
+   ou aprovar uma dependência Node (`sharp`/canvas). Não escolher silenciosamente.
+3. **Adicionar um manifesto de edição ao job/episódio** com beats, transições e cues efetivamente
+   usados, para auditoria posterior contra retenção.
+4. **Validar o montador a $0 com clipes locais**, verificando no arquivo final se rufo/risada
+   coincidem com as cenas planejadas e se os overlaps de transição não deslocam os cues.
+5. **Preparar o primeiro render pago de validação 9:16**, somente após crédito Replicate e
+   autorização explícita do Felipe; deployar antes os fixes locais já acumulados.
+6. **Comparar frame a frame e por áudio com `oatmilk.mp4`**, registrando fidelidade dos
+   personagens, enquadramento, continuidade, ritmo, punchline e qualidade do mix.
+7. **Só depois do primeiro episódio real:** decidir captions, B-roll e regras de publicação.
+   Não construir essas camadas com base apenas no ebook.
+8. **Após publicação e dados suficientes:** confrontar as heurísticas do ebook com retenção
+   observada; promover para regra apenas o que os resultados sustentarem.
+
+### Prova
+
+`npm run test:unit`: **60/60** · `npx tsc --noEmit`: limpo · `npm run build`: compilou ·
+`git diff --check`: limpo.
 
 ---
 
