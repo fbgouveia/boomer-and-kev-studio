@@ -1,11 +1,77 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-08-05 AEST (v5.4)
+# Boomer & Kev Studio | Atualizado: 2026-08-06 AEST (v5.5)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
 > que nunca podem ser quebradas. Atualize-o ANTES de encerrar sua sessão.
 >
 > **Hierarquia de leitura:** HANDOFF.md → GEMINI.md → CLAUDE.md → AGENTS.md
+
+---
+
+## 🚀 SESSÃO 06/08/2026 — DUAS TRAVAS CAÍRAM; A ÚNICA PENDÊNCIA REAL É PUBLICAR
+
+**Resumo em uma linha:** o projeto não tem problema técnico de bloqueio — tem **zero episódios
+publicados**. Crédito e lipsync saíram do caminho nesta sessão; sobrou o P0a e a falta de
+distribuição.
+
+### Atualizações desta sessão
+
+1. **P0b morreu** — Felipe tem **US$17** no Replicate. O handoff dizia "< US$5" desde 24/07 e eu
+   repeti isso como fato atual. Era registro datado, não medição. Corrigido em 3 pontos do arquivo.
+2. **P0 decidido** — lipsync: **opção 1, aceitar sem** (ver §P0). Decisão fundamentada em frames,
+   custo US$0. P0d fechado junto.
+3. **Nenhuma chamada paga** foi feita nesta sessão. Nenhum código de engine tocado.
+
+### 🔎 Descobertas desta sessão (o que não estava escrito em lugar nenhum)
+
+1. **A API do Replicate NÃO expõe saldo.** `GET /v1/account` devolve só identidade
+   (`{type,username,name,avatar_url,github_url}`) — verificado 06/08, HTTP 200, sem campo de
+   crédito. Saldo só no dashboard ou perguntando ao Felipe. **Nunca inferir crédito de documento.**
+2. **O episódio original NUNCA teve lipsync.** `oatmilk.mp4` (drive T5 EVO, 3840×2160, 29.8s) —
+   a régua de qualidade do Felipe — amostrado inteiro a 1fps: boca praticamente fechada o tempo
+   todo, personagens quase estáticos. Nossos clipes crus do Kling **articulam mais** que a régua.
+   Isso mata o P0 por evidência, não por opinião.
+3. **Não existe rota de publicação.** `src/app/api/` = `ai, cron, episodes, keys, pipeline, radar,
+   render, sentinel, trends, video`. Zero TikTok/YouTube/Instagram. Publicar hoje = **upload manual**.
+4. **`getDetailedPrompt` (alvo do P3) só existe em `page_legacy_2024.tsx_backup`** — não está no
+   código vivo. O P3 como escrito aponta para função morta; precisa ser reancorado antes de valer.
+5. **Contradição do próprio handoff:** P0a estava 🔴 numa seção e ✅ em outra. Código confere
+   (`4c0fde8`, `aspect` presente em `pipeline/run`, `render`, `video/generate`, `page.tsx`) — está
+   **implementado e nunca validado com render pago**. Não é "não feito".
+
+### 🔴 PENDÊNCIAS NOVAS — caminho até vídeo no ar (recomendação 06/08)
+
+**Premissa honesta gravada:** "perfeitamente viral" não é parâmetro ajustável. Viralização é
+resultado lido *depois* de publicar, não configuração aplicada antes. A engine hoje está calibrada
+contra **zero pontos de dados reais** — todo refinamento adicional é validado contra intuição, não
+contra retenção de audiência.
+
+| # | Pendência | Custo | Quem |
+|---|---|---|---|
+| **V1** | **Render de validação, 9:16, 1 episódio.** 9:16 porque é onde o conteúdo vive (TikTok/Reels/Shorts). Valida P0a + encadeamento + wardrobe + camada de áudio de uma vez. | ~US$3–6 | Felipe autoriza, Claude dispara |
+| **V2** | **Felipe assiste e julga se é engraçado.** Limite real: Claude avalia enquadramento, LUFS, continuidade — **não avalia timing cômico**. Se não fizer rir, nenhuma métrica salva. | US$0 | Só Felipe |
+| **V3** | **Confirmar se as contas sociais existem** (TikTok/YouTube/Instagram do Down Under Discourse). Se não existirem, isso bloqueia "hoje" e vem ANTES do render. | US$0 | Só Felipe |
+| **V4** | **Upload manual dos primeiros ~10 episódios.** Não construir pipeline de publicação ainda. | US$0 | Felipe |
+| **V5** | **Cadência > perfeição.** 10 episódios medianos em 2 semanas ensinam e performam mais que 1 perfeito em 2 meses. Custo marginal por episódio já é só US$3–6 + minutos. | — | Política |
+
+### ⛔ O que foi DESRECOMENDADO de propósito (não fazer agora)
+
+1. **Pipeline de publicação automática** — YAGNI. Automatizar distribuição de zero conteúdo é o
+   VLAEG ao contrário: automatiza-se o determinístico *depois* de saber que o processo funciona.
+   E com o histórico de gasto autônomo de 20/07, é a última coisa que deveria rodar sozinha.
+2. **Reativar o n8n** — só depois do gate Telegram PRÉ-render.
+3. **P3 (exploits neurológicos nos prompts)** — aplicar teoria de retenção antes de ter **um único
+   dado de retenção** é otimizar no vácuo. Vale depois dos primeiros episódios, com números reais.
+   (E o alvo está morto — ver Descoberta 4.)
+4. **Deploy dos 33 commits** — não bloqueia publicar. Pode esperar.
+
+### 🔴 Consequência de código pendente de permissão
+
+`pipeline/run/route.ts:576-598` ainda dispara wav2lip nas 8 cenas de todo episódio — 8 predictions
+pagas que **falham sempre** (queimam compute + latência de polling) antes de cair no fallback que
+agora é o comportamento oficial. Remover é diff pequeno (apagar o `try/catch`, usar `klingVideoUrl`
+direto). **Não aplicado:** regra inviolável #1 exige permissão explícita para tocar no core.
 
 ---
 
@@ -108,7 +174,7 @@ Bloco novo **"Verificação — produtor ≠ verificador"**, cujo item central �
 | **Abaixo da linha (pago)** | Kling, Replicate, ElevenLabs | **avaliar e PARAR** — dá nota, aponta defeito, devolve pro Felipe. Nunca re-dispara |
 
 **Por quê:** o corte ≥85 com loop automático pressupõe iteração barata. Aqui cada ciclo custa
-US$3–6 e o crédito está abaixo de US$5 (P0b). Loop automático sobre render pago é incinerador de
+US$3–6 (o crédito hoje é US$17 — §P0b). Loop automático sobre render pago é incinerador de
 dinheiro. Vale o ≥90 do protocolo global ("quando o erro é caro") — aqui o erro é sempre caro.
 
 ### O que foi DESCARTADO do vídeo, de propósito
@@ -126,9 +192,10 @@ dinheiro. Vale o ≥90 do protocolo global ("quando o erro é caro") — aqui o 
 
 ### Limite honesto — isto NÃO destrava o projeto
 
-Um avaliador de episódio precisa de um episódio, e o episódio precisa de crédito Replicate. As
-travas continuam exatamente as mesmas: **crédito (P0b)**, **decisão de lipsync (P0)**, **formato
-selecionável (P0a)**. Esta sessão impede o *próximo* 24/07; não produz o primeiro episódio bom.
+Um avaliador de episódio precisa de um episódio. Sobrou **uma** trava na frente crítica:
+**validação paga do formato selecionável (P0a — implementado em `4c0fde8`, nunca validado com
+render real)**. Crédito deixou de ser trava (§P0b, US$17 em 06/08) e lipsync foi decidido
+(§P0, opção 1 em 06/08). Esta sessão impede o *próximo* 24/07; não produz o primeiro episódio bom.
 
 ### Próximo passo derivado (não construído)
 
@@ -597,12 +664,15 @@ final de linha original** — parte dos arquivos é CRLF.
 
 ### 🔴 Pendências reais — ordem atual
 
+0. **🚀 PUBLICAR (V1–V5, sessão 06/08 no topo deste arquivo)** — render de validação 9:16 → Felipe
+   julga → contas sociais → upload manual → cadência. É a frente que importa; o resto é secundário
+   enquanto o número de episódios no ar for zero.
 1. **Configurar segredos da automação:** criar `N8N_RADAR_SECRET` e `CRON_SECRET` na VPS e nos chamadores; até lá Radar/trend cron ficam 503 por segurança.
 2. **Felipe ouvir os A/B:** `04_Delivery/audio_ab/`, materiais de voz e `voice_clone/candidatos/cand6.mp3`.
 3. **Clone do Boomer:** Instant Voice Cloning no ElevenLabs usando o sample preparado; enviar `voice_id` para atualizar `characters.ts`.
 4. **Galeria Commercial na UI:** assets estão publicados e manifestados, mas ainda não existe aba/tela de visualização no Studio.
 5. **Validação paga:** 2 renders (9:16 + 16:9) para validar chaining, enquadramento, wardrobe, áudio e custo real; exige autorização explícita (~US$3–6 cada).
-6. **Lipsync animal:** escolher aceitar articulação do Kling ou testar engine compatível com rosto estilizado/animal.
+6. ~~**Lipsync animal:**~~ ✅ **DECIDIDO 06/08** — aceitar a articulação do Kling (opção 1). Ver §P0. Falta só a consequência de código: remover a chamada wav2lip que falha sempre (pende permissão).
 7. **Higiene de deploy/F1:** alteração local já exclui `.tmp` do standalone, preserva o estado runtime e aplica PM2 `--update-env`; falta revisar/configurar PM2 startup, adaptar o chamador n8n para enviar `Idempotency-Key` + aprovação `n8n_manual` somente após o gate humano no Telegram, deployar a mudança, arquivar handoffs antigos e apenas então avaliar tools mortos sem apagá-los silenciosamente.
 8. **Plano-mestre antigo:** atualizar artifact `7e32cc32-4b8b-4033-b7fb-259f7247270c` se ele continuar sendo usado.
 9. **Foundation Pack — decisões do fundador:** confirmar contato comercial, entidade legal, papel público, naming, preços e categorias proibidas antes de distribuição externa.
@@ -644,7 +714,7 @@ cena4 (`Piloto/`) = **voz ideal do Boomer** (confirmado Felipe). Sample de clone
 - **Fix:** `voice` config por personagem em `characters.ts` (Boomer stability 0.30/style 0.70; Kev 0.82/0.15) + `voiceSettingsFor(char, emotion)` que modula (quentes empurram, frias achatam). Pipeline e frontend usam. Build verde, check $0 OK.
 - **Próximo nível (opcional):** conta tem **eleven_v3** (audio tags `[excited]`/`[sarcastic]`/`[laughs]`) — alavanca mais forte, mas precisa A/B ouvindo p/ tunar. Eu não ouço áudio → validação é do Felipe.
 
-### 🔴 P0d — Lipsync incompatível com rosto animal (ver P0 abaixo) — decidir estratégia
+### ✅ P0d — Lipsync incompatível com rosto animal — DECIDIDO 06/08 (opção 1, aceitar sem lipsync). Ver §P0.
 
 ### P1 — Automação n8n → Radar (🔴 ALTA)
 - **O quê:** Workflow no n8n que a cada 3 dias busca novas ferramentas/tendências de IA para vídeo
@@ -693,20 +763,28 @@ cena4 (`Piloto/`) = **voz ideal do Boomer** (confirmado Felipe). Sample de clone
   (`active:False`), ~3h antes do cron das 12:00 UTC de sexta. Valor exato: dashboard Replicate.
   **Antes de reativar:** por gate de aprovação Telegram PRÉ-render (hoje o approve é pós). Ver [[incidente-render-autonomo]].
 
-### 🔴 P0b — Crédito Replicate < US$5 → throttle 6/min (bloqueia render)
-- **Sintoma:** render de validação 24/07 (job b66b3c3b) deu 429 na 2ª cena: "rate limit reduzido a 6/min, burst 1, enquanto <US$5 de crédito". Pipeline dispara 8 em paralelo → estoura.
-- **Provável causa:** renders autônomos de 20/07 drenaram o saldo.
-- **Ações:** (1) 🔴 **PENDENTE — Felipe recarrega crédito Replicate** (única trava restante p/ validar render); (2) ✅ FEITO 24/07: `createKlingPrediction` com retry no 429 honrando `retry_after` (deployado) — creates sequenciais agora pautam na cadência permitida.
+### ✅ P0b — Crédito Replicate (RESOLVIDO 06/08 — Felipe confirmou US$17)
+- **Era (24/07):** render de validação (job b66b3c3b) deu 429 na 2ª cena: "rate limit reduzido a 6/min, burst 1, enquanto <US$5 de crédito". Pipeline dispara 8 em paralelo → estourava.
+- **Estado atual:** Felipe confirmou **US$17 em saldo (06/08)** — acima do limiar de US$5, throttle não se aplica. Deixa de ser trava.
+- ✅ FEITO 24/07: `createKlingPrediction` com retry no 429 honrando `retry_after` (deployado) — creates sequenciais pautam na cadência permitida.
+- ⚠️ **A API do Replicate NÃO expõe saldo.** `GET /v1/account` retorna só identidade (verificado 06/08, HTTP 200, sem campo de crédito). Saldo só no dashboard ou perguntando ao Felipe — **nunca afirmar nível de crédito a partir deste handoff**, que é registro datado, não medição.
 
 ### ✅ P0c — Fallback de prod (CORRIGIDO 24/07, deployado)
 - **Era:** ao falhar o Kling em prod, o fallback buscava piloto inexistente → "Pilot video missing" enganoso, job FAILED.
 - **Fix:** os 2 fallbacks agora, sem piloto (prod), falham com mensagem acionável nomeando a causa real (crédito/rate-limit Replicate) em vez de mascarar como sandbox. Sandbox segue funcionando em dev (pilotos locais).
 
-### 🔴 P0 — LIPSYNC INCOMPATÍVEL com os personagens (achado 24/07, render de validação)
+### ✅ P0 — LIPSYNC: DECIDIDO 06/08 — aceitar sem lipsync (opção 1), definitivo
 - **404 corrigido** (era endpoint por nome; community exige `version:` hash — trocado em `pipeline/run` + `ai/sync`, deployado). MAS ao rodar de verdade apareceu a causa REAL, nas 8 cenas:
   `LipSync failed: Face not detected! Ensure the video contains a face in all the frames.`
 - **Causa estrutural:** wav2lip detecta rosto HUMANO; Boomer/Kev são canguru/coala (rosto animal) → nunca detecta. **Todo episódio cai no fallback non-lipsynced** (boca vem da articulação do próprio Kling + TTS multiplexado por cima, sem sync).
-- **Decisão de arquitetura (não é bug):** (1) aceitar sem lipsync [atual]; (2) trocar por lipsync que aceite rosto estilizado/animal (testar latentsync etc. na detecção do focinho); (3) Kling nativo com fala. Validação prova: 1.6 encadeamento ✅, 1.7 transições ✅, throttle ✅, episódio 8 cenas ✅ (MP4 46.6MB no Supabase, job 393ef799).
+- **DECISÃO (Felipe, 06/08): opção 1 — aceitar sem lipsync.** Não é concessão; é paridade com a régua, por cima. Descartadas: (2) latentsync — gasto para resolver problema que a régua prova não existir, e a detecção de focinho tem o mesmo risco (modelos treinados em rosto humano); (3) Kling nativo com fala — custaria o ElevenLabs e o clone do Boomer, ou seja, trocaria o ativo bom (voz, ~80% da vibe) pelo problema falso.
+- **EVIDÊNCIA que fundamentou a decisão (US$0, 06/08 — frames, não opinião):**
+  - **Clipes crus do Kling** (`.tmp/kling_97b50c39-..._scene-...-0.mp4`, contact sheet de 18 frames do focinho): a boca **abre e fecha visivelmente**, mandíbula ampla, dentes à mostra. O Kling articula — não é boca parada.
+  - **Episódio original** (`/Volumes/T5 EVO/.../1.THE OAT MILK BAN/artwork/final/oatmilk.mp4`, 3840×2160, 29.8s — a régua de qualidade do Felipe): amostrado inteiro a 1fps + detalhe no focinho. Boca **praticamente fechada o tempo todo**, personagens quase estáticos. **O original NUNCA teve lipsync.**
+  - **Conclusão:** nossa articulação atual é *mais* viva que a do episódio que serve de régua. O P0 era trava documental, não técnica. O que separava nosso output do original sempre foi ÁUDIO (já corrigido), nunca sincronia de boca.
+- **Ressalva registrada:** foi avaliada **articulação**, não **sincronia** — o Kling abre a boca fora dos fonemas do TTS. Se incomodar em tela cheia, o ajuste é de ENQUADRAMENTO (planos fechados no ouvinte durante a fala do outro), custo US$0, sem lipsync. Quem julga é o Felipe assistindo.
+- **🔴 CONSEQUÊNCIA DE CÓDIGO AINDA NÃO APLICADA:** `pipeline/run/route.ts:576-598` continua disparando wav2lip nas 8 cenas por episódio — 8 predictions pagas que **falham sempre** (queimam compute + latência de polling) antes de cair no fallback. Aceitar a opção 1 implica remover essa chamada. **Não removido:** exige permissão explícita do Felipe (regra inviolável #1 — core da engine).
+- Validação prova: 1.6 encadeamento ✅, 1.7 transições ✅, throttle ✅, episódio 8 cenas ✅ (MP4 46.6MB no Supabase, job 393ef799).
 
 ---
 
