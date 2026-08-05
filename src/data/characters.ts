@@ -81,7 +81,12 @@ export const CHARACTERS: Character[] = [
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
         voice: { modelId: 'eleven_multilingual_v2', stability: 0.30, style: 0.70, similarityBoost: 0.75, speakerBoost: true },
-        referenceImage: '/assets/master_boomer.png'
+        referenceImage: '/assets/master_boomer.png',
+        // Boomer tambem esta fora do centro (a ESQUERDA), so que menos que o Kev — por isso
+        // passou batido em 30/07 e ficou no default 0.5. Medido em 06/08 renderizando o recorte
+        // real: em 0.5 a luva esquerda sai do quadro e o terco direito vira TV vazia; 0.40 corta
+        // a luva direita; 0.44 e o unico com a cabeca centrada e as duas luvas inteiras.
+        anchorFocusX: 0.44
     },
     {
         id: 'kev',

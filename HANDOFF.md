@@ -66,6 +66,32 @@ contra retenção de audiência.
    (E o alvo está morto — ver Descoberta 4.)
 4. **Deploy dos 33 commits** — não bloqueia publicar. Pode esperar.
 
+### ✅ EXECUTADO 06/08 — P0a verificado visualmente pela 1ª vez (US$0) e um buraco fechado
+
+A correção do formato (`4c0fde8`) nunca tinha sido **olhada**, só codada. Renderizei os recortes
+reais das 3 âncoras com o filtro de produção (`anchorCropFilter`) e inspecionei:
+
+| Âncora | 9:16 | Veredito |
+|---|---|---|
+| `master_kev.png` (focus 0.687) | rosto inteiro, centrado, orelhas encostando na borda | ✅ passa |
+| `master_boomer.png` (era default **0.5**) | luva esquerda FORA do quadro, terço direito = TV vazia | ❌ **era bug** |
+| `master_wide.png` | **decapita os dois** — sobra ombro do Boomer e pata do Kev, meio é TV/mesa | ✅ nunca usado em 9:16 (guarda confirmada) |
+
+- **Buraco fechado:** `characters.ts` → Boomer ganhou `anchorFocusX: 0.44`. Em 30/07 só o Kev foi
+  corrigido porque o desvio dele era gritante; o do Boomer é menor e passou batido. Testados
+  0.40 (corta a luva direita) e 0.44 (cabeça centrada, as duas luvas inteiras) → **0.44**.
+- **Guarda do two-shot CONFIRMADA no código:** `pipeline/run/route.ts:501` só usa `master_wide`
+  quando `aspect === '16:9'`; `SOLO_SHOTS_IN_VERTICAL` (linha 200) converte WIDE/OTS/GOPRO em
+  enquadramento solo no vertical. O two-shot nunca chega ao 9:16.
+- **Regressão protegida:** novo teste em `tests/prompt-aspect.test.ts` exige que **todo** personagem
+  declare `anchorFocusX` — cair no centro é o bug, não o padrão seguro (nenhuma âncora tem o
+  sujeito centrado). Teste **provado**: removendo o campo do Boomer ele falha com
+  `boomer: sem anchorFocusX, cai no centro e deceps`. Suíte 60 → **61**, typecheck limpo.
+- **O que isso significa pro V1:** o render pago deixou de ser o primeiro lugar onde o
+  enquadramento seria testado. Um defeito que custaria US$3–6 pra descobrir foi achado a US$0.
+- **Limite honesto:** validei o recorte da ÂNCORA. O que o Kling faz com ela a partir daí só o
+  render real mostra.
+
 ### 🔴 Consequência de código pendente de permissão
 
 `pipeline/run/route.ts:576-598` ainda dispara wav2lip nas 8 cenas de todo episódio — 8 predictions

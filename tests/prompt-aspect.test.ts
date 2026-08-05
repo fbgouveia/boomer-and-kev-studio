@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 import { getDetailedPrompt, anchorCropFilter } from '../src/app/api/pipeline/run/route';
+import { CHARACTERS } from '../src/data/characters';
 
 // Achado 30/07: em 9:16 a âncora enviada ao Kling é SOLO (two-shot lado-a-lado não cabe em
 // vertical), mas o prompt continuava pedindo o plano aberto com os DOIS personagens. O Kling
@@ -74,5 +75,16 @@ describe('anchorCropFilter — recorte da âncora respeita onde o personagem est
 
   test('16:9 não aplica foco horizontal (o two-shot ocupa a largura toda)', () => {
     assert.equal(anchorCropFilter('16:9', 0.687), anchorCropFilter('16:9', 0.5));
+  });
+
+  // Achado 06/08: em 30/07 só o Kev ganhou foco declarado, porque o desvio dele era gritante.
+  // O Boomer também está fora do centro (menos, à esquerda) e ficou no default 0.5 — recorte
+  // real mostrou a luva esquerda fora do quadro e o terço direito virando TV vazia. Cair no
+  // centro é o BUG, não o padrão seguro: nenhuma das âncoras tem o sujeito centrado.
+  test('todo personagem declara anchorFocusX — voltar ao centro é regressão', () => {
+    for (const c of CHARACTERS) {
+      assert.equal(typeof c.anchorFocusX, 'number', `${c.id}: sem anchorFocusX, cai no centro e deceps`);
+      assert.ok(c.anchorFocusX! > 0 && c.anchorFocusX! < 1, `${c.id}: anchorFocusX ${c.anchorFocusX} fora de 0..1`);
+    }
   });
 });
