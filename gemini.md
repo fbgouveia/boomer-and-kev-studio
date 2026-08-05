@@ -1,6 +1,6 @@
 # gemini.md — Constituição do Projeto
 # Boomer & Kev Studio | V.L.A.E.G. Project Constitution
-# Criado: 2026-03-28 | Versão: 3.0 (Infra real + doutrina Deriva)
+# Criado: 2026-03-28 | Versão: 3.2 (Infra real + doutrina Deriva + verificação independente)
 
 > ⚖️ Este arquivo é a LEI do projeto. Atualiza-se ANTES do código.
 > Hierarquia: [CLAUDE.md](file:///Users/felipegouveia/Developer/Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/CLAUDE.md) > gemini.md > task_plan.md > findings.md > progress.md
@@ -279,6 +279,35 @@ de TikTok/Instagram/YouTube (aprovação de 1–3 semanas), ainda não solicitad
 8. **Autonomia v1**: a `deriva` diagnostica e PROPÕE; não aplica nada sozinha. Faixa verde só
    depois que as sondas provarem, em uso real, que pegam deriva verdadeira.
 
+### Verificação — produtor ≠ verificador [novo em v3.2]
+
+1. **Quem produziu não avalia** — [ALVO]. A avaliação de um artefato roda em agente separado,
+   **sem o contexto de quem o produziu**. Quem tomou as decisões justifica as decisões: conhece
+   o motivo de cada atalho e pontua o esforço, não o resultado. O avaliador recebe só o artefato
+   e o critério.
+2. **Avaliar o artefato, não o metadado** — [ALVO]. Container, código HTTP e campo de duração
+   são prova de que a máquina rodou, não de que o produto presta. *(Origem: 24/07 — `ffprobe`
+   confirmou 9:16 enquanto os personagens saíam decepados no frame. Ver P0a no HANDOFF.)*
+3. **A sonda vigia a infra; nada vigia o produto** — [REAL, é a lacuna]. Em 19/07 a sentinela deu
+   4/4 GREEN; em 24/07 o episódio saiu com sujeitos cortados e zero lipsync nas 8 cenas. Verde de
+   infra e produto quebrado **coexistem** e sempre coexistiram. Sentinela não substitui avaliador.
+4. **A FRONTEIRA PAGA define onde o loop pode iterar** — [LEI].
+   - **Acima da linha (custo $0):** roteiro, prompt de cena, âncora, plano editorial, prompt de
+     capa. O avaliador reprova e manda refazer **quantas vezes precisar**. Iterar aqui é grátis.
+   - **Abaixo da linha (render pago, irreversível):** Kling, Replicate, ElevenLabs. O avaliador
+     **dá a nota, aponta o defeito e PARA**. Nunca re-dispara sozinho. Retry de render é decisão
+     humana, sempre.
+   - **Razão:** o corte ≥85 com loop automático pressupõe iteração barata e retentável. Aqui cada
+     ciclo custa US$3–6 e o crédito é finito. Loop automático sobre render pago é incinerador de
+     dinheiro, não controle de qualidade. Vale o corte do protocolo global: **≥90 quando o erro
+     é caro** — e aqui o erro é sempre caro.
+5. **Paralelismo não é grátis abaixo da linha** — [REAL]. As 8 cenas já disparam em paralelo e
+   foi isso que estourou o 429 do Replicate (job `b66b3c3b`, P0b). Aumentar concorrência sobre
+   chamada paga agrava o problema existente; ganho de paralelismo pertence à faixa de $0.
+6. **Sem métrica inventada no avaliador** — [LEI]. Nota só sobre critério observável no artefato
+   (fidelidade de personagem, enquadramento, continuidade, coincidência de cue com beat planejado).
+   "Nota viral" e afins são vanity metric e estão proibidos — foram removidos da UI em 30/07.
+
 ### Segurança
 1. **API keys**: NUNCA no frontend
 2. **RLS**: Row Level Security ativo em TODAS as tabelas Supabase
@@ -406,6 +435,7 @@ referência são hipóteses para teste, não fatos do produto nem gates determin
 | 2026-03-28 | 2.0 | Data Schema completo, Pipeline autônomo, integrações sociais | Respostas de Descoberta incorporadas |
 | 2026-07-18 | 2.1 | Inclusão de regras criativas MKBHD | Transcrição de produção incorporada |
 | 2026-07-19 | 3.0 | Convenção [REAL]/[ALVO]; infra de produção; doutrina Deriva; contrato duplo de RLS; três camadas de agentes | Auditoria ao vivo revelou pipeline inexistente |
+| 2026-08-05 | 3.2 | Invariantes de **Verificação (produtor ≠ verificador)**: avaliação sem contexto compartilhado, artefato acima de metadado, e a **fronteira paga** que delimita onde o loop de nota pode iterar sozinho | Lacuna nomeada: sentinela vigia infra, nada vigia o produto (GREEN 19/07 × episódio quebrado 24/07) |
 | 2026-07-19 | 3.1 | Deploy de produção: Docker → PM2 standalone; `deploy_studio.sh` criado; Nginx reverse proxy + SSL Let's Encrypt em `boomerandkev.fgss.io`; rota `/api/radar` para n8n webhook; `IntelligenceRadar.tsx` + `radar.json` (benchmark feed); IP compliance guardrails no brainstorm; wardrobe metadata no pipeline; X-Ray modal na Library | Migração para produção pública. Engine acessível via HTTPS. |
 
 ### Referências rápidas [REAL, 2026-07-19]

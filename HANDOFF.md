@@ -1,11 +1,76 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-07-31 AEST (v5.3)
+# Boomer & Kev Studio | Atualizado: 2026-08-05 AEST (v5.4)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
 > que nunca podem ser quebradas. Atualize-o ANTES de encerrar sua sessão.
 >
 > **Hierarquia de leitura:** HANDOFF.md → GEMINI.md → CLAUDE.md → AGENTS.md
+
+---
+
+## 🔍 SESSÃO 05/08/2026 — A LACUNA DO VERIFICADOR (só doutrina, zero código)
+
+Felipe trouxe um vídeo sobre *graph engineering* (harness → loop → grafos). Absorvido **apenas o
+que sobrevive ao cruzamento com o estado real do projeto**. Nenhum código tocado, nenhuma chamada
+paga, nenhum deploy.
+
+### A descoberta
+
+> **A sentinela verifica se a máquina está viva. Nada verifica se o resultado presta.**
+
+Prova, dentro do próprio projeto: **19/07 a sonda deu 4/4 GREEN** contra produção. **24/07 o render
+de validação saiu com os personagens decepados e zero lipsync nas 8 cenas.** Verde de infra e
+produto quebrado coexistiram — e sempre coexistiram, porque medem coisas diferentes.
+
+O mecanismo da falha tem nome: **quem produziu, conferiu.** O pipeline validou o formato pelo
+**container** (`ffprobe` disse 9:16 ✅) — o metadado que ele mesmo tinha produzido — enquanto o
+conteúdo dentro do frame estava destruído. Um avaliador sem esse contexto, olhando o frame, pegaria
+na primeira cena. Reforça [[analise-rigorosa]]: provar a FONTE, criticar a COMPOSIÇÃO.
+
+### A regra que entrou na constituição (GEMINI.md v3.2)
+
+Bloco novo **"Verificação — produtor ≠ verificador"**, cujo item central é a **fronteira paga**:
+
+| Faixa | O que | O loop de nota pode |
+|---|---|---|
+| **Acima da linha ($0)** | roteiro, prompt de cena, âncora, plano editorial, prompt de capa | **iterar à vontade** — reprovar e refazer quantas vezes precisar |
+| **Abaixo da linha (pago)** | Kling, Replicate, ElevenLabs | **avaliar e PARAR** — dá nota, aponta defeito, devolve pro Felipe. Nunca re-dispara |
+
+**Por quê:** o corte ≥85 com loop automático pressupõe iteração barata. Aqui cada ciclo custa
+US$3–6 e o crédito está abaixo de US$5 (P0b). Loop automático sobre render pago é incinerador de
+dinheiro. Vale o ≥90 do protocolo global ("quando o erro é caro") — aqui o erro é sempre caro.
+
+### O que foi DESCARTADO do vídeo, de propósito
+
+1. **"Nota viral"** — vanity metric inventada. Foi removida da UI em 30/07; não volta por porta
+   de trás. Nota só sobre critério observável no artefato.
+2. **Escalar paralelismo ("100 de uma vez")** — as 8 cenas **já** disparam em paralelo e foi isso
+   que estourou o 429 do Replicate (job `b66b3c3b`). Abaixo da fronteira paga, mais concorrência
+   agrava o problema que já existe. O projeto não sofre de lentidão, sofre de **zero episódios
+   reais validados** — paralelizar zero validações continua dando zero.
+3. **`/ultracode` como comando** — não confirmado neste setup. Adotado o conceito, não o nome.
+4. **Reconstruir metodologia** — ~80% do vídeo (loop com nota 0–100, corte ≥85, subagentes em
+   paralelo sem contexto compartilhado) **já está** no `CLAUDE.md` global do Felipe, táticas 1 e 3.
+   Era confirmação, não novidade.
+
+### Limite honesto — isto NÃO destrava o projeto
+
+Um avaliador de episódio precisa de um episódio, e o episódio precisa de crédito Replicate. As
+travas continuam exatamente as mesmas: **crédito (P0b)**, **decisão de lipsync (P0)**, **formato
+selecionável (P0a)**. Esta sessão impede o *próximo* 24/07; não produz o primeiro episódio bom.
+
+### Próximo passo derivado (não construído)
+
+**Avaliador de episódio** — agente separado, contexto zero, recebe só o MP4 + âncoras dos
+personagens e responde: fidelidade Boomer/Kev, algum sujeito cortado no frame, continuidade entre
+cenas, e se rufo/risada caem nos beats prometidos pelo `editing-policy.ts`. Nota, defeitos, **e
+para**. Só faz sentido depois do primeiro render real.
+
+### Prova
+
+Nenhum teste rodado — mudança é 100% documental (`GEMINI.md`, `HANDOFF.md`). Nenhum arquivo de
+código tocado.
 
 ---
 
