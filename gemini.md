@@ -301,9 +301,13 @@ de TikTok/Instagram/YouTube (aprovação de 1–3 semanas), ainda não solicitad
      ciclo custa US$3–6 e o crédito é finito. Loop automático sobre render pago é incinerador de
      dinheiro, não controle de qualidade. Vale o corte do protocolo global: **≥90 quando o erro
      é caro** — e aqui o erro é sempre caro.
-5. **Paralelismo não é grátis abaixo da linha** — [REAL]. As 8 cenas já disparam em paralelo e
-   foi isso que estourou o 429 do Replicate (job `b66b3c3b`, P0b). Aumentar concorrência sobre
-   chamada paga agrava o problema existente; ganho de paralelismo pertence à faixa de $0.
+5. **Paralelismo NÃO se aplica à geração de cenas** — [REAL, estrutural]. As cenas são
+   **encadeadas**: a cena N usa o último frame da cena N−1 como `start_image` para manter
+   continuidade visual (WP 1.6, `for (const scene of scenesToProcess)` em `pipeline/run`). Isso é
+   uma **dependência de dados estrita**, não uma escolha de implementação — paralelizar quebra a
+   continuidade. *(Histórico: os `create` do Kling já foram paralelos e estouraram o 429 do
+   Replicate no job `b66b3c3b`; a correção de 24/07 os tornou sequenciais com retry honrando
+   `retry_after`.)* Ganho de paralelismo, se houver, pertence à faixa de $0 — nunca à cadeia de cenas.
 6. **Sem métrica inventada no avaliador** — [LEI]. Nota só sobre critério observável no artefato
    (fidelidade de personagem, enquadramento, continuidade, coincidência de cue com beat planejado).
    "Nota viral" e afins são vanity metric e estão proibidos — foram removidos da UI em 30/07.

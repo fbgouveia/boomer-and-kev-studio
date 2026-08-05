@@ -9,6 +9,76 @@
 
 ---
 
+## ⚖️ DECISÃO ARQUITETURAL 05/08/2026 — NÃO reescrever o pipeline em n8n
+
+Felipe perguntou se seria mais prudente escrever o projeto inteiro como pipeline n8n para ter
+"fluxos robustos de execução". **Decisão: NÃO. Manter a divisão A.N.T. atual.** Registrado aqui
+porque decisão de *não fazer* precisa ficar gravada — senão a pergunta volta em dois meses.
+
+### O fato que decide (achado no código, 05/08)
+
+`pipeline/run/route.ts:551` — `for (const scene of scenesToProcess)`. As cenas são **encadeadas**:
+a cena N usa o último frame da cena N−1 como `start_image` (WP 1.6). É **dependência de dados
+estrita**, não dívida técnica. Paralelizar quebra a continuidade visual.
+
+→ O principal ganho de um orquestrador de fluxo (fan-out paralelo) **não tem onde ser aplicado**.
+O pipeline é uma corrente de 8 elos, não um grafo.
+
+### O teste aplicado: das 6 falhas reais documentadas, quantas o n8n teria evitado?
+
+| Falha | n8n evitaria? |
+|---|---|
+| Sujeitos decepados (âncora 16:9) | ❌ é prompt/âncora |
+| Lipsync: wav2lip não detecta rosto animal | ❌ é incompatibilidade de modelo |
+| 429 do Replicate (job `b66b3c3b`) | ❌ já corrigido em código |
+| `.env` apagado no deploy | ❌ é o rsync do `deploy_studio.sh` |
+| Sentinela tomando 401 | ❌ é auth |
+| **Render não-autorizado (20/07 e 22/07, US$3–6)** | ❌ **o n8n CAUSOU** |
+
+**Zero de seis.** A mais cara foi causada pela camada n8n rodando com autonomia.
+
+### O que se perderia
+
+- **60 testes unitários + `tsc`**. `editing-policy.ts` é função pura, testável em ms e a $0. Em
+  nodes n8n vira JSON de workflow: fora do `npm run test:unit`, fora do CI, **só validável
+  executando — e executar custa dólar**. Pior trade possível para um projeto travado em crédito.
+- **Visão white-label** ([[white-label-vision]]): um codebase parametrizado escala pra N marcas;
+  workflow visual vira N workflows pra manter.
+
+### O que fica valendo (já é o invariante A.N.T. deste arquivo)
+
+```
+Camada 2 (n8n) — gatilho, roteamento, APROVAÇÃO HUMANA
+Camada 3 (API routes + tools/) — motor determinístico e testável
+```
+
+### O que realmente falta de robustez — é código, não orquestrador
+
+1. **🔴 Checkpoint / retomada da cadeia.** Hoje, cena 6 de 8 falhando em produção → `throw`
+   derruba o job e as cenas 1–5 **já pagas** vão pro lixo; repaga tudo do zero. Os clipes já
+   existem em `.tmp/sync_<jobId>_<sceneId>.mp4`; falta persistir estado do job e permitir
+   "continuar da cena 6". **Este é o único buraco de robustez que custa dinheiro de verdade** — e
+   não some com n8n: erro no meio da corrente exige a mesma decisão de retomada em qualquer stack.
+2. **🔴 Gate de aprovação Telegram PRÉ-render** (hoje o approve é pós — foi assim que gastou
+   sozinho). **Esse sim é trabalho de n8n**, pequeno e específico. Condição pra reativar o
+   workflow `n6qm9qMxEFvvkU8C`.
+
+### O que reverteria esta decisão (critério falsificável)
+
+- jobs que atravessem **dias** com espera humana no meio (estado durável do n8n ganha do processo Node);
+- alguém **não-dev** precisando editar o fluxo;
+- muitos episódios concorrentes de clientes distintos, com fila e prioridade.
+
+Nenhum é verdade hoje: **zero episódios validados** e um único usuário.
+
+### Correção de fato
+
+`GEMINI.md` v3.2 invariante 5 dizia "as 8 cenas já disparam em paralelo". **Estava desatualizado** —
+foram paralelas, estouraram o 429, e o fix de 24/07 as tornou sequenciais. Reescrito para descrever
+o encadeamento como propriedade estrutural.
+
+---
+
 ## 🔍 SESSÃO 05/08/2026 — A LACUNA DO VERIFICADOR (só doutrina, zero código)
 
 Felipe trouxe um vídeo sobre *graph engineering* (harness → loop → grafos). Absorvido **apenas o
