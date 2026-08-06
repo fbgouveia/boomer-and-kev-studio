@@ -49,7 +49,8 @@ contra retenção de audiência.
 
 | # | Pendência | Custo | Quem |
 |---|---|---|---|
-| **V1** | **Render de validação, 9:16, 1 episódio.** 9:16 porque é onde o conteúdo vive (TikTok/Reels/Shorts). Valida P0a + encadeamento + wardrobe + camada de áudio de uma vez. | ~US$3–6 | Felipe autoriza, Claude dispara |
+| **V0** | 🚨 **Regularizar o billing do Google Cloud (projeto `271640987369`).** Bloqueia V1 — sem Gemini não há roteiro, sem roteiro não há episódio. Ver §P0f. | — | **Só Felipe** |
+| **V1** | **Render de validação, 9:16, 1 episódio.** 9:16 porque é onde o conteúdo vive (TikTok/Reels/Shorts). Valida P0a + encadeamento + wardrobe + camada de áudio de uma vez. **BLOQUEADO por V0.** Autorizado pelo Felipe em 06/08; dispara pela UI (o gate de aprovação é humano por design). | ~US$3–6 | Felipe dispara na UI |
 | **V2** | **Felipe assiste e julga se é engraçado.** Limite real: Claude avalia enquadramento, LUFS, continuidade — **não avalia timing cômico**. Se não fizer rir, nenhuma métrica salva. | US$0 | Só Felipe |
 | **V3** | **Confirmar se as contas sociais existem** (TikTok/YouTube/Instagram do Down Under Discourse). Se não existirem, isso bloqueia "hoje" e vem ANTES do render. | US$0 | Só Felipe |
 | **V4** | **Upload manual dos primeiros ~10 episódios.** Não construir pipeline de publicação ainda. | US$0 | Felipe |
@@ -91,6 +92,52 @@ reais das 3 âncoras com o filtro de produção (`anchorCropFilter`) e inspecion
   enquadramento seria testado. Um defeito que custaria US$3–6 pra descobrir foi achado a US$0.
 - **Limite honesto:** validei o recorte da ÂNCORA. O que o Kling faz com ela a partir daí só o
   render real mostra.
+
+### 🚨 P0f — GEMINI NEGADO POR COBRANÇA: pipeline não produz episódio nenhum (achado 06/08, teste E2E via browser)
+
+**Sintoma:** clicar em START PRODUCTION no Studio devolve `NEURAL_LINK_SEVERED`. No servidor:
+
+```
+BRAINSTORM_API_FAIL: Error: Lightning dunning decision is deny
+for project: projects/271640987369
+   at POST (src/app/api/ai/brainstorm/route.ts:88)
+POST /api/ai/brainstorm 500
+```
+
+- **Causa: NÃO é bug do Studio.** "Dunning" é cobrança de dívida — o projeto Google Cloud
+  `271640987369` está com **faturamento suspenso/inadimplente** e a API do Gemini responde DENY.
+- **Impacto: bloqueia tudo.** Brainstorm e roteiro morrem juntos; sem roteiro não há 8 cenas, logo
+  não há o que renderizar. **A trava do V1 nunca foi o Replicate** (esse está com US$17 e a sonda
+  do Kling está GREEN).
+- **Atinge local E produção.** Sentinela local: `RED`. Sentinela de produção verificada em
+  06/08 00:18 UTC: `RED` em `gemini_roteirista` (HTTP 500); as outras 3 (ElevenLabs, Kling,
+  Supabase) seguem GREEN. Ou seja: só o roteirista caiu, e caiu **dentro das últimas ~11h** —
+  o hook de abertura desta sessão ainda reportava as 4 sondas verdes.
+- **A sentinela FUNCIONOU.** Não foi deriva silenciosa: a sonda `gemini_roteirista` existe desde
+  19/07 exatamente para isso e pegou. O que faltou foi alguém olhar o RED entre a quebra e agora.
+- **🔴 AÇÃO — só o Felipe resolve:** regularizar o faturamento do projeto Google Cloud
+  `271640987369` (console.cloud.google.com → Billing). Nenhuma mudança de código conserta isso;
+  trocar de key só resolve se a key nova estiver em OUTRO projeto com billing em dia.
+
+### ✅ Teste de estresse E2E via browser (06/08) — o que passou e o que não
+
+Percorrido o Studio real no navegador, do login ao gate pago. **Nenhuma chamada paga disparada.**
+
+| Etapa | Resultado |
+|---|---|
+| Basic Auth + carga da home | ✅ |
+| Navegação entre as 7 abas | ✅ |
+| Aba COMMERCIAL (nova) | ⚠️ passou depois de corrigida — ver abaixo |
+| Botão START PRODUCTION com campo vazio | ✅ corretamente **desabilitado** (não era no-op silencioso) |
+| Medidor SIGNAL ao digitar o tema | ✅ |
+| Brainstorm / geração de roteiro | 🚨 **HTTP 500 — Gemini negado (§P0f)** |
+| Render pago | ⛔ inalcançável: sem roteiro não há cenas |
+
+**Defeito achado e corrigido na galeria:** o preview usava o aspect NATIVO de cada asset, então o
+card 9:16 virava uma coluna gigante e o grid saía desalinhado; e `object-cover` **cortava** a arte
+— banner cortado não é o banner. Trocado por caixa de proporção fixa (4/3) + `object-contain`.
+Continua sem layout shift (a caixa fixa também reserva altura). **Isto só apareceu porque a tela
+foi OLHADA:** build, typecheck, 61 testes e lint estavam todos verdes com o grid quebrado.
 
 ### 🔴 Consequência de código pendente de permissão
 

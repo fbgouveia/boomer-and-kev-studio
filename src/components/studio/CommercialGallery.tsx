@@ -23,8 +23,10 @@ interface Manifest {
   assets: CommercialAsset[];
 }
 
-// "16:9" -> "16 / 9" para o CSS reservar a altura antes da imagem carregar (evita layout shift).
-const cssRatio = (format: string) => format.replace(':', ' / ');
+// A caixa de preview tem proporção FIXA para todos os cards. Usar o aspect nativo de cada asset
+// (16:9, 9:16, 1:1) fazia o card vertical virar uma coluna gigante e o grid sair desalinhado.
+// Fixa também reserva a altura antes da imagem carregar, então continua sem layout shift.
+const PREVIEW_RATIO = '4 / 3';
 
 export function CommercialGallery() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
@@ -102,8 +104,8 @@ export function CommercialGallery() {
           {manifest.assets.map(asset => (
             <figure key={asset.id} className="border border-white/10 bg-[#0d0d0d] group">
               <div
-                className="w-full overflow-hidden bg-black/40 border-b border-white/10"
-                style={{ aspectRatio: cssRatio(asset.format) }}
+                className="w-full overflow-hidden bg-black/40 border-b border-white/10 p-3"
+                style={{ aspectRatio: PREVIEW_RATIO }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- asset estático servido
                     de public/, sem otimização remota; next/image aqui só somaria configuração. */}
@@ -111,7 +113,9 @@ export function CommercialGallery() {
                   src={asset.file}
                   alt={`${asset.type} em formato ${asset.format} da coleção Commercial Creatives`}
                   loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  // object-contain e não cover: cortar peça criativa a apresenta errado — um
+                  // banner cortado não é o banner. O formato real fica declarado no rodapé do card.
+                  className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                 />
               </div>
               <figcaption className="p-5">
