@@ -40,8 +40,9 @@ import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
 import { RenderTerminal } from '@/components/studio/RenderTerminal';
 import { DNAPanel } from '@/components/studio/DNAPanel';
 import { IntelligenceRadar } from '@/components/studio/IntelligenceRadar';
+import { CommercialGallery } from '@/components/studio/CommercialGallery';
 import LabsPanel from '@/components/studio/LabsPanel';
-import { FlaskConical, Tv, Target } from 'lucide-react';
+import { FlaskConical, Tv, Target, Briefcase } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
 
@@ -54,7 +55,12 @@ const TABS = [
   { id: 'dna', label: 'ENGINE DNA', icon: Dna },
   { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
   { id: 'radar', label: 'RADAR', icon: Target },
+  { id: 'commercial', label: 'COMMERCIAL', icon: Briefcase },
 ] as const;
+
+// ponytail: derivado de TABS — a união estava escrita à mão em dois lugares e toda aba nova
+// exigia lembrar dos dois. Agora adicionar aba acima basta.
+type TabId = typeof TABS[number]['id'];
 
 export default function Home() {
   const [script, setScript] = useState<ScriptLine[]>([
@@ -62,7 +68,7 @@ export default function Home() {
     { id: '2', characterId: 'kev', text: "Yeah, nah. I just want to know when we're finished.", shotType: 'KEV_CU', action: 'Slowly chewing on a gum leaf', durationEst: 2, emotion: 'Deadpan', status: 'IDLE' },
   ]);
 
-  const [activeTab, setActiveTab] = useState<'director' | 'script' | 'library' | 'dna' | 'labs' | 'radar'>('director');
+  const [activeTab, setActiveTab] = useState<TabId>('director');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
@@ -1045,7 +1051,7 @@ export default function Home() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id as typeof activeTab); setIsMobileMenuOpen(false); }}
+                    onClick={() => { setActiveTab(tab.id); setIsMobileMenuOpen(false); }}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 text-xs font-black tracking-widest transition-all",
                       isActive
@@ -1101,7 +1107,7 @@ export default function Home() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as 'director' | 'script' | 'library' | 'dna' | 'labs' | 'radar')}
+                    onClick={() => setActiveTab(tab.id)}
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
                     className={cn(
@@ -1748,6 +1754,10 @@ export default function Home() {
 
             {activeTab === 'radar' && (
               <IntelligenceRadar />
+            )}
+
+            {activeTab === 'commercial' && (
+              <CommercialGallery />
             )}
           </div>
         </div>

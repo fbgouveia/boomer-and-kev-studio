@@ -696,7 +696,15 @@ final de linha original** — parte dos arquivos é CRLF.
 1. **Configurar segredos da automação:** criar `N8N_RADAR_SECRET` e `CRON_SECRET` na VPS e nos chamadores; até lá Radar/trend cron ficam 503 por segurança.
 2. **Felipe ouvir os A/B:** `04_Delivery/audio_ab/`, materiais de voz e `voice_clone/candidatos/cand6.mp3`.
 3. **Clone do Boomer:** Instant Voice Cloning no ElevenLabs usando o sample preparado; enviar `voice_id` para atualizar `characters.ts`.
-4. **Galeria Commercial na UI:** assets estão publicados e manifestados, mas ainda não existe aba/tela de visualização no Studio.
+4. ~~**Galeria Commercial na UI:**~~ ✅ **FEITO 06/08** — aba `COMMERCIAL` no Studio
+   (`src/components/studio/CommercialGallery.tsx`). Lê o `manifest.json` de `public/` em runtime
+   (o manifest é a fonte da verdade de quem publica, então não virou import estático).
+   `aspect-ratio` vindo do campo `format` reserva a altura antes da imagem carregar (sem CLS),
+   `loading="lazy"`, `alt` descritivo, estados de carregando/erro/vazio, e o `disclosure`
+   ("concept — demonstração interna, não trabalho de cliente") em destaque, não em rodapé.
+   Tipo da aba passou a ser derivado de `TABS` — a união estava escrita à mão em 2 lugares.
+   **⚠️ Não confirmado visualmente:** build, typecheck, 61 testes e lint passam, e manifest +
+   3 assets + home servem 200 no dev; mas ninguém OLHOU a tela renderizada ainda.
 5. **Validação paga:** 2 renders (9:16 + 16:9) para validar chaining, enquadramento, wardrobe, áudio e custo real; exige autorização explícita (~US$3–6 cada).
 6. ~~**Lipsync animal:**~~ ✅ **DECIDIDO 06/08** — aceitar a articulação do Kling (opção 1). Ver §P0. Falta só a consequência de código: remover a chamada wav2lip que falha sempre (pende permissão).
 7. **Higiene de deploy/F1:** alteração local já exclui `.tmp` do standalone, preserva o estado runtime e aplica PM2 `--update-env`; falta revisar/configurar PM2 startup, adaptar o chamador n8n para enviar `Idempotency-Key` + aprovação `n8n_manual` somente após o gate humano no Telegram, deployar a mudança, arquivar handoffs antigos e apenas então avaliar tools mortos sem apagá-los silenciosamente.
