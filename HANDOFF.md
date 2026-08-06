@@ -49,8 +49,8 @@ contra retenção de audiência.
 
 | # | Pendência | Custo | Quem |
 |---|---|---|---|
-| **V0** | 🚨 **Regularizar o billing do Google Cloud (projeto `271640987369`).** Bloqueia V1 — sem Gemini não há roteiro, sem roteiro não há episódio. Ver §P0f. | — | **Só Felipe** |
-| **V1** | **Render de validação, 9:16, 1 episódio.** 9:16 porque é onde o conteúdo vive (TikTok/Reels/Shorts). Valida P0a + encadeamento + wardrobe + camada de áudio de uma vez. **BLOQUEADO por V0.** Autorizado pelo Felipe em 06/08; dispara pela UI (o gate de aprovação é humano por design). | ~US$3–6 | Felipe dispara na UI |
+| ~~V0~~ | ✅ **Billing do Google Cloud regularizado em 06/08** — sentinelas GREEN nas duas pontas. Ver §P0f. | — | feito |
+| **V1** | **Render de validação, 9:16, 1 episódio.** 9:16 porque é onde o conteúdo vive (TikTok/Reels/Shorts). Valida P0a + encadeamento + wardrobe + camada de áudio de uma vez. **DESTRAVADO.** Autorizado pelo Felipe em 06/08; dispara pela UI local (o gate de aprovação é humano por design, e a produção não tem o fix da âncora do Boomer). | ~US$3–6 | Felipe dispara na UI |
 | **V2** | **Felipe assiste e julga se é engraçado.** Limite real: Claude avalia enquadramento, LUFS, continuidade — **não avalia timing cômico**. Se não fizer rir, nenhuma métrica salva. | US$0 | Só Felipe |
 | **V3** | **Confirmar se as contas sociais existem** (TikTok/YouTube/Instagram do Down Under Discourse). Se não existirem, isso bloqueia "hoje" e vem ANTES do render. | US$0 | Só Felipe |
 | **V4** | **Upload manual dos primeiros ~10 episódios.** Não construir pipeline de publicação ainda. | US$0 | Felipe |
@@ -93,7 +93,15 @@ reais das 3 âncoras com o filtro de produção (`anchorCropFilter`) e inspecion
 - **Limite honesto:** validei o recorte da ÂNCORA. O que o Kling faz com ela a partir daí só o
   render real mostra.
 
-### 🚨 P0f — GEMINI NEGADO POR COBRANÇA: pipeline não produz episódio nenhum (achado 06/08, teste E2E via browser)
+### ✅ P0f — GEMINI NEGADO POR COBRANÇA (achado E RESOLVIDO em 06/08, mesma sessão)
+
+**RESOLVIDO:** Felipe regularizou o faturamento no console do Google Cloud. Verificado logo depois:
+`GET /v1beta/models` → **HTTP 200**, `gemini-2.5-flash` acessível. Sentinelas **GREEN nas duas
+pontas** (local e produção), e a sonda do roteirista valida conteúdo, não só status:
+`8 cenas, topico referenciado, balanco boomer/kev 4/4`. **V1 destravado.**
+Tempo entre a descoberta e o conserto: minutos. Histórico do incidente abaixo.
+
+
 
 **Sintoma:** clicar em START PRODUCTION no Studio devolve `NEURAL_LINK_SEVERED`. No servidor:
 
