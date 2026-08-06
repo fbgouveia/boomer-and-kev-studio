@@ -174,6 +174,60 @@ GIF da sessão: `boomer-kev-pipeline-e2e.gif`. **Nada foi gasto.**
    That's a sacred rule at the Bondi bakery, fair dinkum!"*; sponsor falso = "Line Dominator 3000";
    Kev cético no lugar certo. 8 blocos, 0:48.
 
+### 🧪 TESTE DE ESTRESSE DE USUÁRIO — varredura de TODAS as funcionalidades (06/08, via browser)
+
+Percorridas as 7 abas e os controles principais. **Nenhuma chamada paga disparada.**
+
+#### ✅ Funciona como deveria
+- **DIRECTOR:** botão desabilitado com campo vazio; medidor SIGNAL; brainstorm gera 8 seções
+  coerentes e no tema.
+- **PRODUCTION:** timeline com 8 blocos; combos de enquadramento, personagem, ação, movimento de
+  câmera e dinâmica de storyboard; orçamento ao vivo (US$6.72).
+- **DOWNLOAD FULL SCRIPT (PDF):** exporta de verdade (`BK-MANIFEST-*.pdf`, 41KB).
+- **E-KONTE:** layout de storyboard japonês com CUT/PICTURE/ACTION/AUDIO/TIME e durações por cena.
+- **LIBRARY:** lista do Supabase, busca filtra corretamente, thumbnails e download.
+- **ENGINE DNA:** specs dos personagens e link do repositório.
+- **RADAR:** benchmarks com filtro por categoria.
+- **COMMERCIAL:** ok após a correção de grid desta sessão.
+- **Compliance Scanner:** roda de verdade e devolve análise substantiva (direito de imagem US/BR
+  citando Código Civil art. 20, marca d'água do EU AI Act, recomendações).
+
+#### 🚨 STUDIO LABS É INTEIRAMENTE SIMULADO — capacidade fabricada apresentada como real
+`LabsPanel.tsx` — os próprios comentários dizem `// Simulated WebGPU Compilation` e
+`// Simulated Autonomous Agent logs`:
+- **"Compilação WebGPU"** finge carregar pesos do Llama-3-2-3B, compilar shaders e alocar VRAM.
+  São `setTimeout` com texto. O header ainda exibe `RENDER: WEBGL_ACTIVE`.
+- **"Diálogo local"** sorteia uma de **3 frases hardcoded** (linhas ~197-203).
+- **"Orquestrador de agentes autônomos"** imprime logs falsos de caçador/roteirista/jurídico e
+  termina com **`[Orquestrador] Enviando storyboard compilado para a fila de renderização no
+  Replicate (Kling v2.6)`** — afirma ter enfileirado um render que **não existe**. Confirmado no
+  navegador: zero requisições de rede.
+- **Por que é grave:** viola a regra de honestidade do projeto (mesma família da "nota viral" e da
+  rota `/admin` falsa, removidas em 30/07). Pior: um log que afirma ter enfileirado render no
+  Replicate é desinformação perigosa num projeto que **já teve incidente de gasto autônomo**.
+- **Decisão pendente do Felipe:** remover a aba, ou rotulá-la explicitamente como DEMO/MOCKUP na
+  própria UI. Não corrigido nesta sessão — é escopo de produto, não bug.
+
+#### 🔴 Outros defeitos encontrados
+1. **Storyboard usa fotos de banco de imagem quebradas.** `GUIDE_IMAGES` (`characters.ts:167`)
+   aponta para **Unsplash** — fotos genéricas que não têm nada a ver com Boomer & Kev, e que no
+   teste apareceram **quebradas** (ícone de imagem falha no E-KONTE). O projeto tem as âncoras
+   reais (`master_boomer/kev/wide.png`) que deveriam estar ali. Resto de scaffold.
+2. **Modal do Compliance estoura horizontalmente.** Título vira "RIO / IANCE / ER" e o
+   **nível de risco fica cortado** — uma ferramenta de compliance cujo veredito não se lê. O botão
+   `RUN SCANNER` também nasce fora do campo de visão.
+3. **Log de cada tecla digitada.** `DirectorTerminal.tsx:191` faz `console.log` a cada caractere
+   ("Stream detected: B / Bo / Boo..."). 121 mensagens no console numa sessão curta; o texto do
+   usuário vai inteiro para o console.
+4. **Brainstorm leva ~28s** sem indicador de progresso (só esqueleto) — parece travado.
+5. **Dois controles de câmera com o mesmo propósito** na mesma cena: "MOVIMENTO DE CÂMERA (PRESET)"
+   e "DINÂMICA DE CÂMERA (STORYBOARD)", com opções equivalentes. Não verificado qual prevalece.
+
+#### ⛔ Não testado, de propósito
+Os 3 caminhos guardados por `window.confirm` nativo — render pago (`page.tsx:885`), síntese de
+imagem paga (`DNAPanel.tsx:67`) e deletar episódio (`LibraryViewer.tsx:51`). Diálogo nativo
+bloqueia automação; e os dois primeiros gastam. **Isso é o gate funcionando.**
+
 ### 🔴 Consequência de código pendente de permissão
 
 `pipeline/run/route.ts:576-598` ainda dispara wav2lip nas 8 cenas de todo episódio — 8 predictions
@@ -772,6 +826,20 @@ final de linha original** — parte dos arquivos é CRLF.
 
 ### 🔴 Pendências reais — ordem atual
 
+0.5 **🧪 DEFEITOS DO TESTE DE ESTRESSE (06/08)** — em ordem de gravidade:
+   - **D1 🚨 STUDIO LABS simulado** — decidir: remover a aba OU rotular DEMO/MOCKUP na UI.
+     Decisão de produto do Felipe; o log falso "enviando para a fila do Replicate" é o pior item.
+   - **D2 🔴 `GUIDE_IMAGES` são fotos do Unsplash e estão quebradas** — trocar pelas âncoras reais
+     (`master_boomer/kev/wide.png`), que já existem em `public/assets/`.
+   - **D3 🔴 `aspect` não é selecionável na UI** — requisito de 24/07 está metade feito.
+   - **D4 🔴 Botão "RENDER SCENE" (singular) renderiza o episódio inteiro por US$6.72** — renomear.
+   - **D5 🟡 Modal de Compliance estoura horizontal** e corta o nível de risco; `RUN SCANNER`
+     nasce fora da vista.
+   - **D6 🟡 Vanity metrics no Drafting Mode** (92% MOMENTUM, CONFIDENCE 100%, RETENTION GOAL 90%+,
+     ENGAGEMENT VELOCITY EXTREME) — números inventados, mesma família da "nota viral".
+   - **D7 🟡 `console.log` de cada tecla** em `DirectorTerminal.tsx:191`.
+   - **D8 🟢 Brainstorm ~28s sem indicador de progresso.**
+   - **D9 🟢 Dois controles de câmera redundantes** na mesma cena — verificar qual prevalece.
 0. **🚀 PUBLICAR (V1–V5, sessão 06/08 no topo deste arquivo)** — render de validação 9:16 → Felipe
    julga → contas sociais → upload manual → cadência. É a frente que importa; o resto é secundário
    enquanto o número de episódios no ar for zero.
