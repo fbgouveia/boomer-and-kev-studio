@@ -147,6 +147,33 @@ card 9:16 virava uma coluna gigante e o grid saía desalinhado; e `object-cover`
 Continua sem layout shift (a caixa fixa também reserva altura). **Isto só apareceu porque a tela
 foi OLHADA:** build, typecheck, 61 testes e lint estavam todos verdes com o grid quebrado.
 
+### 🔎 Achados do E2E conduzido no navegador (06/08, 2ª passada — pós-billing)
+
+Fluxo percorrido inteiro: tema → brainstorm → 8 seções → COMMIT TO TIMELINE → timeline com 8 blocos.
+GIF da sessão: `boomer-kev-pipeline-e2e.gif`. **Nada foi gasto.**
+
+1. **🔴 `aspect` NÃO é selecionável na UI.** `page.tsx` nunca envia o campo em `/api/pipeline/run`
+   (grep: só há `aspect-video`/`aspect-[9/16]` de CSS). O backend aceita `9:16|16:9`, mas sem
+   controle na tela sempre cai no default do schema. **O requisito do Felipe de 24/07 ("formato
+   deve ser SELECIONÁVEL, não hardcoded") está METADE feito** — o handoff marcava ✅ cedo demais.
+   Não bloqueia hoje (o default 9:16 é o desejado), mas 16:9 é inalcançável pela UI.
+2. **🔴 Rótulo perigoso: o botão diz "RENDER SCENE" (singular) e renderiza o EPISÓDIO INTEIRO.**
+   `aria-label="Initiate Render Cycle"`, chama `/api/pipeline/run` com as 8 cenas — **US$6.72**
+   no orçamento exibido. Um rótulo no singular num botão que gasta 8 cenas é convite a engano.
+3. **🟡 Vanity metrics voltaram por outra porta.** No Drafting Mode: "92% MOMENTUM",
+   "DIRECTORIAL CONFIDENCE 100%", "RETENTION GOAL 90%+", "ENGAGEMENT VELOCITY: EXTREME",
+   "ALGORITHM BIAS: FAVORABLE". São números inventados — não medem nada. Mesmo padrão da "nota
+   viral" removida em 30/07 (§"O que foi DESCARTADO do vídeo, de propósito").
+4. **🟡 Brainstorm leva ~28s** com esqueleto e sem indicador de progresso — parece travado.
+5. **✅ O gate de aprovação usa `window.confirm()`** (`page.tsx:885`). Diálogo NATIVO bloqueia
+   automação de navegador: **um agente não consegue atravessar a fronteira paga sozinho.** Isso é
+   o gate funcionando como projetado depois do incidente de 20/07 — o clique que gasta é humano
+   por construção. Registrado como propriedade desejada, não como limitação.
+6. **✅ Qualidade do roteiro gerado (tema: regra sagrada da fila da padaria em Bondi):** on-topic e
+   em personagem. Hook = *"Mate, you just don't cut in front of someone eyeing off the sourdough!
+   That's a sacred rule at the Bondi bakery, fair dinkum!"*; sponsor falso = "Line Dominator 3000";
+   Kev cético no lugar certo. 8 blocos, 0:48.
+
 ### 🔴 Consequência de código pendente de permissão
 
 `pipeline/run/route.ts:576-598` ainda dispara wav2lip nas 8 cenas de todo episódio — 8 predictions
