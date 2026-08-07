@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.8)
+# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.9)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -172,6 +172,64 @@ Embaralhar é uma linha: sorteia a ordem a cada vídeo, dois episódios nunca re
 
 **Uso:** manchete + logo por poucos segundos, como citação em vídeo de comentário, é a
 prática padrão do gênero; reproduzir a matéria inteira não é. Ninguém aqui é advogado.
+
+### 🛠️ CONSTRUÍDO E FUNCIONANDO — `tools/capture-receipts.mjs`
+
+```
+node tools/capture-receipts.mjs "<tema>" [dias]
+```
+
+Playwright + Chromium instalados. Teste real (`"coffee price australia"`, 400d):
+**5 de 6 veículos capturados** — Nine, Time Out, ABC, Guardian, 7NEWS.
+Saída em `.tmp/receipts/<tema>/` + `receipts.json`.
+
+**Decisões travadas no código, todas medidas e não supostas:**
+
+1. **Recorte do TOPO, não do `<h1>`.** Printar só o h1 devolve **texto pelado** — sem logo,
+   sem assinatura, sem data. Vira o mesmo cartão tipografado que a camada de prova existe
+   para substituir. O recorte `{0,0,1000,560}` pega masthead + manchete + byline + data.
+   **É a diferença entre prova e citação.**
+2. **Bloqueio de anúncio na rede** (`page.route` + regex de ad hosts). Sem isso o Nine trouxe
+   um banner dos Wallabies colado no logo. Anúncio no recibo confunde o que é a matéria.
+3. **Data real do artigo, nunca o `pubDate` do feed.** Extraída da URL (`/2025-01-20/`) ou do
+   `article:published_time`. Ver descoberta abaixo — o Google mente na data.
+4. **`MIN_OUTLETS = 5`**: abaixo disso o script sai com código 2 e a mensagem "SEM PAUTA".
+
+### ⚠️ DESCOBERTAS QUE MUDAM O DESENHO
+
+**O `pubDate` do Google News não é confiável.** O feed datou como **março/2026** uma matéria
+do ABC cuja URL é `/2025-01-20/` — **19 meses mais velha**. Montar recibo pelo `pubDate`
+colocaria manchete de um ano e meio atrás na tela como se fosse notícia de hoje.
+**Isso é pior que não ter prova.** Por isso a data sai do artigo, não do feed.
+
+**"Várias fontes" e "notícia atual" estão em conflito direto:**
+
+| Busca | Itens | Veículos |
+|---|---|---|
+| `brisbane coffee price` (sem filtro) | 77 | **34** |
+| `brisbane coffee price when:7d` | **1** | **1** |
+
+Os 34 veículos existem porque a busca varreu mais de um ano. **Isso vira a regra de admissão
+de pauta, e é o sinal de viral MEDIDO** que substitui o `signal: 92` inventado:
+
+> Se ≥5 veículos confiáveis cobriram o mesmo assunto nos últimos 7 dias, o assunto está
+> quente e sustenta camada de prova. Se é preciso voltar 18 meses para achar 5, é tema
+> perene, não notícia.
+
+**O café de Brisbane REPROVA nesse critério.** Os 3 temas hardcoded provavelmente reprovam
+todos.
+
+### Falhas conhecidas da ferramenta (não resolvidas)
+
+- **News.com.au falha** (`h1` timeout 15s) — provável detecção de bot. 5/6 é o número real.
+- **Relevância não é verificada.** O RSS devolve matéria vagamente relacionada: o 7NEWS
+  capturado é *"Best coffee subscription service: take 20 per cent off"* (conteúdo de
+  afiliado) e o Guardian é um teste às cegas de café moído. **Nenhum dos dois corrobora
+  "café está caro".** Recibo que não sustenta a fala é enfeite, não prova — falta um filtro
+  de relevância entre a busca e a captura.
+- **Espaço vazio do anúncio** fica no recorte depois do bloqueio (placeholder "Advertisement").
+- **Nenhuma URL pode ser transcrita à mão.** Copiei um ID do Google News manualmente, troquei
+  um caractere e recebi "invalid web address". Tudo por script.
 
 **NÃO CONSTRUIR PROVA PARA PAUTA FALSA.** Os 3 temas do `trend-hunter` têm URL
 `https://example.com/...`. Overlay de "prova" sobre notícia inexistente é fabricar
