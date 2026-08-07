@@ -1,11 +1,68 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-08-06 AEST (v5.5)
+# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.6)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
 > que nunca podem ser quebradas. Atualize-o ANTES de encerrar sua sessão.
 >
 > **Hierarquia de leitura:** HANDOFF.md → GEMINI.md → CLAUDE.md → AGENTS.md
+
+---
+
+## 🧠 SESSÃO 07/08/2026 — ROTEIRO SAIU DO GEMINI; PAUTA GANHOU MÉTODO
+
+**Resumo em uma linha:** a geração de roteiro foi migrada de `gemini-2.5-flash` (morto por
+cobrança GCP desde 06/08) para Claude com structured outputs, e a busca de pauta ganhou uma
+regra escrita. **Nada foi testado contra a API real — falta a chave.**
+
+### Atualizações desta sessão
+
+1. **`src/app/api/ai/script/route.ts` migrado para Claude.** Saiu o `fetch` cru no Gemini,
+   entrou o SDK oficial `@anthropic-ai/sdk@0.115.0` com `output_config.format` +
+   `json_schema`. Modelo padrão `claude-sonnet-5`, sobrescrevível por `SCRIPT_MODEL` no env
+   ou pelo campo `model` no body (existe só para o A/B cego contra `claude-opus-5`).
+2. **Morreu o regex que raspava JSON.** A linha `content.match(/\[[\s\S]*\]/)` era ponto de
+   falha silenciosa: qualquer variação de formatação quebrava ou entregava lixo. O schema
+   agora impede o modelo de sair do formato, e `shotType` virou `enum` derivado de
+   `SHOT_TYPES` — validado pela API, não pedido em prosa.
+3. **`JSON ONLY. NO MARKDOWN. NO EXPLANATIONS.` removido do prompt** — virou lixo com o
+   schema no lugar. O resto do prompt (personagens, slang, gancho, patrocinador falso) ficou
+   **intacto de propósito**.
+4. **`BALANCE_GATE` preservado.** Structured outputs garante o *formato*, não a contagem 4/4
+   Boomer/Kev. A trava do incidente de 19/07 (5x1, Kev sumiu do vídeo) continua necessária.
+5. **Regra de pauta escrita** no `CLAUDE.md` do studio: skill `last30days` antes de qualquer
+   pauta entrar na fila, com a forma de busca (conflito, não assunto) e o filtro dos 3.
+
+### Descobertas (o que não estava escrito em lugar nenhum)
+
+- **A skill `last30days` exige Python 3.12+ e o `python3` do sistema é 3.9.6** — ela nem
+  inicia. Rodar com `~/.local/bin/python3.12`. Sem isso parece quebrada.
+- **Cobertura real do `last30days` sem chave** (medido pelo `doctor` em 07/08): vivos =
+  reddit (público), hackernews, github, web. **Quebrado = polymarket.** Desligados = tiktok,
+  instagram, threads, youtube, x, linkedin, pinterest. Ou seja: as plataformas onde o B&K
+  vive estão **mudas**. Serve para achar tema de notícia, **não** para ler tendência de
+  short-form. Destravar é grátis: `brew install yt-dlp` e `last30days.py setup --github`.
+- **Sonnet 5 e Opus 5 rejeitam `temperature`/`top_p`/`top_k` com erro 400.** O código antigo
+  não mandava temperature (o Gemini usava o padrão alto dele), então a migração não quebra —
+  mas o botão de variedade não existe mais. Para gerar N variantes do MESMO tema, a variação
+  tem que ser pedida no prompt ("três ângulos distintos"), não sorteada.
+- **O roteiro custa ~1% do episódio.** ~2.500 tokens de entrada + ~1.500 de saída: US$0,02 em
+  Sonnet 5, US$0,05 em Opus 5, contra US$3–6 de render. Escolher modelo por preço aqui
+  economiza centavos e coloca o risco na única etapa criativa do pipeline.
+
+### Pendências / próximos passos
+
+- **BLOQUEADO: falta `ANTHROPIC_API_KEY`.** Não existe no `.env.local` (só REPLICATE, GEMINI,
+  ELEVENLABS, SUPABASE), não está no ambiente, e o `ant` CLI não está instalado. A rota nova
+  retorna 400 antes de chamar nada. **A primeira chamada real continua NÃO VERIFICADA** —
+  build, tipos, lint e 61 testes passam, mas isso não prova que a API responde.
+- **A/B cego pendente**: mesmo tópico em `claude-sonnet-5` vs `claude-opus-5`, roteiros sem
+  etiqueta para o Felipe julgar. Custo < US$0,15. Só falta a chave.
+- **As outras rotas Gemini seguem no Gemini e seguem mortas**: `brainstorm`, `interview`,
+  `mitigation`, `compliance`, `trend-hunter`, `image`, `cover-prompt`. Migrar é decisão do
+  Felipe — não foi pedido nesta sessão.
+- Continua valendo tudo da sessão 06/08 abaixo: **zero episódios publicados** é a pendência
+  real; render de validação V1 aguarda autorização.
 
 ---
 

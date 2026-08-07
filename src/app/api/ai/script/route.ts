@@ -1,16 +1,46 @@
 import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 import { SHOT_TYPES } from '@/data/characters';
 
-import { fetchWithRetry } from '@/lib/fetch-retry';
+// Schema do roteiro. Substitui o `content.match(/\[[\s\S]*\]/)` que raspava JSON
+// da resposta do Gemini: o modelo agora nao consegue devolver fora deste formato.
+// Envelopado em { scenes: [...] } porque structured outputs exige objeto na raiz.
+const SCRIPT_SCHEMA = {
+    type: 'object',
+    properties: {
+        scenes: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string', description: 'unique string' },
+                    characterId: { type: 'string', enum: ['boomer', 'kev'] },
+                    text: { type: 'string', description: 'the dialogue line' },
+                    shotType: { type: 'string', enum: SHOT_TYPES.map(s => s.id) },
+                    action: { type: 'string', description: 'physical motion matching DNA/Notes' },
+                    durationEst: { type: 'integer', description: 'seconds, 3 to 8' },
+                    emotion: { type: 'string', description: 'character emotion matching flow' },
+                },
+                required: ['id', 'characterId', 'text', 'shotType', 'action', 'durationEst', 'emotion'],
+                additionalProperties: false,
+            },
+        },
+    },
+    required: ['scenes'],
+    additionalProperties: false,
+} as const;
 
 export async function POST(req: Request) {
     try {
-        const { topic, snippet, apiKey: clientApiKey } = await req.json();
-        const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
+        const { topic, snippet, apiKey: clientApiKey, model } = await req.json();
+        const apiKey = clientApiKey || process.env.ANTHROPIC_API_KEY;
 
         if (!apiKey) {
-            return NextResponse.json({ error: 'Missing Gemini API Key' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing Anthropic API Key' }, { status: 400 });
         }
+        // Sonnet 5 e o padrao: a US$0,02/roteiro o custo e irrelevante perto do
+        // render (US$3-6). `model` no body existe so para o A/B cego contra Opus 5.
+        const modelId = model || process.env.SCRIPT_MODEL || 'claude-sonnet-5';
 
         const systemPrompt = `
       You are the Creative Director and Lead Scriptwriter for "Down Under Discourse", an authentic, high-energy Australian podcast studio.
@@ -63,46 +93,32 @@ export async function POST(req: Request) {
       TOPIC: "${topic}"
       ${snippet ? `ADDITIONAL CONTEXT (Directorial Notes): "${snippet}"` : ''}
 
-      OUTPUT FORMAT:
-      You MUST return a JSON array containing exactly 8 objects. Each object must have:
-      - id: unique string
-      - characterId: "boomer" or "kev"
-      - text: the dialogue line
-      - shotType: one of [${SHOT_TYPES.map(s => s.id).join(', ')}]
-      - action: physical motion matching DNA/Notes
-      - durationEst: number (3-8 seconds)
-      - emotion: character emotion matching flow
-
-      JSON ONLY. NO MARKDOWN. NO EXPLANATIONS.
+      OUTPUT: exactly 8 scenes.
     `;
 
-        const { response } = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: systemPrompt }] }]
-            })
+        // Sem `temperature`: Sonnet 5 / Opus 5 retornam 400 se ela for enviada.
+        // A variacao entre episodios vem do topic + snippet, nao de amostragem.
+        const client = new Anthropic({ apiKey });
+        const message = await client.messages.create({
+            model: modelId,
+            max_tokens: 8000, // teto cobre thinking + saida (~1500 tokens de roteiro)
+            messages: [{ role: 'user', content: systemPrompt }],
+            output_config: { format: { type: 'json_schema', schema: SCRIPT_SCHEMA } },
         });
 
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error.message || 'Gemini API Error');
+        if (message.stop_reason === 'refusal') {
+            throw new Error('Roteiro recusado pelos classificadores de seguranca do modelo.');
+        }
+        if (message.stop_reason === 'max_tokens') {
+            throw new Error('Roteiro truncado: aumente max_tokens.');
         }
 
-        const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!content) {
-            throw new Error('No content returned from Gemini');
+        const block = message.content.find(b => b.type === 'text');
+        if (!block || block.type !== 'text') {
+            throw new Error('No content returned from Claude');
         }
 
-        // Robust JSON extraction
-        let jsonStr = content;
-        const jsonMatch = content.match(/\[[\s\S]*\]/); // Scripts return an array
-        if (jsonMatch) {
-            jsonStr = jsonMatch[0];
-        }
-
-        const parsedScript = JSON.parse(jsonStr);
+        const parsedScript = JSON.parse(block.text).scenes;
 
         // BALANCE_GATE (WP 1.5): validacao deterministica — o prompt pede 4/4, aqui
         // rejeitamos o que passar do limite. Evidencia: episodio de 19/07 saiu 5x1
