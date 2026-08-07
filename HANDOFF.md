@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.7)
+# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.8)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -35,6 +35,14 @@ regra escrita. **Nada foi testado contra a API real — falta a chave.**
 
 ### Descobertas (o que não estava escrito em lugar nenhum)
 
+- **`last30days` pelo CLI cru roda em modo degradado.** A saída avisa: *"If you are the
+  reasoning model hosting this skill, YOU ARE the planner"* — sem `--plan` ele cai no
+  fallback determinístico (caminho headless/cron). Invocar como skill de verdade, com o
+  modelo montando o plano de busca. A medição de cobertura de 07/08 foi feita no modo pior.
+- **`last30days` é instável entre execuções.** Mesma query (`Brisbane coffee prices`),
+  minutos de diferença: primeira rodada reportou `Reddit: 6 threads / 1.054 upvotes`,
+  as seguintes `0 threads`, `Sources: none`, zero URLs extraíveis. Fonte gratuita
+  intermitente não sustenta pipeline que precisa de recibo em todo episódio.
 - **Chamada local à API do studio exige Basic Auth.** `src/proxy.ts` protege tudo menos
   `/api/radar` e `/api/cron/trend-hunter`. Um 401 em teste local **não é bug** — falta o
   header. Receita: `AUTH=$(printf '%s:%s' "$STUDIO_AUTH_USER" "$STUDIO_AUTH_PASSWORD" | base64)`.
@@ -114,6 +122,60 @@ vídeo viral. Consequências já aplicadas:
   (`index === 7 → GOPRO_FISHEYE`) vivem no gerador de template offline do `script-engine.ts`,
   que não toca a saída da IA.
 - **Custo:** cada cena é um clipe no Kling. 10 cenas ≈ 40% mais render que 7.
+
+### 🧾 V2 DEFINIDA — CAMADA DE PROVA (recibos de jornal na tela)
+
+**Pedido do Felipe (07/08):** durante a fala, entram na tela **prints de 5-6 veículos
+conhecidos e confiáveis** cobrindo o mesmo assunto, **em ordem aleatória a cada vídeo**.
+Um print é alegação; cinco veículos é consenso — o espectador não precisa confiar, ele vê.
+
+Já estava registrado como lacuna em `docs/editing-retention-constitution.md`:
+*"Captions, B-roll e publicação continuam pendentes"*. Agora tem desenho.
+
+**MECANISMO ENCONTRADO E TESTADO — RSS de busca do Google News (grátis, sem chave):**
+
+```
+https://news.google.com/rss/search?q=<tema>&hl=en-AU&gl=AU&ceid=AU:en
+```
+
+Teste real com `brisbane coffee price`: **77 matérias, 34 veículos distintos** — SMH,
+News.com.au, Nine.com.au, The Courier Mail, Time Out, BeanScene, ABC. Manchetes reais,
+mesmo assunto. É exatamente o que o Felipe descreveu.
+
+**ISSO RESOLVE DOIS PROBLEMAS COM UM MECANISMO.** A contagem de veículos **é** a detecção
+de viral: 34 veículos cobrindo o tema é sinal **medido**, ao contrário do `signal: 92`
+digitado à mão no `trend-hunter`. O mesmo RSS entrega a pauta validada **e** os recibos.
+Confirma o instinto do Felipe: pauta vem de jornal, não de rede social.
+
+**CORREÇÃO REGISTRADA:** eu havia recomendado ligar TikTok/Instagram/Threads via
+`last30days.py setup --github`. **Não serve para isto** — aquilo traz post de rede social,
+não manchete de veículo. Recomendação riscada.
+
+**Atritos reais (medidos, não supostos):**
+
+1. **Paywall.** SMH e Courier Mail (News Corp) são pagos — o print sairia com o muro.
+   Livres e famosos, testados com HTTP: The Guardian AU (200), News.com.au (200),
+   SBS (200), ABC (301→ok), Nine (301→ok), Time Out, The Conversation. **Allowlist resolve** —
+   dá 6 fontes confiáveis sem tocar em paywall.
+2. **Link do Google News é redirect** (`news.google.com/rss/articles/CBM...`), não a URL do
+   artigo. Precisa resolver antes de printar. **Único risco técnico ainda não verificado.**
+3. **Banner de cookie e detecção de bot** sujam o print. Mitigação: printar o **seletor da
+   manchete**, não a página — já sai enquadrado para 9:16 e o banner fica fora.
+
+**Desenho:**
+```
+tema → Google News RSS → filtra allowlist → escolhe 5-6 veículos
+     → resolve redirect → print do seletor da manchete
+     → embaralha ordem → overlay FFmpeg nos beats do roteiro
+```
+Embaralhar é uma linha: sorteia a ordem a cada vídeo, dois episódios nunca repetem sequência.
+
+**Uso:** manchete + logo por poucos segundos, como citação em vídeo de comentário, é a
+prática padrão do gênero; reproduzir a matéria inteira não é. Ninguém aqui é advogado.
+
+**NÃO CONSTRUIR PROVA PARA PAUTA FALSA.** Os 3 temas do `trend-hunter` têm URL
+`https://example.com/...`. Overlay de "prova" sobre notícia inexistente é fabricar
+evidência — custo é a credibilidade do canal inteiro. A ordem é: pauta real → print → overlay.
 
 ### Pendências / próximos passos
 
