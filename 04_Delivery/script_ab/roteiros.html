@@ -1,0 +1,848 @@
+<title>Boomer &amp; Kev — Roteiros do A/B, 07/08/2026</title>
+<style>
+  :root{
+    --ink:#EDE7E1; --ink-dim:#9C948C; --ink-faint:#6B645E;
+    --ground:#0A0908; --surface:#131211; --surface-2:#1B1917;
+    --rule:#2C2926;
+    --boomer:#FF5F1F;   /* Signal Orange — rim light quente do Boomer */
+    --kev:#79A3B8;      /* soft-box frio do Kev */
+    --max:1400px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:17px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .mono,.num,.meta,.hud,.eyebrow,.model{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .wrap{max-width:var(--max); margin:0 auto; padding:0 24px 96px}
+
+  /* ── cabeçalho ─────────────────────────────── */
+  .masthead{border-bottom:4px solid var(--boomer); margin-bottom:48px; padding:56px 0 32px}
+  .eyebrow{
+    font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--boomer); margin:0 0 16px
+  }
+  h1{
+    font-size:clamp(30px,5vw,52px); line-height:1.05; margin:0 0 16px;
+    letter-spacing:-.02em; text-wrap:balance; font-weight:800;
+  }
+  .standfirst{max-width:62ch; color:var(--ink-dim); margin:0; font-size:18px}
+  .standfirst strong{color:var(--ink); font-weight:600}
+
+  .caveat{
+    margin:32px 0 0; padding:16px 20px; background:var(--surface);
+    border-left:4px solid var(--boomer); max-width:78ch;
+  }
+  .caveat p{margin:0; font-size:15px; color:var(--ink-dim)}
+  .caveat p + p{margin-top:8px}
+
+  /* ── tópico ────────────────────────────────── */
+  .topic{margin-bottom:72px}
+  .topic-head{border-bottom:1px solid var(--rule); padding-bottom:14px; margin-bottom:24px}
+  .topic-head h2{
+    font-size:clamp(21px,2.6vw,28px); margin:0 0 6px; letter-spacing:-.01em;
+    text-wrap:balance; font-weight:700;
+  }
+  .topic-sub{margin:0; color:var(--ink-faint); font-size:14px}
+
+  .pair{display:grid; grid-template-columns:1fr 1fr; gap:28px}
+  @media (max-width:860px){ .pair{grid-template-columns:1fr; gap:44px} }
+
+  .model{
+    font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+    margin:0 0 14px; padding:7px 12px; display:inline-block; font-weight:600;
+  }
+  .model.sonnet{background:var(--surface-2); color:var(--ink-dim); border:1px solid var(--rule)}
+  .model.opus{background:var(--boomer); color:#0A0908}
+
+  /* ── HUD de métricas ───────────────────────── */
+  .hud{
+    display:flex; flex-wrap:wrap; gap:0; margin:0 0 20px;
+    border:1px solid var(--rule); background:var(--surface);
+  }
+  .hud > div{padding:9px 14px; border-right:1px solid var(--rule); flex:1 1 auto}
+  .hud > div:last-child{border-right:0}
+  .hud dt{
+    font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-faint); margin:0 0 3px;
+  }
+  .hud dd{margin:0; font-size:16px; font-variant-numeric:tabular-nums; color:var(--ink)}
+
+  /* ── cenas ─────────────────────────────────── */
+  .scenes{display:flex; flex-direction:column; gap:2px}
+  .scene{
+    background:var(--surface); padding:16px 18px 18px;
+    border-left:4px solid var(--rule);
+  }
+  .scene.boomer{border-left-color:var(--boomer)}
+  .scene.kev{border-left-color:var(--kev)}
+
+  .scene-head{
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .num{
+    font-size:12px; color:var(--ink-faint); font-variant-numeric:tabular-nums;
+  }
+  .who{
+    font-size:12px; letter-spacing:.16em; text-transform:uppercase; font-weight:700;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .boomer .who{color:var(--boomer)}
+  .kev .who{color:var(--kev)}
+  .meta{
+    font-size:11px; color:var(--ink-faint); margin-left:auto; text-align:right;
+  }
+  .line{
+    margin:0; font-size:19px; line-height:1.5; max-width:60ch; text-wrap:pretty;
+  }
+  .action{
+    margin:10px 0 0; font-size:13.5px; color:var(--ink-dim);
+    font-style:italic; max-width:60ch;
+  }
+
+  footer{
+    border-top:1px solid var(--rule); margin-top:24px; padding-top:24px;
+    color:var(--ink-faint); font-size:13.5px; max-width:78ch;
+  }
+  footer p{margin:0 0 8px}
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9em;
+    background:var(--surface-2); padding:1px 5px; color:var(--ink-dim);
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Boomer &amp; Kev Studio · A/B de modelo · 07 ago 2026</p>
+    <h1>Oito roteiros, quatro temas, dois modelos</h1>
+    <p class="standfirst">
+      Gerados pela rota <code>/api/ai/script</code> depois da migração do Gemini para Claude
+      com structured outputs. Custo total: <strong>US$&nbsp;0,26</strong>.
+      O gabarito já foi revelado — cada coluna traz o modelo no topo.
+    </p>
+    <div class="caveat">
+      <p><strong>Isto não decide nada.</strong> São quatro pares de amostras, um tema cada.
+      Não existe medição de retenção porque não existe episódio publicado.</p>
+      <p>Três dos quatro temas vêm <em>hardcoded</em> em
+      <code>trend-hunter/route.ts:25-29</code>, com &ldquo;viral score&rdquo; digitado à mão.
+      Não são tendências reais.</p>
+    </div>
+  </header>
+
+  
+  <section class="topic">
+    <header class="topic-head">
+      <h2>Entrevistas de emprego por IA</h2>
+      <p class="topic-sub">Empresas trocam entrevista por teste de IA; candidatos respondem com IA.</p>
+    </header>
+    <div class="pair">
+      <div class="col">
+        <h3 class="model sonnet">Sonnet&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/3</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>43s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · manic excitement · 6s</span>
+      </header>
+      <p class="line">OI! Listen up! Companies are ditching job interviews for AI tests, and the candidates are using AI to ANSWER the AI! It's robots interviewing robots, mate!</p>
+      <p class="action">leans aggressively into the mic, pointing both fingers at the camera like a debater</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · escalating disbelief · 5s</span>
+      </header>
+      <p class="line">Fair dinkum, nobody's even in the room anymore! You could send your TOASTER to a job interview these days and it'd probably get the gig!</p>
+      <p class="action">shadow boxes at an imaginary toaster while flexing his bicep</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · bone-dry cynicism · 5s</span>
+      </header>
+      <p class="line">Yeah, nah. Sounds about right. Saves everyone the trouble of pretending to like each other for forty minutes.</p>
+      <p class="action">slow blink, takes a lazy sip from his stubby holder without breaking eye contact</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · fake corporate enthusiasm · 6s</span>
+      </header>
+      <p class="line">Speaking of robots doing the work — this episode is proudly UN-sponsored by 'BoomBot AI Resume Juicer', guaranteed to make your CV sound like you personally invented the wheel!</p>
+      <p class="action">holds up a crumpled piece of paper like it's a product box, grinning wide at the lens</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · deadpan dismissal · 4s</span>
+      </header>
+      <p class="line">Wrap this up. That's not a sponsor, mate, that's just you lying to a printer.</p>
+      <p class="action">chews gum leaf slowly, unimpressed stare directly into camera</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · explosive disbelief · 6s</span>
+      </header>
+      <p class="line">But get this — the AI interview bots are getting TRICKED by other AIs! Candidates are literally feeding their laptop mic the answers in real time! ABSOLUTE STREWTH!</p>
+      <p class="action">wipes imaginary sweat off his brow then slams both paws on the desk</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · resigned amusement · 6s</span>
+      </header>
+      <p class="line">So basically... it's two toasters lying to each other, and somewhere a human's still unemployed. Mad as a cut snake, this whole system.</p>
+      <p class="action">leans back in chair, arms crossed, giving Boomer a slow sideways glance</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · triumphant absurdity · 5s</span>
+      </header>
+      <p class="line">So the real winner of the job market... is whoever's got the better Wi-Fi connection! GAME CHANGER, Kev!</p>
+      <p class="action">throws both arms up in triumphant realization then freezes mid-fist-pump</p>
+    </article></div>
+      </div>
+      <div class="col">
+        <h3 class="model opus">Opus&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>4/4</dd></div>
+      <div><dt>máx. seguidas</dt><dd>1</dd></div>
+      <div><dt>duração</dt><dd>55s</dd></div>
+      <div><dt>planos</dt><dd>6</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · manic, explosive · 7s</span>
+      </header>
+      <p class="line">OI! LISTEN UP! There is a bloke in Brisbane who got hired for a job that DOESN'T EXIST, by a robot that DOESN'T EXIST, and mate, he's been paid for six weeks! Absolute STREWTH!</p>
+      <p class="action">slams both palms on the desk, knocking the mic stand sideways, then shadow boxes twice at the camera lens</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · deadpan, unbothered · 8s</span>
+      </header>
+      <p class="line">Yeah, nah. Back up. Companies are runnin' AI interviews now, and the candidates are runnin' AI answers. So it's just two computers havin' a yarn about teamwork while the humans go make a cuppa.</p>
+      <p class="action">slow blink, chews his gum leaf twice, leans one elbow on the desk and drags the mic closer without lifting his head</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · conspiratorial hype · 7s</span>
+      </header>
+      <p class="line">That's the CURIOUS bit, Kev! Nobody knows who actually got employed! And I reckon I know the ONE bloke who cracked the whole system — but I'm sittin' on that, mate. Sittin' on it.</p>
+      <p class="action">points aggressively at Kev like a debater, then taps his own temple and mimes zipping his lips</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · dry, withering · 6s</span>
+      </header>
+      <p class="line">You're dreamin'. You don't know anyone. You couldn't crack a Nokia.</p>
+      <p class="action">sips slowly from his stubby holder, sets it down, stares straight down the barrel of the camera in silence</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">boomer</span>
+        <span class="meta">GOPRO_FISHEYE · shameless, begging energy · 8s</span>
+      </header>
+      <p class="line">SPEAKING of crackin' it — this ep is brought to you by NOTHIN'! Zero sponsors! So OI, corporate legends, sling us a dollar and I'll flex for your product! I'll do PUSH-UPS for a yoghurt brand, fair dinkum!</p>
+      <p class="action">rips headphones off one ear, flexes a bicep directly into the fisheye lens, wipes sweat off his brow with a beer coaster</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · tired, dismissive · 5s</span>
+      </header>
+      <p class="line">Mate, no one's sponsorin' a kanga who's flat out like a lizard drinkin' at his own desk. Wrap this up.</p>
+      <p class="action">yawns wide, pushes Boomer's flexing arm out of frame with one lazy paw</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · escalating revelation · 7s</span>
+      </header>
+      <p class="line">But here's the GAME CHANGER, Kev — if the robot's askin' and the robot's answerin', who's actually doin' the JOB?! Nobody! It's ghosts! It's ghosts all the way down, mate!</p>
+      <p class="action">gestures wildly with both hands like he's untangling invisible fishing line, then grips the mic with both paws</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · deadpan triumph · 7s</span>
+      </header>
+      <p class="line">That bloke in Brisbane? That's you. You applied. Your AI got the gig, your AI's been doin' the work, and honestly mate — it's better at it than you. Cactus.</p>
+      <p class="action">delivers it flat, then wheezes a single dry laugh and slowly slides down in his chair as Boomer freezes mid-flex</p>
+    </article></div>
+      </div>
+    </div>
+  </section>
+  <section class="topic">
+    <header class="topic-head">
+      <h2>NRL Grand Final Controversy</h2>
+      <p class="topic-sub">Tema hardcoded no trend-hunter. Sinal "85" — inventado.</p>
+    </header>
+    <div class="pair">
+      <div class="col">
+        <h3 class="model sonnet">Sonnet&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/3</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>42s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · outraged · 5s</span>
+      </header>
+      <p class="line">OI! Listen up! The refs just STOLE the Grand Final and nobody's talking about it, fair dinkum!</p>
+      <p class="action">slams both paws on the desk and jumps up shadow boxing at the camera</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · manic · 6s</span>
+      </header>
+      <p class="line">Forward pass, no penalty, Bunker goes UPSTAIRS for four minutes and comes back with NOTHING. That's a scandal mate, an absolute STREWTH of a scandal!</p>
+      <p class="action">paces off frame then leans back in flexing his biceps while pointing at an imaginary replay screen</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · unimpressed · 5s</span>
+      </header>
+      <p class="line">Yeah, nah. You watched that game with three energy drinks and your heart set on a bet, Boomer.</p>
+      <p class="action">slow blink, takes a lazy sip from his stubby holder without breaking eye contact</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · excited · 6s</span>
+      </header>
+      <p class="line">Speaking of getting ROBBED, this episode's brought to you by 'Kev's Leaf Insurance' — covers your gum leaves against theft, drought, and existential dread!</p>
+      <p class="action">grabs a random gum leaf off the desk and waves it like a game show host presenting a prize</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · deadpan · 4s</span>
+      </header>
+      <p class="line">We don't have a sponsor, Boomer. That's my lunch. Put it down.</p>
+      <p class="action">reaches out one paw flatly, unblinking, gum leaf held mid-chew</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · passionate · 6s</span>
+      </header>
+      <p class="line">Fine, FINE! But mark my words — this controversy's gonna change the whole comp, game changer stuff mate, GAME. CHANGER.</p>
+      <p class="action">stands up, spreads arms wide gesturing at an invisible stadium while Kev remains slouched beside him</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · smug · 6s</span>
+      </header>
+      <p class="line">Ground control to Boomer... the coach already said post-match he wouldn't've changed a thing. Cooked your whole rant, mate.</p>
+      <p class="action">pulls out phone, scrolls once with one claw, then sets it face-down with zero fanfare</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · deflated · 4s</span>
+      </header>
+      <p class="line">...wait, he said WHAT?</p>
+      <p class="action">freezes mid-flex, arms still raised, jaw slightly open</p>
+    </article></div>
+      </div>
+      <div class="col">
+        <h3 class="model opus">Opus&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>4/4</dd></div>
+      <div><dt>máx. seguidas</dt><dd>1</dd></div>
+      <div><dt>duração</dt><dd>54s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · Explosive, manic outrage · 6s</span>
+      </header>
+      <p class="line">OI! LISTEN UP! That bunker decision in the Grand Final was the single biggest robbery in Australian sporting history and I've got the receipts, mate. RECEIPTS!</p>
+      <p class="action">Slams both palms on the desk, knocking his headphones sideways, then jabs a finger straight down the barrel of the mic like a courtroom prosecutor</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · Flat, unimpressed deadpan · 6s</span>
+      </header>
+      <p class="line">Yeah, nah. Ya said 'receipts' but all I can see on that iPad is a Macca's order from Tuesday.</p>
+      <p class="action">Slowly tilts his head to peer at Boomer's tablet, blinks once, then takes a long unhurried sip from his stubby holder</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · Conspiratorial, wired · 8s</span>
+      </header>
+      <p class="line">Nah nah nah, SCROLL DOWN, Kev! Frame forty-two! His pinky finger's a bee's dick off the sideline and they called it OUT. There's a bloke in that bunker with a grudge, I reckon — and I'll tell ya exactly who by the end of this ep.</p>
+      <p class="action">Leans across the desk shadow boxing the air twice, then swipes furiously at the tablet with one paw while wiping sweat off his brow with the other</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · Bored, mildly obligated · 6s</span>
+      </header>
+      <p class="line">Before ya name him and we get sued into next Tuesday... aren't you meant to read the ad? The bloke's paid us in stubby holders again.</p>
+      <p class="action">Yawns, stretches one arm behind his head, and lazily slides a crumpled sponsor card across the desk to Boomer without looking at him</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · Shameless, over-the-top salesman · 8s</span>
+      </header>
+      <p class="line">BLOODY OATH! This ep's brought to ya by REF-VISION: the prescription goggles for blokes who make terrible decisions! Fair dinkum, chuck 'em on ya mother-in-law, chuck 'em on the bunker — GAME CHANGER! Also if any REAL sponsor's watchin', we are flat out like a lizard drinkin' and we work for snacks.</p>
+      <p class="action">Whips a pair of enormous novelty goggles from under the desk, wears them crooked, and flexes one bicep directly into the camera lens</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · Dry amusement, cutting · 6s</span>
+      </header>
+      <p class="line">Mate, they're servo sunnies with the price tag still on. Ground control to Boomer — nobody's buyin' that, and nobody's suin' the bunker either.</p>
+      <p class="action">Reaches over, flicks the dangling price tag on the goggles, then leans back into his chair and lets out a dry wheezing laugh</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · Genuine, exasperated appeal · 6s</span>
+      </header>
+      <p class="line">So you're tellin' me a grand final gets decided by a bloke squintin' at a pixel in a dark room in Eveleigh and we all just... cop it sweet?!</p>
+      <p class="action">Throws both arms wide, rolls his chair back, then rolls forward and grips the mic stand with both paws like he's about to propose to it</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · Devastatingly calm, final · 8s</span>
+      </header>
+      <p class="line">Yeah. Ya do. 'Cos here's ya grand conspiracy, mate — the bunker bloke's name is Dave, he's on twenty-two bucks an hour, and he barracks for neither side. Your team lost 'cos they dropped it cold four times in the second half. Wrap this up.</p>
+      <p class="action">Sets his stubby holder down with a soft clunk, slow-blinks once directly at camera, and pulls the gum leaf out of his mouth mid-chew</p>
+    </article></div>
+      </div>
+    </div>
+  </section>
+  <section class="topic">
+    <header class="topic-head">
+      <h2>Aussie Housing Crisis Update</h2>
+      <p class="topic-sub">Tema hardcoded no trend-hunter. Sinal "70" — inventado.</p>
+    </header>
+    <div class="pair">
+      <div class="col">
+        <h3 class="model sonnet">Sonnet&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>9</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/4</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>44s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · manic outrage · 5s</span>
+      </header>
+      <p class="line">OI! Listen up you drongos, some bloke in Sydney just paid NINE HUNDRED GRAND for a garage with a bloody kitchen bolted on!</p>
+      <p class="action">shadow boxing the air then jabbing finger directly at camera lens</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · escalating disbelief · 5s</span>
+      </header>
+      <p class="line">They're calling it a 'micro-loft investment opportunity', mate! No wuckas, they said! It's got a SHOWER in the PANTRY!</p>
+      <p class="action">flexes both biceps while wiping imaginary sweat off forehead</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · deadpan unimpressed · 4s</span>
+      </header>
+      <p class="line">Yeah nah. Sounds cosy. Bloke can shower and make a sanga same time. Efficient, really.</p>
+      <p class="action">slow blink while chewing gum leaf, sips from stubby holder without breaking eye contact</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · desperate showmanship · 6s</span>
+      </header>
+      <p class="line">This episode is proudly brought to you by absolutely NO ONE, because our sponsor pulled out faster than a bloke doing a runner from a share house inspection!</p>
+      <p class="action">throws arms wide gesturing to empty studio like a game show host</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · dry sarcasm · 5s</span>
+      </header>
+      <p class="line">So instead we're spruiking Kev's Genuine Leaf Mulch. Eat it, sleep on it, or use it as a house deposit. Same buying power, fair dinkum.</p>
+      <p class="action">holds up a leaf to the lens then drops it with zero enthusiasm</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · frantic urgency · 6s</span>
+      </header>
+      <p class="line">STREWTH Kev, this is a fair dinkum crisis! My cousin's renting a BUNK BED, mate! A BUNK BED! Top or bottom, doesn't matter, it's still six hundred a week!</p>
+      <p class="action">paces aggressively, points at Kev then slams open palm on the desk</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · weary resignation · 5s</span>
+      </header>
+      <p class="line">Ground control to Boomer. Mate's lucky. I've seen blokes bidding on a tent peg in Byron. Went for four hundred grand. Had ocean glimpse, apparently.</p>
+      <p class="action">yawns wide then slowly sips from stubby holder, eyelids drooping</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · desperate anticipation · 4s</span>
+      </header>
+      <p class="line">So what's the fix then, genius?! What's the ACTUAL game changer?!</p>
+      <p class="action">stops pacing, spins to face Kev, both arms out demanding an answer</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">09</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · flat finality · 4s</span>
+      </header>
+      <p class="line">Move to Tassie. Buy a shed. Call it 'rustic'. Wrap this up.</p>
+      <p class="action">shrugs once, closes eyes mid-sentence and goes completely still</p>
+    </article></div>
+      </div>
+      <div class="col">
+        <h3 class="model opus">Opus&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/3</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>58s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · explosive outrage · 7s</span>
+      </header>
+      <p class="line">OI! LISTEN UP! I just got knocked back on a one-bedroom shoebox in Footscray by SEVENTY-TWO other blokes, and one of 'em offered SIX MONTHS rent up front IN CASH! Absolute STREWTH!</p>
+      <p class="action">slams both palms on the desk, knocking his headphones sideways, then jabs a finger straight down the barrel of the mic</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · manic conspiratorial hype · 7s</span>
+      </header>
+      <p class="line">But here's the kicker, mate — I've cracked it. I've found the ONE loophole that gets a bloke on the property ladder in this country, and I'm tellin' ya at the end of this ep. Game changer.</p>
+      <p class="action">leans into the mic conspiratorially, taps his temple twice, then shadow-boxes a quick one-two at the air</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · flat weary cynicism · 8s</span>
+      </header>
+      <p class="line">Yeah, nah. Seventy-two blokes. Mate, I put in for a granny flat in Blacktown and the agent laughed at me. Down the phone. Like a dry little wheeze. Reckon he's cactus too, honestly.</p>
+      <p class="action">blinks slowly, takes a long sip from his stubby holder, sets it down with a soft clunk and adjusts his headphones one-handed</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · deranged salesman energy · 8s</span>
+      </header>
+      <p class="line">Which is WHY this ep is brought to ya by BOOMER'S BOOT-SCOOT BOND BUSTER! Two hundred bucks and I turn up to your rental inspection, shirt OFF, flexin' at the agent till he signs outta pure fear! No wuckas!</p>
+      <p class="action">stands up so fast his chair rolls back, rips at his shirt collar and flexes a double bicep over the desk while Kev leans away from him</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · dry desperate deadpan · 8s</span>
+      </header>
+      <p class="line">Ground control to Boomer. That's not a sponsor, that's a restraining order with a logo. Also mate, if anyone real wants to give us money... we are flat out like a lizard drinkin'. We'd take a pie voucher.</p>
+      <p class="action">deadpan straight down the lens, gum leaf hanging from the corner of his mouth, gives the mic one tiny apologetic pat</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · betrayed nostalgia · 6s</span>
+      </header>
+      <p class="line">Fair dinkum though, Kev! Me old man bought a four-bedder in Brissy on a POSTIE'S WAGE! One wage! And a Kingswood in the driveway! What happened to this country?!</p>
+      <p class="action">throws both arms wide in genuine debater's disbelief, then wipes sweat off his brow with his forearm and leans back in</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · amused flat accusation · 7s</span>
+      </header>
+      <p class="line">What happened is your old man's four-bedder is now worth one-point-nine mill and he calls it a 'starter home'. He's the villain, mate. Your dad's the crisis.</p>
+      <p class="action">shrugs one shoulder in slow motion, gestures loosely at Boomer with the stubby holder, then goes back to chewing</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · triumph curdling into horror · 7s</span>
+      </header>
+      <p class="line">So HERE'S the loophole, right — ya move back in with the olds, ya charge 'em RENT for the emotional support, and ya wait for the inheritan— oh. Oh no.</p>
+      <p class="action">lights up ecstatically, gestures like a magician revealing the trick, then his face collapses and both arms drop dead to the desk</p>
+    </article></div>
+      </div>
+    </div>
+  </section>
+  <section class="topic">
+    <header class="topic-head">
+      <h2>Brisbane Coffee Price Shock</h2>
+      <p class="topic-sub">Tema hardcoded no trend-hunter. Sinal "92" — inventado.</p>
+    </header>
+    <div class="pair">
+      <div class="col">
+        <h3 class="model sonnet">Sonnet&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/3</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>46s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · outraged · 5s</span>
+      </header>
+      <p class="line">OI! Listen up! Six dollars fifty for a FLAT WHITE in Brisbane, Kev! SIX FIFTY! That's fair dinkum ROBBERY, mate!</p>
+      <p class="action">slams both fists on the desk then points aggressively at the camera like a debater making a closing argument</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · manic · 6s</span>
+      </header>
+      <p class="line">I did the maths, Kev. If I get one a day that's TWO GRAND a year! I could buy a jet ski! A JET SKI, mate!</p>
+      <p class="action">shadow boxes the air then mimes riding a jet ski with both hands gripping invisible handlebars</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · deadpan · 5s</span>
+      </header>
+      <p class="line">Yeah, nah. You don't buy coffee daily, mate. You beg one off me every morning and call it 'content research'.</p>
+      <p class="action">slow blinks while sipping from a stubby holder, sets it down with deliberate calm</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · excited · 7s</span>
+      </header>
+      <p class="line">Speaking of savings, mate, this episode is PROUDLY not sponsored by anyone, so I've invented 'BOOMER BREW' - it's just instant coffee in a servo cup, TWO BUCKS, GAME CHANGER!</p>
+      <p class="action">holds up a crumpled servo cup with fake logo scrawled in texta, shakes it enthusiastically toward the lens</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · unimpressed · 5s</span>
+      </header>
+      <p class="line">Wrap this up. That's servo instant in a cup you nicked from the bin. No wuckas, but that's cactus, mate, absolute cactus.</p>
+      <p class="action">chews on a gum leaf while staring flatly into the lens, one eyebrow raised</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · worked up · 6s</span>
+      </header>
+      <p class="line">Alright, alright, but here's the ABSOLUTE STREWTH of it - the cafe on my corner reckons it's 'ethically sourced', but so's me bloody thongs, doesn't mean they cost fifty bucks!</p>
+      <p class="action">flexes both arms then gestures wildly toward Kev, wiping sweat off his brow with the back of his hand</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · smug · 6s</span>
+      </header>
+      <p class="line">Ground control to Boomer. It's Brisbane rent going through the roof, not the beans, dropkick. Landlords are flat out like a lizard drinking, squeezing every cafe on the strip.</p>
+      <p class="action">yawns mid-sentence then slowly points one claw toward Boomer without lifting his head off the cushion</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · shocked realization · 6s</span>
+      </header>
+      <p class="line">So it's not the coffee, it's the bloody RENT?! Mad as a cut snake, this whole city! Right, I'm boycotting cafes and drinking straight outta the jar!</p>
+      <p class="action">freezes mid-flex with mouth open in realisation, then grabs an entire jar of instant coffee and tips it straight into his mouth</p>
+    </article></div>
+      </div>
+      <div class="col">
+        <h3 class="model opus">Opus&nbsp;5</h3>
+        
+    <dl class="hud">
+      <div><dt>cenas</dt><dd>8</dd></div>
+      <div><dt>boomer/kev</dt><dd>5/3</dd></div>
+      <div><dt>máx. seguidas</dt><dd>2</dd></div>
+      <div><dt>duração</dt><dd>53s</dd></div>
+      <div><dt>planos</dt><dd>5</dd></div>
+    </dl><div class="scenes">
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">01</span>
+        <span class="who">boomer</span>
+        <span class="meta">LOW_ANGLE_BOOMER · explosive outrage · 6s</span>
+      </header>
+      <p class="line">OI! LISTEN UP! Nine dollars fifty for a bloody flat white in Fortitude Valley! Nine-fifty! Mate, I've bought a whole CAR for less than that!</p>
+      <p class="action">slams both palms on the desk, headphones half off one ear, jabs a finger straight down the barrel of the mic like a courtroom prosecutor</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">02</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · conspiratorial mania · 7s</span>
+      </header>
+      <p class="line">And here's the kicker, right — I know EXACTLY why it happened. I did the sums on a napkin at two in the mornin'. There's a bloke in this city single-handedly holdin' the bean hostage, and I'm namin' him before we're done.</p>
+      <p class="action">leans hard into the mic, unfolds a crumpled napkin and waves it at the camera, wipes sweat off his brow with a forearm</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">03</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · flat, devastating calm · 7s</span>
+      </header>
+      <p class="line">Yeah, nah. Mate, you paid nine-fifty 'cause you ordered an oat milk double-shot with a caramel drizzle and a little biscuit on the side. That's not inflation. That's a personality problem.</p>
+      <p class="action">slow blinks twice, chews a gum leaf, adjusts his stubby holder on the desk without ever lifting his elbows</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">04</span>
+        <span class="who">boomer</span>
+        <span class="meta">BOOMER_MCU · infomercial euphoria · 8s</span>
+      </header>
+      <p class="line">Which is WHY this ep is brought to ya by BOOMER'S BEAN BUCKET! Four litres of servo coffee in a paint tin. No barista, no latte art, no bloke named Jarrod askin' if ya want it in a keep cup. Two bucks. GAME CHANGER!</p>
+      <p class="action">hoists a paint tin above his head with both hands like a premiership trophy, shakes it so it sloshes, flexes one bicep at the lens</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">05</span>
+        <span class="who">kev</span>
+        <span class="meta">WIDE · weary deadpan · 7s</span>
+      </header>
+      <p class="line">That's not a sponsor, mate. Nobody's payin' us. You bought that tin at Bunnings on Sunday and filled it yourself. Also it's cactus — I saw a moth in it.</p>
+      <p class="action">slouches deep in his chair, gestures at the tin with one lazy finger, takes a long sip from the stubby holder while Boomer keeps posing mid-air</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">06</span>
+        <span class="who">boomer</span>
+        <span class="meta">OTS_BOOMER · heated but sincere · 7s</span>
+      </header>
+      <p class="line">Fair dinkum though Kev, be serious — Brissy's gone mad as a cut snake. Rent's up, beans are up, the poor cafe's payin' eight grand a month for a shopfront the size of a dunny. Someone's gotta cop it!</p>
+      <p class="action">drops the tin, shadow boxes twice, then plants his elbows on the desk and points across at Kev like a debater conceding a point</p>
+    </article>
+    <article class="scene kev">
+      <header class="scene-head">
+        <span class="num">07</span>
+        <span class="who">kev</span>
+        <span class="meta">KEV_CU · rare agreeable warmth · 7s</span>
+      </header>
+      <p class="line">Yeah, nah — that bit I'll give ya. Bloody oath. The cafe's not gougin' ya, mate. They're flat out like a lizard drinkin' just to keep the lights on. You're yellin' at the wrong bloke in the apron.</p>
+      <p class="action">nods once, slowly, leans two inches toward the mic — the most effort he's made all episode — then wheezes a dry little laugh</p>
+    </article>
+    <article class="scene boomer">
+      <header class="scene-head">
+        <span class="num">08</span>
+        <span class="who">boomer</span>
+        <span class="meta">WIDE · triumphant reveal · 4s</span>
+      </header>
+      <p class="line">So who's the bloke holdin' the bean hostage?! Napkin says it's... the landlord!</p>
+      <p class="action">slaps the napkin flat on the desk, both hands raised in triumph, freezing mid-flex</p>
+    </article></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Ordem das colunas fixa (Sonnet à esquerda, Opus à direita) — na geração original
+    a ordem foi sorteada por tema para o julgamento ser cego.</p>
+    <p>Cores: laranja = Boomer (rim light quente), azul-frio = Kev (soft-box difuso).
+    Ambas derivadas do <code>lightingKey</code> de cada personagem em <code>characters.ts</code>.</p>
+  </footer>
+</div>

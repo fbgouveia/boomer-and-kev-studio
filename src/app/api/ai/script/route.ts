@@ -93,7 +93,13 @@ export async function POST(req: Request) {
       TOPIC: "${topic}"
       ${snippet ? `ADDITIONAL CONTEXT (Directorial Notes): "${snippet}"` : ''}
 
-      OUTPUT: exactly 8 scenes.
+      SCENE COUNT: free. Use as many scenes as the story needs — typically 7 to 10.
+      Never pad to hit a number and never cut a beat to save one. What matters is
+      holding the viewer, not the count.
+
+      TOTAL RUNTIME: keep the sum of durationEst within short-form norms. Aim for
+      35-75 seconds. Never exceed 90 seconds — beyond that, retention on 9:16
+      collapses regardless of platform ceilings.
     `;
 
         // Sem `temperature`: Sonnet 5 / Opus 5 retornam 400 se ela for enviada.
@@ -130,6 +136,16 @@ export async function POST(req: Request) {
             if ((porPersonagem[c] || 0) < minimo) {
                 throw new Error(`SCRIPT_BALANCE: '${c}' tem ${porPersonagem[c] || 0} cenas de ${parsedScript.length} (minimo ${minimo}). Roteiro desequilibrado rejeitado.`);
             }
+        }
+
+        // RUNTIME_GATE: o numero de cenas e livre de proposito (decisao do Felipe,
+        // 07/08) — 7, 9 ou 10 cenas nao importa, o que importa e segurar o
+        // espectador. O que NAO e livre e a duracao: passou disso, nao e mais
+        // short-form viral em nenhuma plataforma. Trava por segundos, nao por cenas.
+        const MAX_RUNTIME_S = 90;
+        const runtime = parsedScript.reduce((a: number, l: { durationEst?: number }) => a + (l.durationEst || 0), 0);
+        if (runtime > MAX_RUNTIME_S) {
+            throw new Error(`SCRIPT_RUNTIME: ${runtime}s em ${parsedScript.length} cenas (maximo ${MAX_RUNTIME_S}s). Roteiro longo demais para 9:16.`);
         }
 
         // Add status: 'IDLE' to each line for the frontend

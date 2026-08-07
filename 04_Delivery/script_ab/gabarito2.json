@@ -1,0 +1,14 @@
+{
+  "T1": {
+    "X": "claude-sonnet-5",
+    "Y": "claude-opus-5"
+  },
+  "T2": {
+    "X": "claude-opus-5",
+    "Y": "claude-sonnet-5"
+  },
+  "T3": {
+    "X": "claude-sonnet-5",
+    "Y": "claude-opus-5"
+  }
+}

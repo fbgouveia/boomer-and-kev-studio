@@ -1,5 +1,5 @@
 # HANDOFF.md — Registro de Continuidade entre Sessões
-# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.6)
+# Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.7)
 
 > 🔄 **Este arquivo é o primeiro ponto de leitura de QUALQUER agente novo.**
 > Ele contém o estado exato do projeto, o que foi feito, o que falta, e as regras
@@ -35,6 +35,11 @@ regra escrita. **Nada foi testado contra a API real — falta a chave.**
 
 ### Descobertas (o que não estava escrito em lugar nenhum)
 
+- **Chamada local à API do studio exige Basic Auth.** `src/proxy.ts` protege tudo menos
+  `/api/radar` e `/api/cron/trend-hunter`. Um 401 em teste local **não é bug** — falta o
+  header. Receita: `AUTH=$(printf '%s:%s' "$STUDIO_AUTH_USER" "$STUDIO_AUTH_PASSWORD" | base64)`.
+- **Sonnet 5 gera em 15-19s; Opus 5 em 24-27s.** Diferença de latência real, não de preço.
+
 - **A skill `last30days` exige Python 3.12+ e o `python3` do sistema é 3.9.6** — ela nem
   inicia. Rodar com `~/.local/bin/python3.12`. Sem isso parece quebrada.
 - **Cobertura real do `last30days` sem chave** (medido pelo `doctor` em 07/08): vivos =
@@ -50,19 +55,82 @@ regra escrita. **Nada foi testado contra a API real — falta a chave.**
   Sonnet 5, US$0,05 em Opus 5, contra US$3–6 de render. Escolher modelo por preço aqui
   economiza centavos e coloca o risco na única etapa criativa do pipeline.
 
+### ✅ RESOLVIDO ainda em 07/08 — a rota está VERIFICADA de verdade
+
+O commit `dc6b183` foi feito quando a rota ainda era não-verificada. **Isso mudou.** Felipe
+adicionou `ANTHROPIC_API_KEY` no `.env.local` e a rota rodou de ponta a ponta:
+**8 gerações reais, HTTP 200 em todas, ~US$0,26 no total.**
+
+- Primeira tentativa deu **401** — não era bug: é o Basic Auth do próprio studio
+  (`src/proxy.ts`). Toda chamada local à API precisa do header
+  `Authorization: Basic base64(STUDIO_AUTH_USER:STUDIO_AUTH_PASSWORD)`.
+- Segunda deu **400 "credit balance is too low"** — a chave autenticava, a conta é que não
+  tinha crédito. Felipe resolveu e rotacionou a chave.
+- **Structured outputs confirmado:** 8 roteiros, zero campo faltando, zero `shotType`
+  inválido, zero JSON malformado. Nenhum regex envolvido.
+
+### Resultado do A/B — o modelo NÃO é a variável
+
+4 temas × 2 modelos, julgamento cego (ordem sorteada por tema; gabaritos em
+`04_Delivery/script_ab/gabarito*.json`). **Felipe aprovou os 8.**
+
+**Conclusão: fica em `claude-sonnet-5`.** Se os dois são indistinguíveis para o único juiz que
+importa, vence o mais barato e mais rápido — US$0,02 vs US$0,05, e 15-19s vs 24-27s por
+roteiro. Opus continua a um `SCRIPT_MODEL=claude-opus-5` de distância.
+**O que faz o trabalho é o prompt do Felipe, não o modelo.** Não gastar mais tempo comparando
+modelo sem dado de retenção.
+
+Artefatos preservados em **`04_Delivery/script_ab/`** (mesmo padrão do `audio_ab`): os 8 JSON,
+os dois gabaritos, `roteiros.html` para leitura humana e `build-page.mjs` que o regenera.
+
+### ⚠️ ACHADO GRAVE — `trend-hunter` é teatro, igual à aba Studio Labs
+
+`src/app/api/cron/trend-hunter/route.ts` **não caça tendência nenhuma**:
+
+- Os temas são um **array fixo no código** (linhas 25-29): NRL Grand Final, Aussie Housing
+  Crisis, Brisbane Coffee Price. Três, sempre os mesmos.
+- As fontes são comentários `TODO`: "Implement Google Trends RSS fetch", "Implement YouTube
+  API search", "Implement TikTok Hashtag scrape". Nada implementado.
+- O **"Viral Potential Score" é inventado** — `signal: 85 / 70 / 92` digitados à mão. A linha
+  diz "INTELLIGENCE PHASE (Gemini 2.5 Flash)" e o código logo abaixo admite: `// Mock
+  processing block`.
+- URLs são `https://example.com/...`; o `supabase.from('trends').insert(...)` está comentado.
+- **E responde `success: true, hunted: 3`.**
+
+**Não existe banco de pautas no projeto.** A regra de pauta gravada hoje no `CLAUDE.md`
+pressupõe uma fonte que não existe — é o buraco que o `last30days` deveria tapar.
+
+### Decisão do Felipe: contagem de cenas é LIVRE
+
+7, 8, 9 ou 10 não importa — o critério é **segurar o espectador** e ficar nas boas práticas de
+vídeo viral. Consequências já aplicadas:
+
+- Prompt trocou `exactly 8 scenes` por faixa livre (típico 7-10) + alvo de 35-75s.
+- **`RUNTIME_GATE` novo**: rejeita acima de **90s** somando `durationEst`. A trava passou a ser
+  duração, não contagem. Os 8 roteiros medidos ficaram entre 42s e 58s.
+- O 4/4 estrito caiu por consequência. O `BALANCE_GATE` (mínimo 3 por personagem) continua —
+  garante que o Kev não vire figurante (incidente 5x1 de 19/07).
+- **Nada a jusante quebra com contagem variável** — verificado. Os índices fixos
+  (`index === 7 → GOPRO_FISHEYE`) vivem no gerador de template offline do `script-engine.ts`,
+  que não toca a saída da IA.
+- **Custo:** cada cena é um clipe no Kling. 10 cenas ≈ 40% mais render que 7.
+
 ### Pendências / próximos passos
 
-- **BLOQUEADO: falta `ANTHROPIC_API_KEY`.** Não existe no `.env.local` (só REPLICATE, GEMINI,
-  ELEVENLABS, SUPABASE), não está no ambiente, e o `ant` CLI não está instalado. A rota nova
-  retorna 400 antes de chamar nada. **A primeira chamada real continua NÃO VERIFICADA** —
-  build, tipos, lint e 61 testes passam, mas isso não prova que a API responde.
-- **A/B cego pendente**: mesmo tópico em `claude-sonnet-5` vs `claude-opus-5`, roteiros sem
-  etiqueta para o Felipe julgar. Custo < US$0,15. Só falta a chave.
+- **A trava que mais importa para retenção não existe:** nada verifica se a última cena
+  **paga** o que a primeira plantou. No A/B isso separou bom de fraco — o NRL do Sonnet abriu
+  com "os refs roubaram a final" e fechou com "...wait, he said WHAT?", sem pagar nada. Exige
+  julgar sentido, não contar campo: ou uma segunda chamada barata ao modelo, ou olho humano
+  antes de renderizar.
+- **PRÓXIMO PASSO ÓBVIO: escolher 1 dos 8 roteiros e renderizar.** O gargalo nunca foi
+  escrever — está provado. Candidatos que fecham loop e cabem em qualquer plataforma:
+  Brisbane Coffee (Opus, 53s) e NRL (Opus, 54s). Render 9:16 custa US$3-6; há US$17 no
+  Replicate.
 - **As outras rotas Gemini seguem no Gemini e seguem mortas**: `brainstorm`, `interview`,
   `mitigation`, `compliance`, `trend-hunter`, `image`, `cover-prompt`. Migrar é decisão do
   Felipe — não foi pedido nesta sessão.
 - Continua valendo tudo da sessão 06/08 abaixo: **zero episódios publicados** é a pendência
-  real; render de validação V1 aguarda autorização.
+  real.
 
 ---
 
