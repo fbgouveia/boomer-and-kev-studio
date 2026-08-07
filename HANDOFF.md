@@ -9,6 +9,40 @@
 
 ---
 
+## 🚦 COMECE AQUI — estado em 07/08/2026 fim do dia
+
+**Uma linha:** a geração de roteiro saiu de morta para verificada, e a camada de prova saiu
+do zero para funcionando. **Continua com zero episódios publicados.**
+
+**Commits de hoje (todos em `restore-engine`, remoto sincronizado):**
+`dc6b183` migração Gemini→Claude · `ff32a15` cenas livres + RUNTIME_GATE + A/B ·
+`8243bd2` desenho da camada de prova · `4528285` captura de recibos funcionando
+
+**O que existe agora e não existia de manhã:**
+- Roteiro gerando em `claude-sonnet-5` com structured outputs (zero regex, zero JSON quebrado)
+- 8 roteiros aprovados pelo Felipe em `04_Delivery/script_ab/`
+- `tools/capture-receipts.mjs` capturando print real de manchete de 5 veículos confiáveis
+
+**PRÓXIMO PASSO, sem rodeio: escolher 1 dos 8 roteiros e renderizar.** O gargalo nunca foi
+escrever nem provar — está demonstrado. Candidatos que fecham loop e cabem em qualquer
+plataforma: Brisbane Coffee (Opus, 53s) e NRL (Opus, 54s). Render 9:16 custa US$3-6,
+há US$17 no Replicate. **Exige OK explícito do Felipe** (incidente de 20-22/07).
+
+**As 3 travas que faltam, em ordem de importância:**
+1. **Relevância do recibo** — nada verifica se a manchete sustenta a fala. Hoje captura
+   conteúdo de afiliado como se fosse prova. Provável solução: uma chamada barata ao modelo
+   ("esta manchete sustenta esta alegação? sim/não") entre a busca e a captura.
+2. **Loop do roteiro** — nada verifica se a última cena paga o que a primeira plantou. Foi o
+   que separou bom de fraco no A/B.
+3. **Pauta real** — `trend-hunter` é teatro (3 temas hardcoded, score inventado). A regra de
+   admissão medida já existe no papel: ≥5 veículos confiáveis em 7 dias.
+
+**Não repetir os erros de hoje:** nenhuma URL transcrita à mão (troquei um caractere e quebrou);
+`last30days` exige `~/.local/bin/python3.12` e precisa de `--plan`; chamada local à API do
+studio exige Basic Auth (401 não é bug).
+
+---
+
 ## 🧠 SESSÃO 07/08/2026 — ROTEIRO SAIU DO GEMINI; PAUTA GANHOU MÉTODO
 
 **Resumo em uma linha:** a geração de roteiro foi migrada de `gemini-2.5-flash` (morto por
