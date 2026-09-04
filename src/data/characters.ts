@@ -164,20 +164,22 @@ export const STUDIO_SETTING = {
 export const DEFAULT_STUDIO_REFERENCE = '/assets/master_wide.png';
 export const DEFAULT_DNA_FOLDER_URL = 'https://drive.google.com/drive/folders/1BhtSpeBYhTG5TgQmPbqxBK2z1SCQh5Zf';
 
+// Âncoras reais do projeto (public/assets) — substitui as fotos de Unsplash quebradas
+// (resto de scaffold). Cada shot usa a âncora do personagem focado; wide usa o two-shot.
 export const GUIDE_IMAGES: Record<string, string> = {
-    main: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800', // Mid shot (main)
-    wide: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800', // Wide Studio
-    side: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800', // Side angle
-    close: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800', // Close up
-    profile: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800', // Profile
-    detail: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800', // Detail
+    main: '/assets/master_boomer.png',      // Mid shot (main) — Boomer
+    wide: '/assets/master_wide.png',        // Wide Studio (two-shot)
+    side: '/assets/master_boomer.png',      // Side angle
+    close: '/assets/master_kev.png',        // Close up — Kev
+    profile: '/assets/master_boomer.png',   // Profile
+    detail: '/assets/master_wide.png',      // Detail (fallback honesto ao two-shot)
     // Keep legacy uppercase keys for safety
-    WIDE: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&q=80&w=800',
-    BOOMER_MCU: 'https://images.unsplash.com/photo-1590845947847-b8f98ec4e1df?auto=format&fit=crop&q=80&w=800',
-    KEV_CU: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800',
-    OTS_BOOMER: 'https://images.unsplash.com/photo-1517504712030-f38b251ce7da?auto=format&fit=crop&q=80&w=800',
-    LOW_ANGLE_BOOMER: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?auto=format&fit=crop&q=80&w=800',
-    GOPRO_FISHEYE: 'https://images.unsplash.com/photo-1445384763658-040093982930?auto=format&fit=crop&q=80&w=800'
+    WIDE: '/assets/master_wide.png',
+    BOOMER_MCU: '/assets/master_boomer.png',
+    KEV_CU: '/assets/master_kev.png',
+    OTS_BOOMER: '/assets/master_boomer.png',
+    LOW_ANGLE_BOOMER: '/assets/master_boomer.png',
+    GOPRO_FISHEYE: '/assets/master_wide.png'
 };
 
 export const ANGLE_SPECS: Record<string, { label: string, desc: string, requirements: string[] }> = {

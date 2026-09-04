@@ -9,7 +9,60 @@
 
 ---
 
-## 🚦 COMECE AQUI — estado em 07/08/2026 fim do dia
+## 🚦 COMECE AQUI — estado em 04/09/2026 fim do dia (v6.0)
+
+**Uma linha:** engine reparada e re-deployada (src/ inteira tinha saído do disco, restaurada do
+git), 4 defeitos crônicos mortos, Labs honesto. **Continua com zero episódios publicados —
+o próximo passo continua sendo escolher 1 dos 8 roteiros e renderizar (US$3–6, seu OK).**
+
+**Estado de infra verificado hoje:**
+- `node_modules` estava quebrado (typescript + esbuild com binário de outra plataforma) →
+  reparado com `npm install` + `npm rebuild esbuild tsx`. Ritual verde: **tsc limpo, 61/61
+  testes, build ok**.
+- Deploy executado: **PM2 online, health check HTTP 401 (esperado — Basic Auth)**. Os 33+
+  commits pendentes foram à produção.
+- Stack de skills instalada em `~/.config/opencode/skills/` (ver bloco 04/09 abaixo):
+  holofote AU configurado em `.holofote/`, fact-checker, humanizer v3, Alambique.
+
+**Diffs de hoje (US$0, em produção):**
+1. **wav2lip removido** do `pipeline/run/route.ts` — as 8 predictions pagas que falhavam
+   sempre em todo episódio não existem mais; áudio TTS multiplexado direto via ffmpeg.
+   Economia medida: 8 chamadas + polling + logs de erro por episódio.
+2. **`GUIDE_IMAGES` → âncoras reais** (`/assets/master_*.png`) — storyboard não usa mais
+   Unsplash quebrada.
+3. **Botão pago renomeado**: `RENDER EPISODE · N SCENES · ~US$X` + aria-label explicando que
+   renderiza o episódio inteiro (custo vem do total real, não hardcoded).
+4. **console.log por tecla removido** (`DirectorTerminal.tsx`) — texto do usuário não vaza
+   mais ao console.
+5. **Studio Labs com selo obrigatório** `⚠ DEMO — SIMULATED · nothing here is real or
+   queued` e header `RENDER: SIMULATED`. **Decisão pendente do Felipe:** remover a aba
+   inteira (recomendação) ou torná-la real. Hoje ela não engana mais.
+
+**Honestidade da verificação:** tsc + testes + build + health check verdes; lint segue com
+48 erros **preexistentes** (meus diffs reduziram 1 — o console.log era erro). O que o Kling
+faz com as âncoras e o comportamento sem wav2lip só o primeiro render real mostra.
+
+## 📋 PLANO DE AMANHÃ — engine para 10/10 (1 sessão por item, em ordem de retorno)
+
+| # | Sessão | Desenho | Critério de aceite |
+|---|---|---|---|
+| 1 | **Filtro de relevância dos recibos** | No `tools/capture-receipts.mjs`, entre RSS e captura: chamada barata ("esta manchete sustenta esta alegação? sim/não"). Referência de método: skill `fact-checker` | Recibo de afiliado (ex.: 7NEWS "20% off subscription") rejeitado; `MIN_OUTLETS` conta só relevantes |
+| 2 | **Loop do roteiro** | Gate na `/api/ai/script`: 2ª chamada barata "a última cena paga a primeira?" | Roteiro NRL que não pagava o hook reprovado |
+| 3 | **Checkpoint/retomada** | Persistir estado do job por cena (clipes já salvos em `.tmp/`), permitir "continuar da cena N" | Cena 6 falhando → retoma sem repagar 1–5 |
+| 4 | **`aspect` selecionável** | `page.tsx` envia o campo em `/api/pipeline/run` | 16:9 alcançável pela UI (requisito do Felipe de 24/07) |
+| 5 | **Pauta real** | Substituir `trend-hunter` teatral pela regra medida: ≥5 veículos confiáveis em 7 dias via Google News RSS | Zero tema `example.com`, zero score inventado |
+
+**Decisões pendentes do Felipe (US$0, uma palavra cada):**
+- Studio Labs: **remover a aba** (recomendação) ou torná-la real um dia?
+- Escolher 1 dos 8 roteiros (`04_Delivery/script_ab/` — Brisbane Coffee ou NRL) e **renderizar**
+  na UI local (US$3–6; tem US$17 no Replicate; gate humano por design).
+
+**Não fazer (registrado):** publicação automática, n8n, P3 exploits — critério de reversão
+já gravado (§DECISÃO ARQUITETURAL 05/08).
+
+---
+
+## 🚦 ESTADO 07/08/2026 fim do dia (histórico — supersedido pelo v6.0 acima)
 
 **Uma linha:** a geração de roteiro saiu de morta para verificada, e a camada de prova saiu
 do zero para funcionando. **Continua com zero episódios publicados.**

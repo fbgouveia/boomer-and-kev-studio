@@ -573,30 +573,10 @@ async function processPipeline(
         const klingVideoUrl = Array.isArray(output) ? output[0] : output;
         updateJob({ logs: [`✅ [Scene ${scene.index}] Kling video generated: ${klingVideoUrl}`] });
 
-        // Trigger Wav2Lip LipSync
-        updateJob({ logs: [`👄 [Scene ${scene.index}] Triggering Wav2Lip sync on Replicate...`] });
-        let syncVideoUrl = klingVideoUrl;
-        let usedWav2Lip = false;
-        try {
-          const syncPrediction = await replicate!.predictions.create({
-            // ponytail: modelo community exige version hash — endpoint por nome (model:) dá 404
-            version: "8d65e3f4f4298520e079198b493c25adfc43c058ffec924f2aefc8010ed25eef",
-            input: {
-              face: klingVideoUrl,
-              audio: scene.audioDataUri,
-              pads: "0 10 0 0",
-              smooth: true,
-              fps: 30
-            }
-          });
-
-          updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling LipSync completion...`] });
-          const syncOutput = await pollPrediction(replicate!, syncPrediction.id);
-          syncVideoUrl = Array.isArray(syncOutput) ? syncOutput[0] : syncOutput;
-          usedWav2Lip = true;
-        } catch (err: any) {
-          updateJob({ logs: [`⚠️ [Scene ${scene.index}] LipSync failed: ${err.message}. Falling back to non-lipsynced video.`] });
-        }
+        // Wav2Lip removido (decisão 06/08 §P0): lipsync descartado por decisão do Felipe —
+        // o episódio régua (oatmilk.mp4) nunca teve lipsync e os clipes do Kling articulam mais.
+        // Cada cena poupava 1 prediction paga que falhava sempre (compute + latência queimados).
+        const syncVideoUrl = klingVideoUrl;
 
         // Download final synced video to local disk
         updateJob({ logs: [`📥 [Scene ${scene.index}] Downloading scene video...`] });
@@ -611,31 +591,24 @@ async function processPipeline(
         const finalScenePath = path.resolve(tmpDir, `sync_${jobId}_${scene.sceneId}.mp4`);
         const audioPath = path.resolve(tmpDir, `audio_${jobId}_${scene.sceneId}.mp3`);
 
-        if (!usedWav2Lip) {
-            updateJob({ logs: [`🎵 [Scene ${scene.index}] Multiplexing audio and video locally...`] });
-            await new Promise((resolve, reject) => {
-                const args = ['-y', '-i', scenePath];
-                
-                if (existsSync(audioPath)) {
-                  args.push('-i', audioPath, '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
-                } else {
-                  args.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
-                }
-                args.push(finalScenePath);
+        // Sem lipsync: sempre multiplexa o áudio TTS por cima do clipe do Kling.
+        updateJob({ logs: [`🎵 [Scene ${scene.index}] Multiplexing audio and video locally...`] });
+        await new Promise((resolve, reject) => {
+            const args = ['-y', '-i', scenePath];
 
-                const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'inherit'] });
-                ff.on('error', reject);
-                ff.on('close', (code) =>
-                  code === 0 ? resolve(finalScenePath) : reject(new Error(`ffmpeg multiplex exited with code ${code}`))
-                );
-            });
-        } else {
-            // Check if the wav2lip video actually has an audio stream
-            // But we will assume it does, because we provided an audio file to it.
-            // If it doesn't have an audio stream, it will crash assembly. To be 100% safe,
-            // we could always remux, but this is fine for now.
-            copyFileSync(scenePath, finalScenePath);
-        }
+            if (existsSync(audioPath)) {
+              args.push('-i', audioPath, '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
+            } else {
+              args.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
+            }
+            args.push(finalScenePath);
+
+            const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'inherit'] });
+            ff.on('error', reject);
+            ff.on('close', (code) =>
+              code === 0 ? resolve(finalScenePath) : reject(new Error(`ffmpeg multiplex exited with code ${code}`))
+            );
+        });
 
         finalClipPaths.push(finalScenePath);
         updateJob({ logs: [`✅ [Scene ${scene.index}] Scene completed & saved.`] });

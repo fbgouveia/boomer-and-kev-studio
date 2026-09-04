@@ -47,3 +47,4 @@ page_lint.json
 
 # bancada temporária VLAEG (intermediários efêmeros)
 .tmp/
+.holofote/

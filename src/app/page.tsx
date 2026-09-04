@@ -1899,12 +1899,12 @@ export default function Home() {
           <button
             onClick={renderProject}
             disabled={isRenderingProject || script.length === 0}
-            aria-label="Initiate Render Cycle"
+            aria-label={`Initiate Render Cycle — renders the whole episode (${script.length} scenes), not a single scene. Estimated cost $${totalCost}`}
             className="btn-signal bg-[#FF5F1F] text-black px-6 py-2.5 text-xs font-black uppercase hover:bg-white transition-all shadow-[4px_4px_0_rgba(255,95,31,0.2)] disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center gap-2 group relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
             <MonitorPlay size={16} fill="currentColor" className="relative z-10" />
-            <span className="relative z-10">{isRenderingProject ? "RENDERING..." : "RENDER SCENE"}</span>
+            <span className="relative z-10">{isRenderingProject ? "RENDERING..." : `RENDER EPISODE · ${script.length} SCENES · ~$${totalCost}`}</span>
           </button>
         </div>
       </div>

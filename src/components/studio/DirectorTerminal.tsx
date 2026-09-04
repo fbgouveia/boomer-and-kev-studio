@@ -188,7 +188,6 @@ export function DirectorTerminal({
                   id="director-idea"
                   value={directorIdea}
                   onChange={(e) => {
-                    console.log("⌨️ [Neural_Input] Stream detected:", e.target.value.substring(0, 10));
                     setDirectorIdea(e.target.value);
                   }}
                   placeholder={`Topic (e.g. NRL vs AFL)\nDirectorial Notes (e.g. Kev wearing NRL Jersey)`}

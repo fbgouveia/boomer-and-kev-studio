@@ -252,6 +252,12 @@ export default function LabsPanel() {
         <div>
           <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] block uppercase italic">Visualizer & Labs</span>
           <h2 className="text-5xl font-black tracking-tighter uppercase italic">LABORATÓRIO TECNOLÓGICO 2026</h2>
+          {/* Honestidade: tudo nesta aba é SIMULADO (setTimeout + frases hardcoded). Nenhum
+              render é enfileirado, nenhuma métrica aqui é real. Selo obrigatório até decisão
+              do Felipe sobre remover a aba ou torná-la real. */}
+          <div className="mt-3 inline-block border-2 border-[#FF5F1F] bg-[#FF5F1F]/10 text-[#FF5F1F] px-3 py-1 text-xs font-black tracking-widest uppercase">
+            ⚠ DEMO — SIMULATED · nothing here is real or queued
+          </div>
         </div>
         <div className="flex items-center gap-2 px-4 py-1.5 border border-[#FF5F1F]/30 bg-[#FF5F1F]/5 text-[#FF5F1F] text-xs font-black tracking-widest uppercase">
           <Sparkles size={12} /> BEYOND STATE OF THE ART
@@ -268,7 +274,7 @@ export default function LabsPanel() {
                 <Box className="text-[#FF5F1F]" size={18} />
                 <h3 className="text-xs font-black tracking-widest uppercase">Palco Pré-vis 3D (WebGL / Three.js)</h3>
               </div>
-              <span className="text-xs text-white/60 font-mono">RENDER: WEBGL_ACTIVE</span>
+              <span className="text-xs text-white/60 font-mono">RENDER: SIMULATED</span>
             </div>
             
             {/* CANVAS CONTAINER */}
