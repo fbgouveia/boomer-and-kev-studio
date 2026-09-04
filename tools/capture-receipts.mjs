@@ -84,6 +84,57 @@ for (const it of items) {
 
 console.log(`tema: "${topic}" · janela: ${days}d · veiculos na allowlist: ${picked.length}`);
 
+// ─── FILTRO DE RELEVANCIA (trava nº 1 do handoff 07/08, implementada 04/09) ───
+// "Recibo que nao sustenta a fala e enfeite, nao prova." O 7NEWS capturado em
+// 07/08 era conteudo de afiliado ("20% off subscription"). Um SIM/NAO barato
+// entre a busca e a captura impede prova de enfeite. Metodo: decomposicao de
+// claim da skill fact-checker — a manchete sustenta a alegacao?
+// Custo: ~US$0.002 por manchete (claude-sonnet-5, ~200 tokens). Acima da linha paga.
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || readEnvKey();
+function readEnvKey() {
+    try {
+        const env = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8');
+        return env.match(/^ANTHROPIC_API_KEY=(.+)$/m)?.[1]?.trim() || '';
+    } catch { return ''; }
+}
+
+async function sustainsClaim(headline, claim) {
+    if (!ANTHROPIC_KEY) return { verdict: 'UNKNOWN', reason: 'sem ANTHROPIC_API_KEY — filtro desligado' };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        body: JSON.stringify({
+            model: 'claude-sonnet-5',
+            max_tokens: 16,
+            messages: [{
+                role: 'user',
+                content: `You are a strict fact-checker. Does this headline DIRECTLY support the claim below? The claim is what a comedy commentary video will state on screen.\nCLAIM: "${claim}"\nHEADLINE: "${headline}"\nAnswer with exactly one word: YES, NO, or PARTIAL (partially related but does not confirm the claim).`
+            }]
+        })
+    });
+    if (!res.ok) return { verdict: 'UNKNOWN', reason: `HTTP ${res.status}` };
+    const data = await res.json();
+    const verdict = String(data.content?.[0]?.text || 'UNKNOWN').trim().toUpperCase();
+    return { verdict: ['YES', 'NO', 'PARTIAL'].includes(verdict) ? verdict : 'UNKNOWN' };
+}
+
+console.log('\n🧪 filtro de relevância (a manchete sustenta a alegação?):');
+const relevant = [];
+for (const r of picked) {
+    const { verdict, reason } = await sustainsClaim(r.headline, topic);
+    const icon = verdict === 'YES' ? '✅' : verdict === 'PARTIAL' ? '🟡' : verdict === 'NO' ? '❌' : '⚪';
+    console.log(`   ${icon} ${verdict.padEnd(7)} [${r.outlet}] ${r.headline.slice(0, 70)}${reason ? ` (${reason})` : ''}`);
+    r.relevance = verdict;
+    if (verdict === 'YES' || verdict === 'PARTIAL') relevant.push(r);
+}
+console.log(`\nrelevantes: ${relevant.length}/${picked.length} (NO e descartado antes de gastar captura)\n`);
+
+if (relevant.length === 0) {
+    console.log('⚠ SEM PAUTA: nenhuma manchete da allowlist sustenta a alegação. Prova de enfeite não entra no episódio.');
+    fs.writeFileSync(path.join(outDir, 'receipts.json'), JSON.stringify(picked.map(r => ({ ...r, captured: false, reason: 'relevance filter: NO' })), null, 2));
+    process.exit(2);
+}
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1000, height: 1200 } });
 
@@ -95,7 +146,8 @@ await page.route('**/*', route => AD_HOSTS.test(route.request().url()) ? route.a
 
 const results = [];
 
-for (const [i, r] of picked.entries()) {
+// Captura SOMENTE o que sustenta a alegacao. NO nao gasta Playwright nem entra no ep.
+for (const [i, r] of relevant.entries()) {
     try {
         await page.goto(r.gnewsLink, { waitUntil: 'domcontentloaded', timeout: 45000 });
         await page.waitForURL(u => !u.hostname.includes('news.google.com'), { timeout: 25000 });
