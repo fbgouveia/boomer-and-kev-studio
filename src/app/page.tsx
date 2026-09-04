@@ -2335,15 +2335,15 @@ export default function Home() {
 
               {activeFooterModal === 'legal' && (
                 <div className="flex flex-col h-full overflow-hidden text-[#FAFAFA] font-['Space_Grotesk']">
-                  <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
-                    <div>
+                  <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4 flex-wrap">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <ShieldCheck size={24} className="text-[#FF5F1F]" />
+                        <ShieldCheck size={24} className="text-[#FF5F1F] shrink-0" />
                         <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase">Tactical_Legal_Compliance_Agent</span>
                       </div>
-                      <h2 className="text-5xl font-black tracking-tighter uppercase italic">Scenario Compliance Scanner</h2>
+                      <h2 className="text-5xl font-black tracking-tighter uppercase italic break-words">Scenario Compliance Scanner</h2>
                     </div>
-                    <div className="flex items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
+                    <div className="flex items-center gap-6 self-stretch md:self-auto justify-between md:justify-end flex-wrap">
                       <div className="flex gap-4">
                         {['AU', 'US', 'EU', 'BR'].map(country => (
                           <label key={country} className="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 px-3 py-1.5 hover:border-[#FF5F1F] transition-all">

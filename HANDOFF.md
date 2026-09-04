@@ -96,7 +96,61 @@ studio exige Basic Auth (401 não é bug).
 
 ---
 
-## 🧠 SESSÃO 07/08/2026 — ROTEIRO SAIU DO GEMINI; PAUTA GANHOU MÉTODO
+## 🚀 SESSÃO 04/09/2026 (tarde/noite) — MISSÃO 10H: ENGINE DESTRAVADA
+
+**Uma linha:** 4 das 5 travas do handoff morreram em código; primeiro episódio FREE gerado a
+US$0; pauta fabricada substituída por sinal medido (44 outlets reais); intel competitiva em docs/.
+
+**Commits:** `2f3e706` episódio FREE · `4588a16` trend agent medido · `69d8674` filtro de
+recibos · `e030a64` LOOP_GATE · commit atual (compliance modal + intel doc)
+
+### O que passou a existir
+1. **`tools/free-episode.mjs`** — episódio completo US$0: Edge TTS en-AU grátis (Boomer
+   WilliamNeural +18%/+12Hz; Kev -14%/-28Hz) + clipes piloto 4K recortados 9:16 + ffmpeg.
+   **Prova: .tmp/free_episode/BK_FREE_EPISODE.mp4 — 55s, 8 cenas, 1080×1920, US$0,00.**
+2. **`/api/trends` reescrito** — era notícia fabricada (manchetes PT-BR inventadas, domínio
+   falso, viralPotential à mão, log "AGENT 24/7 Dynamic" = teatro). Agora: Google News RSS 7d,
+   score = contagem REAL de outlets (regra ≥5/7d em código). Prova: housing 44 outlets, fuel 43,
+   Coles 42 (ABC/AFR/CommBank reais). Sem dados → 502 honesto, nunca fabrica.
+3. **Filtro de relevância dos recibos** (trava nº 1) no capture-receipts: chamada barata
+   entre busca e captura. Provado: Bruno Mars → NO; afiliado → NO. 0 relevantes → exit 2
+   antes de gastar Playwright.
+4. **LOOP_GATE** (trava nº 2) no /api/ai/script. Provado: roteiro REJEITADO ("just vague
+   slogans"), regenerado e aprovado com payoff real. Fail-open se juiz indisponível.
+5. **Compliance modal consertado** (defeito 06/08): overflow medido (h2 69px fora do painel),
+   fix flex-wrap/min-w-0, verificado ao vivo. Scanner devolve análise substantiva
+   (EU AI Act: WATERMARK_REQUIRED; right of publicity HIGH).
+6. **Métricas inventadas mortas**: sparkline Math.random(), "92% MOMENTUM", "RETENTION GOAL
+   90%+" → placeholders honestos.
+7. **`docs/competitive-intel-2026-09.md`** — Nobody Sausage (22M, escassez de ad US$33.8k),
+   Betoota/Shovel (sátira AU é TEXTO = vazio em vídeo), Glorb (formato replicável), 10
+   táticas acionáveis, ondas 2026, análise de ferramentas rivais (HeyGen/Captions/Argil).
+
+### Descobertas
+- **Lipsync em animal existe**: Kling Avatar V2 (kwaivgi/kling-avatar-v2) documenta "humans,
+  cartoons, animals" — wav2lip falhava por não detectar rosto animal. POC US$1-2 aguarda OK.
+- **TikTok é o gargalo do POST**: app não-auditado publica PRIVADO (auditoria = semanas).
+  Plano: publicar manual enquanto as auditorias correm em paralelo.
+- n8n: `tools/n8n_boomer_kev_orchestrator.ts` (cron seg/qua/sex) e o schema Supabase
+  (publish_jobs/social_accounts/pipeline_events) JÁ EXISTEM — POST perfeito = construir
+  sobre fundação pronta.
+- Edge TTS en-AU = TTS do modo FREE; Piper en_AU-amy-medium (MIT) para comercial.
+- **Lição de processo**: `git restore .` com docs não-committados apagou o bloco de handoff
+  da sessão anterior. Nunca restaurar sem stash/commit prévio.
+
+### Trava restante (única de código): CHECKPOINT/retomada
+- Cenas salvas em `.tmp/sync_*.mp4`; falta manifest por job + "continuar da cena N"
+  (último frame via ffmpeg = start_image da retomada). Único buraco que queima dinheiro.
+
+### Próximos passos (ordem)
+1. Checkpoint/retomada (core — 1 sessão dedicada)
+2. POC lipsync Kling Avatar V2 (US$1-2) — **exige OK do Felipe**
+3. n8n gates Telegram + auditorias TikTok/YouTube/IG em submissão
+4. Analytics ingest real + avaliador visual
+5. Pendências do Felipe: Labs remover vs real; OK do POC; contas sociais existem?
+
+---
+
 
 **Resumo em uma linha:** a geração de roteiro foi migrada de `gemini-2.5-flash` (morto por
 cobrança GCP desde 06/08) para Claude com structured outputs, e a busca de pauta ganhou uma
