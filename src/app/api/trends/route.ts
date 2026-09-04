@@ -1,190 +1,114 @@
 import { NextResponse } from 'next/server';
+import Parser from 'rss-parser';
 
-// 24/7 CURRENT AFFAIRS & TREND AGENT
-// Returns dynamic news and trends tailored by geography (AU, US, BR, GB, TR, IN)
+// 24/7 TREND AGENT — MEDIDED, not invented (04/09 rewrite).
+// Fonte: Google News RSS (grátis, sem chave) — a mesma mecanica comprovada do
+// capture-receipts.mjs. Regra de admissão do handoff 07/08 agora em codigo:
+//   >=5 veiculos confiaveis cobrindo o assunto em 7 dias = quente.
+// O score e a CONTAGEM REAL de outlets. Nada de viralPotential digitado a mao.
+// Sem noticias reais -> rota devolve vazio/erro; NUNCA fabrica manchete.
+
+const parser = new Parser({
+  timeout: 8000,
+  customFields: { item: ['source'] },
+});
+
+// Google News RSS entrega <source> como objeto custom ({ _: 'Outlet' }) —
+// normaliza para o nome do veiculo (a contagem de outlets E o score medido).
+function outletOf(item: Record<string, unknown>, fallbackLink: string): string {
+  const s = item.source as { _: string } | string | undefined;
+  if (typeof s === 'string' && s.trim()) return s.trim();
+  if (s && typeof s === 'object' && typeof s._ === 'string' && s._.trim()) return s._.trim();
+  try { return new URL(fallbackLink).hostname.replace('www.', ''); } catch { return 'unknown'; }
+}
+
+type Geo = 'AU' | 'US' | 'BR' | 'GB';
+
+// Consultas do genero editorial B&K: absurdo cotidiano do humano comum —
+// precos, consumismo, politica errada, dia a dia dificil.
+const QUERIES: Record<Geo, string[]> = {
+  AU: [
+    'cost of living Australia',
+    'coffee OR groceries prices Australia',
+    'rent OR housing Australia',
+    'energy bills OR petrol prices Australia',
+    'Australia politics scandal OR blunder',
+    'Woolworths OR Coles Australia',
+  ],
+  US: ['cost of living US', 'grocery prices US', 'rent housing US', 'gas prices US', 'US politics scandal'],
+  BR: ['custo de vida Brasil', 'precos alimentação Brasil', 'aluguel Brasil', 'conta de luz Brasil'],
+  GB: ['cost of living UK', 'grocery prices UK', 'rent housing UK', 'energy bills UK'],
+};
+
+function relTime(date: Date): string {
+  const mins = Math.max(1, Math.round((Date.now() - date.getTime()) / 60000));
+  if (mins < 60) return `${mins} MIN AGO`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h} HOURS AGO`;
+  return `${Math.round(h / 24)} DAYS AGO`;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const geo = searchParams.get('geo') || 'AU';
+    const geo = (searchParams.get('geo') || 'AU') as Geo;
+    const queries = QUERIES[geo] || QUERIES.AU;
+    const lang = geo === 'BR' ? 'pt-BR' : 'en-AU';
+    const gl = geo === 'BR' ? 'BR' : geo === 'US' ? 'US' : geo === 'GB' ? 'GB' : 'AU';
+    const ceid = geo === 'BR' ? 'BR:pt-419' : `${gl}:${geo === 'US' ? 'en' : geo === 'GB' ? 'en' : 'en'}`;
 
-    let trendsData = [];
+    const results = await Promise.allSettled(
+      queries.map(async (q) => {
+        const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:7d')}&hl=${lang}&gl=${gl}&ceid=${ceid}`;
+        const feed = await parser.parseURL(url);
+        const raw = (feed.items || []) as unknown as Array<Record<string, unknown>>;
+        const items = raw.filter(i => i.title && i.link);
+        const outlets = new Set(items.map((i: Record<string, unknown>) => outletOf(i, String(i.link))));
+        const newest = items
+          .map((i: Record<string, unknown>) => i.isoDate ? new Date(String(i.isoDate)) : null)
+          .filter((d): d is Date => !!d && !isNaN(d.getTime()))
+          .sort((a, b) => b.getTime() - a.getTime())[0];
+        return {
+          query: q,
+          outletCount: outlets.size,
+          items: items.slice(0, 6).map((i: Record<string, unknown>) => ({
+            title: String(i.title).replace(/\s+-\s+[^-]+$/, '').trim(),
+            source: outletOf(i, String(i.link)),
+            url: String(i.link),
+            pubDate: String(i.isoDate || ''),
+          })),
+          newest: newest ? relTime(newest) : '7 DAYS+',
+        };
+      })
+    );
 
-    if (geo === 'AU') {
-      trendsData = [
-        {
-          title: "[LIFESTYLE] Crise do Café Flat White a 9 dólares em Sydney",
-          snippet: "Preços absurdos do café matinal causam revolta e humor nas redes sociais em Nova Gales do Sul.",
-          url: "https://www.news.com.au/lifestyle/food/sydney-9-flat-white",
-          traffic: "600K+",
-          published: "1 HOUR AGO",
-          news: [
-            { title: "Cafeterias gourmet justificam alta do grão e custos operacionais", source: "Sydney Morning Herald", url: "https://www.smh.com.au" },
-            { title: "Consumidores dizem que o café virou luxo inalcançável", source: "Daily Telegraph", url: "https://www.dailytelegraph.com.au" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'BOOMER', text: "Nove dólares por um café fresco com leite? No meu tempo a gente fervia água da chuva numa lata enferrujada e bebia puro!" },
-            hooks: [
-              "Boomer e Kev tentam criar o café definitivo de 1 dólar",
-              "A revolta dos australianos contra a gourmetização de Sydney",
-              "Café Flat White vs Café instantâneo com Vegemite"
-            ],
-            viralPotential: 96
-          }
-        },
-        {
-          title: "[POLITICS] Proposta de declarar coalas como cidadãos com direito a voto",
-          snippet: "Petição satírica viraliza no Reddit clamando que coalas governariam melhor o país.",
-          url: "https://www.sydneymorningherald.com.au/koala-voting-rights",
-          traffic: "300K+",
-          published: "3 HOURS AGO",
-          news: [
-            { title: "Petição satírica de Sydney passa de 50 mil assinaturas em 24h", source: "Reddit Australia", url: "https://www.reddit.com/r/australia" },
-            { title: "Cientistas brincam: 'Eles dormiriam durante as votações no Parlamento'", source: "ABC News", url: "https://www.abc.net.au" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'KEV', text: "Votar dá muito trabalho... Mas se eu for eleito, declaro feriado nacional de 22 horas por dia para dormir." },
-            hooks: [
-              "Campanha eleitoral do Kev para Primeiro Ministro",
-              "Coalas no Parlamento: O que mudaria na Austrália?",
-              "Boomer se revolta com o programa de bem-estar de Kev"
-            ],
-            viralPotential: 89
-          }
-        },
-        {
-          title: "[TECH] IA recria sotaque de caipira australiano clássico com perfeição",
-          snippet: "Modelos neurais agora conseguem reproduzir gírias locais e causos de bar perfeitamente.",
-          url: "https://theage.com.au/technology/aussie-accent-neural-cloning",
-          traffic: "450K+",
-          published: "30 MINS AGO",
-          news: [
-            { title: "Linguistas dizem que sotaque caipira do outback é o mais difícil de copiar", source: "The Age", url: "https://www.theage.com.au" },
-            { title: "Startup lança voz neural inspirada em bar do outback", source: "TechAU", url: "https://www.techau.com.au" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'KEV', text: "Eu aposto que essa IA fala mais rápido do que eu... o que convenhamos, não é muito difícil." },
-            hooks: [
-              "Boomer discute com um robô dublado por ele mesmo",
-              "A revolução da IA no Outback: Robôs cuidando de ovelhas",
-              "O verdadeiro sotaque aussie vs Clonadores de voz"
-            ],
-            viralPotential: 92
-          }
-        },
-        {
-          title: "[SPORTS] Preços de ingressos para a final do AFL chocam torcedores",
-          snippet: "A escalada de preços para a Grande Final da AFL atinge valores recordes no mercado secundário.",
-          url: "https://www.foxsports.com.au/afl/tickets-scandal",
-          traffic: "500K+",
-          published: "5 HOURS AGO",
-          news: [
-            { title: "Torcedores denunciam cambistas vendendo ingressos a 3 mil dólares", source: "Fox Sports AU", url: "https://www.foxsports.com.au" },
-            { title: "Liga promete banir revendedores não autorizados", source: "AFL.com.au", url: "https://www.afl.com.au" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'BOOMER', text: "Três mil dólares para ver um bando de caras correndo atrás de uma bola oval? Eu pulo a cerca e assisto de graça!" },
-            hooks: [
-              "Boomer planeja invadir a final do AFL",
-              "A inflação do esporte na Austrália",
-              "Kev prefere dormir embaixo da arquibancada do que pagar o ingresso"
-            ],
-            viralPotential: 85
-          }
-        }
-      ];
-    } else if (geo === 'US') {
-      trendsData = [
-        {
-          title: "[TECH] Robôs de entrega de pizza controlados por IA invadem Nova York",
-          snippet: "Pequenos veículos autônomos disputam calçadas com pedestres e causam curiosidade.",
-          url: "https://www.techcrunch.com/pizza-drones-nyc",
-          traffic: "800K+",
-          published: "2 HOURS AGO",
-          news: [
-            { title: "Prefeitura estuda regulamentar velocidade dos robôs entregadores", source: "TechCrunch", url: "https://techcrunch.com" },
-            { title: "Entregadores tradicionais protestam contra automação em Manhattan", source: "NY Post", url: "https://nypost.com" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'BOOMER', text: "Se um robô desses cruzar o meu caminho no estúdio, eu dou um gancho de direita que ele vai parar na lua." },
-            hooks: [
-              "Boomer e Kev pedem comida de robô e acabam sem pizza",
-              "A grande invasão dos robôs de entrega",
-              "Robôs vs Motoboys: A batalha de Nova York"
-            ],
-            viralPotential: 94
-          }
-        },
-        {
-          title: "[FINANCE] Comunidade do Reddit faz ações de varejo subirem 200% em um dia",
-          snippet: "Fórum r/wallstreetbets ataca novamente promovendo investimento em massa de forma humorística.",
-          url: "https://www.bloomberg.com/meme-stocks-back",
-          traffic: "1.2M+",
-          published: "4 HOURS AGO",
-          news: [
-            { title: "Meme stocks voltam com força total e quebram fundos de cobertura", source: "Bloomberg", url: "https://www.bloomberg.com" },
-            { title: "Analistas alertam para bolha especulativa irracional nas redes", source: "Wall Street Journal", url: "https://www.wsj.com" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'KEV', text: "Eu gastei todas as minhas economias em ações de folhas de eucalipto... e agora sou dono de nada." },
-            hooks: [
-              "Kev tenta dar dicas financeiras para Wall Street",
-              "A loucura das Meme Stocks explicada por animais",
-              "Boomer tenta comprar ações físicas usando papel moeda"
-            ],
-            viralPotential: 98
-          }
-        }
-      ];
-    } else {
-      // Fallback/Generic trends for other regions
-      trendsData = [
-        {
-          title: `[GLOBAL] Grande evento de sustentabilidade reúne líderes mundiais em ${geo}`,
-          snippet: "Discussões sobre energia limpa e metas climáticas ganham destaque internacional.",
-          url: "https://www.reuters.com/green-energy-summit",
-          traffic: "250K+",
-          published: "6 HOURS AGO",
-          news: [
-            { title: "Líderes debatem transição energética e créditos de carbono", source: "Reuters", url: "https://www.reuters.com" },
-            { title: "Ativistas cobram ações práticas imediatas dos governantes", source: "BBC Global", url: "https://www.bbc.com" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'BOOMER', text: "Sustentabilidade é plantar sua própria comida e treinar até o braço cair. O resto é papo furado!" },
-            hooks: [
-              "Boomer ensina como sobreviver na floresta sem tecnologia",
-              "Kev defende a preservação das florestas dormindo nas árvores",
-              "O plano verde de Boomer & Kev"
-            ],
-            viralPotential: 81
-          }
-        },
-        {
-          title: `[TRENDS] Campeonato mundial de eSports bate recorde de audiência em ${geo}`,
-          snippet: "Milhões de espectadores acompanham as finais de torneio competitivo online.",
-          url: "https://www.ign.com/esports-championship",
-          traffic: "400K+",
-          published: "8 HOURS AGO",
-          news: [
-            { title: "Finais registram mais de 5 milhões de espectadores simultâneos", source: "IGN", url: "https://www.ign.com" },
-            { title: "Premiação milionária atrai competidores de todos os continentes", source: "Esports Insider", url: "https://esportsinsider.com" }
-          ],
-          directorialIntelligence: {
-            take: { character: 'KEV', text: "Gamer profissional? Eu jogo o jogo de não fazer nada e sou campeão há dez anos." },
-            hooks: [
-              "Kev tenta jogar videogame e dorme no meio da partida",
-              "Boomer joga simulador de boxe com luvas reais e destrói o console",
-              "O torneio lendário de Boomer e Kev"
-            ],
-            viralPotential: 88
-          }
-        }
-      ];
-    }
+    const trends = results
+      .filter((r): r is PromiseFulfilledResult<{ query: string; outletCount: number; items: { title: string; source: string; url: string; pubDate: string }[]; newest: string }> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter(r => r.items.length > 0 && r.outletCount > 0)
+      .sort((a, b) => b.outletCount - a.outletCount)
+      .slice(0, 6)
+      .map(r => ({
+        // titulo real da manchete mais recente do tema (medido, nao inventado)
+        title: `[${r.outletCount >= 5 ? 'HOT' : 'WARM'}·${r.outletCount} OUTLETS] ${r.items[0].title}`,
+        snippet: `${r.outletCount} veiculos distintos cobrindo "${r.query}" nos ultimos 7 dias — sinal medido via Google News. Regra de admissao: >=5 outlets = quente.`,
+        url: r.items[0].url,
+        traffic: `${r.outletCount} OUTLETS`,
+        published: r.newest,
+        news: r.items.map(i => ({ title: i.title, source: i.source, url: i.url })),
+        // directorialIntelligence deliberadamente AUSENTE: o "take" do personagem e
+        // trabalho do brainstorm (LLM), nao do agente de busca. A UI esconde o gauge
+        // quando o campo nao vem — honestidade por design.
+        measured: { query: r.query, outlets: r.outletCount, admissionRule: '>=5 outlets / 7 days' },
+      }));
 
-    console.log(`[AGENT 24/7] Dynamic trends generated for geo=${geo}. count=${trendsData.length}`);
-    return NextResponse.json(trendsData);
+    console.log(`[TREND AGENT] geo=${geo} temas medidos=${trends.length} (outlets reais, RSS 7d)`);
+    return NextResponse.json(trends);
   } catch (error) {
-    console.error("TRENDS_ROUTE_ERROR", error);
-    return NextResponse.json({ error: 'Falha no Agente de Notícias.' }, { status: 500 });
+    console.error('TRENDS_ROUTE_ERROR', error);
+    return NextResponse.json(
+      { error: 'Trend agent falhou ao buscar noticias reais. Nenhuma pauta fabricada — verifique rede/RSS.' },
+      { status: 502 }
+    );
   }
 }

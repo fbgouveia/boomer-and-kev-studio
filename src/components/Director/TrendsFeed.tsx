@@ -260,7 +260,7 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
                                         <span className="px-2 py-0.5 bg-[#FF5F1F] text-white text-xs font-black uppercase">Live_Trend</span>
-                                        <span className="text-sm font-black text-white/50 tracking-widest uppercase italic">{selectedTrend.traffic} Searches</span>
+                                        <span className="text-sm font-black text-white/50 tracking-widest uppercase italic">{selectedTrend.traffic} · 7d · measured</span>
                                     </div>
                                     <h2 className="text-5xl font-black tracking-tighter uppercase italic">{selectedTrend.title}</h2>
                                 </div>
@@ -272,22 +272,9 @@ export function TrendsFeed({ onSelectTrend }: TrendsFeedProps) {
                                 </button>
                             </div>
 
-                            {/* Synthetic Sparkline (SVG) */}
-                            <div className="w-full h-32 bg-white/[0.02] border border-white/5 relative group p-6 overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#FF5F1F]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="flex items-end gap-1 h-full w-full justify-between relative z-10">
-                                    {Array(40).fill(0).map((_, i) => (
-                                        <div
-                                            key={i}
-                                            className="w-1 bg-[#FF5F1F] opacity-30 group-hover:opacity-60 transition-all duration-700"
-                                            style={{ height: `${Math.random() * 80 + 20}%`, transitionDelay: `${i * 10}ms` }}
-                                        />
-                                    ))}
-                                </div>
-                                <div className="absolute top-2 right-4 flex items-center gap-2 text-xs font-black text-white/50 uppercase tracking-[0.4em]">
-                                    <BarChart3 size={10} className="text-[#FF5F1F]" /> 24H_INTEREST_VELOCITY
-                                </div>
-                            </div>
+                            {/* Honestidade: sparkline com Math.random() removida (04/09).
+                                Não existe dado de "24h interest velocity" real no sistema —
+                                quando o W6 (analytics ingest) existir, volta com dado verdadeiro. */}
                         </div>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-12 min-h-0 bg-gradient-to-b from-[#050505] to-[#080808]">

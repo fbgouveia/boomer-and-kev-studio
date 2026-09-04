@@ -409,17 +409,16 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                             <div className="p-4 border border-white/5 bg-white/[0.02]">
                                 <span className="text-xs font-black text-[#FF5F1F] tracking-widest block mb-2 uppercase italic">Target Analytics</span>
                                 <div className="space-y-3">
+                                    {/* Honestidade (06/08 + 04/09): métricas inventadas ("92% MOMENTUM",
+                                        "RETENTION GOAL 90%+") foram removidas. Só existe métrica aqui quando
+                                        vier de dados reais de plataforma (ver W6 — analytics ingest). */}
                                     <div className="flex justify-between items-center text-xs font-bold text-white/60">
-                                        <span>RETENTION GOAL</span>
-                                        <span className="text-white">90%+</span>
+                                        <span>RETENTION DATA</span>
+                                        <span className="text-white">aguardando 1º episódio no ar</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-bold text-white/60">
-                                        <span>ENGAGEMENT VELOCITY</span>
-                                        <span className="text-white">EXTREME</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs font-bold text-white/60">
-                                        <span>ALGORITHM BIAS</span>
-                                        <span className="text-white">FAVORABLE</span>
+                                        <span>ENGAGEMENT DATA</span>
+                                        <span className="text-white">aguardando 1º episódio no ar</span>
                                     </div>
                                 </div>
                             </div>
