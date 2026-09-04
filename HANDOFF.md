@@ -142,6 +142,50 @@ recibos · `e030a64` LOOP_GATE · commit atual (compliance modal + intel doc)
 - Cenas salvas em `.tmp/sync_*.mp4`; falta manifest por job + "continuar da cena N"
   (último frame via ffmpeg = start_image da retomada). Único buraco que queima dinheiro.
 
+### Pendências (estado fim da missão 10H + benchmark)
+- [ ] **OK do Felipe — POC lipsync Kling Avatar V2** (`kwaivgi/kling-avatar-v2`, documenta "animals"; 1 cena ≈ US$1–2) — desbloqueia nota 2→8
+- [ ] **OK do Felipe — Labs**: remover aba (recomendação) ou torná-la real
+- [ ] **V3**: confirmar contas sociais do Down Under Discourse (TikTok/YouTube/IG) — único bloqueador do POST
+- [ ] **I1 Checkpoint/retomada** — sessão dedicada no core · **I3** captions no free-episode · **I6** táticas de retenção no prompt · **I7** nav corta em 1440px
+- [ ] **W5** submeter auditorias TikTok Content Posting / YouTube Data API / IG Graph (semanas de prazo — submeter cedo)
+- [ ] **V1** escolher 1 dos 8 roteiros + render pago (US$3–6, gate humano)
+- [ ] **W6** analytics ingest real · **W4** avaliador visual
+
+### Descobertas — MISSÃO 10H + BENCHMARK (o que não estava escrito em lugar nenhum)
+1. **`/api/trends` era notícia FABRICADA**: manchetes PT-BR inventadas, domínio falso
+   `sydneymorningherald.com.au`, `viralPotential: 96` à mão, log "[AGENT 24/7] Dynamic
+   trends" = teatro. A UI do Diretor se alimentava de fake news. Reescrito com RSS medido
+   (44 outlets reais em housing).
+2. **`rss-parser` entrega `<source>` como objeto custom** (`{_: 'Outlet'}`) — sem
+   `customFields`, a contagem de outlets dá sempre 1. A contagem de outlets É o score.
+3. **edge-tts CLI exige `--rate=-14%`** (formato `=`): argparse trata valor iniciado em
+   `-` como flag. Falha silenciosa com exit 2.
+4. **Kling Avatar V2** (`kwaivgi/kling-avatar-v2`) documenta lip sync para "humans,
+   cartoons, ANIMALS" — o wav2lip falhava por não detectar rosto animal. Sync.so NÃO
+   suporta não-humanos (FAQ oficial) — não gastar crédito lá.
+5. **TikTok Content Posting API**: cliente NÃO-auditado publica PRIVADO (auditoria =
+   semanas). YouTube: 100 uploads/dia em bucket próprio. IG: App Review Meta. POST
+   automático é bloqueio burocrático, não técnico — submeter cedo, publicar manual.
+6. **Edge TTS en-AU grátis e suficiente** (NatashaNeural/WilliamNeural) — o modo FREE não
+   depende de chave paga. Piper `en_AU-amy-medium` (MIT) para comercial.
+7. **Juiz LLM precisa max_tokens ≥300**: com 120 para em `max_tokens` e o veredito vem
+   vazio. Gate com LLM deve parsear `/\bPASS\b|\bFAIL\b/` e ter fail-open UNJUDGED
+   (juiz morto não incenera roteiro bom).
+8. **Compliance scanner devolve análise jurídica REAL**: EU AI Act WATERMARK_REQUIRED +
+   right of publicity HIGH (US/BR) — a preocupação de marca d'água já era detectada pela
+   engine; ninguém tinha olhado o output.
+9. **Estouro de flex vai à ESQUERDA**: header row sem `flex-wrap` empurra o título filho
+   para fora do painel (h2 69px fora). Diagnóstico: comparar boundingRect do h2 vs painel.
+10. **`npm ci` era obrigatório**: `npm install` pós-corrupção reinstalou só 28 pacotes e
+    mascarou esbuild/typescript quebrados. Pânico do Turbopack só sumiu após `npm ci` +
+    `rm -rf .next`. **Lição irmã**: `git restore .` com docs não-committados apagou bloco
+    de handoff — nunca restaurar sem stash/commit prévio.
+11. **Benchmark fechado** (docs/engine-benchmark-vs-competitors.md): B&K 6,4 vs Betoota 7,3
+    e Sausage 6,8 (têm audiência); B&K ÚNICO em prova documental (10) e custo FREE (9);
+    vazio de mercado AU (sátira da manchete do dia em vídeo) confirmado.
+12. **Medições do dia**: pauta 1,5s · roteiro completo com LOOP_GATE 21,4s · sentinela 4/4
+    GREEN · episódio FREE 55s/US$0 · PDF real 8 páginas · nenhum gasto disparado.
+
 ### Próximos passos (ordem)
 1. Checkpoint/retomada (core — 1 sessão dedicada)
 2. POC lipsync Kling Avatar V2 (US$1-2) — **exige OK do Felipe**
