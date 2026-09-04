@@ -148,6 +148,33 @@ export async function POST(req: Request) {
             throw new Error(`SCRIPT_RUNTIME: ${runtime}s em ${parsedScript.length} cenas (maximo ${MAX_RUNTIME_S}s). Roteiro longo demais para 9:16.`);
         }
 
+        // LOOP_GATE (04/09): trava nº 2 do handoff 07/08. "No A/B isto separou bom de
+        // fraco — o NRL abriu com 'os refs roubaram a final' e fechou sem pagar nada."
+        // Julga SENTIDO, nao conta campo: segunda chamada barata (~US$0.02) avalia se
+        // a ultima cena paga o que a primeira plantou. FAIL = roteiro rejeitado, o
+        // frontend regenera. Limite honesto: isto nao julga timing comico (juiz V2 = Felipe).
+        const first = parsedScript[0];
+        const last = parsedScript[parsedScript.length - 1];
+        const loopJudge = await client.messages.create({
+            model: modelId,
+            max_tokens: 300,
+            messages: [{
+                role: 'user',
+                content: `You are a strict script editor for a comedy duo podcast. A short video opens with a hook and must pay it off by the end.\nOPENING HOOK (scene 1, by ${first.characterId}): "${first.text}"\nCLOSING SCENE (last, by ${last.characterId}): "${last.text}"\nDoes the closing scene PAY OFF the opening hook (resolves, lands the promised joke/value, or closes the loop)? Answer with exactly one word PASS or FAIL, then a short reason (max 15 words).`
+            }]
+        });
+        const loopVerdict = (loopJudge.content.find(b => b.type === 'text')?.text || '').trim();
+        const hasPass = /\bPASS\b/i.test(loopVerdict);
+        const hasFail = /\bFAIL\b/i.test(loopVerdict);
+        if (loopJudge.stop_reason === 'max_tokens' || (!hasPass && !hasFail)) {
+            // Falha-open com registro: juiz indisponivel nao incenera roteiro aprovavel.
+            console.warn(`[LOOP_GATE] UNJUDGED (stop=${loopJudge.stop_reason}) — roteiro segue com loop não verificado`);
+        } else if (hasFail && !hasPass) {
+            throw new Error(`SCRIPT_LOOP: a última cena não paga o gancho da primeira. Veredito do juiz: ${loopVerdict.slice(0, 200)}`);
+        } else {
+            console.log(`[LOOP_GATE] PASS — ${loopVerdict.slice(0, 120)}`);
+        }
+
         // Add status: 'IDLE' to each line for the frontend
         const finalScript = parsedScript.map((line: Record<string, unknown>) => ({
             ...line,
