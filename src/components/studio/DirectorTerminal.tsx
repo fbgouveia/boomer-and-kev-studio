@@ -426,7 +426,7 @@ export function DirectorTerminal({
                     {/* Badge details */}
                     <div className="flex justify-between items-center text-xs font-mono text-white/60 uppercase tracking-widest">
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-white/70">Live Signal</span>
-                      <span className="text-[#FF5F1F] font-bold">{trend.traffic} Searches</span>
+                      <span className="text-[#FF5F1F] font-bold">{trend.traffic} · 7d · measured</span>
                     </div>
 
                     <h4 className="text-xl font-black italic tracking-tighter uppercase text-white/90 leading-tight">
