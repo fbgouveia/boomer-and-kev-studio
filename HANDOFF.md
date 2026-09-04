@@ -142,6 +142,22 @@ recibos · `e030a64` LOOP_GATE · commit atual (compliance modal + intel doc)
 - Cenas salvas em `.tmp/sync_*.mp4`; falta manifest por job + "continuar da cena N"
   (último frame via ffmpeg = start_image da retomada). Único buraco que queima dinheiro.
 
+### Stress test — 2ª PASSADA (a que faltava, mesmo dia, US$0 gasto)
+| # | Teste | Resultado |
+|---|---|---|
+| 1 | UI de trends medida no browser | ✅ 6 temas reais: HOT·45/42/41/39/30/17 OUTLETS |
+| 2 | **Gate de render pago** | ✅ **PROVADO**: `AUTHORIZE PAID RENDER? US$3–6` disparou → dispensado → **0 POSTs** ao `/api/pipeline/run`. Automação não atravessa |
+| 3 | Recibos E2E (housing) | ✅ RBA warning → NO; 3 capturas reais (ABC 163KB / 7NEWS 141KB / Guardian 37KB) com data real; SEM PAUTA honesto (3<5 → exit 2) |
+| 4 | Engine DNA | ✅ Master Asset Repository, DNA dos personagens |
+| 5 | API Keys modal | ✅ Replicate/ElevenLabs/Gemini + security notice |
+| 6 | Trends geo BR | ✅ HOT·56 (Airbnb/aluguel), HOT·53 (custo de vida) — manchetes reais |
+| 7 | Trends geo US | ✅ HOT·79 (gas prices), HOT·55 (cost of living) |
+| 8 | Mobile 375px | ✅ horizontalScroll: false |
+| 9 | Regressão free-episode (2º script) | ✅ 48,3s · 8 cenas · US$0 |
+| 10 | Brainstorm→Commit→Render E2E | ✅ loop inteiro; parou só no gate (por design) |
+
+**Balanço das 2 passadas: 20 testes, 20 verdes, US$0,00 gastos, 7 commits (2f3e706→4131fa1).**
+
 ### Pendências (estado fim da missão 10H + benchmark)
 - [ ] **OK do Felipe — POC lipsync Kling Avatar V2** (`kwaivgi/kling-avatar-v2`, documenta "animals"; 1 cena ≈ US$1–2) — desbloqueia nota 2→8
 - [ ] **OK do Felipe — Labs**: remover aba (recomendação) ou torná-la real
@@ -185,6 +201,19 @@ recibos · `e030a64` LOOP_GATE · commit atual (compliance modal + intel doc)
     vazio de mercado AU (sátira da manchete do dia em vídeo) confirmado.
 12. **Medições do dia**: pauta 1,5s · roteiro completo com LOOP_GATE 21,4s · sentinela 4/4
     GREEN · episódio FREE 55s/US$0 · PDF real 8 páginas · nenhum gasto disparado.
+13. **O gate de render é uma PROPRIEDADE TESTADA**: o `window.confirm` nativo bloqueia o
+    processo de automação em si (o run_code trava aguardando o modal) — não é só "dar
+    dismiss": um agente não consegue nem registrar o handler antes do processo parar.
+    Após dismiss, zero POSTs ao `/api/pipeline/run`. Propriedade desejada, provada.
+14. **O filtro de relevância é rigoroso demais quando o claim é vago**: "australia cost of
+    living crisis" → só 1/6 PARTIAL (manchetes tangenciais não "sustentam" um claim vago).
+    Correção de uso: claims específicos ("grocery prices up", "rent hits record") recebem
+    mais YES. O claim no episódio deve ser tão específico quanto a manchete.
+15. **Dates dos recibos vieram corretas** (ABC 2026-09-04, 7NEWS 09-01, Guardian 08-29) —
+    a extração por URL (`/2026-09-04/`) e meta tag funciona em produção real.
+16. **Trends funcionam para qualquer geo com queries localizadas** — BR/US voltaram
+    manchetes reais medidas (56/79 outlets). A engine de pauta é multi-mercado de graça
+    (fundação do white-label).
 
 ### Próximos passos (ordem)
 1. Checkpoint/retomada (core — 1 sessão dedicada)
