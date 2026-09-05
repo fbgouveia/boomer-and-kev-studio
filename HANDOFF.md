@@ -223,8 +223,20 @@ documental. Sua presença não comprova testes, disponibilidade remota ou deploy
 - Revisão crítica desta solução: cópia fora do Git perderia os arquivos da raiz;
   duplicar o handoff criaria divergência; incluir todos os diffs salvaria código
   de outra frente sem validação. A cópia limitada e o stage explícito tratam esses pontos.
-- Contrato FGSS desta rotina: `20260905T050735218070-d61e8b`. O resultado efetivo
-  do commit/push será conferido no remoto e registrado ao finalizar.
+- **Registro principal salvo e enviado:** commit `0b3bb51`
+  (`docs: consolidate project continuity and save workspace recovery`), sete arquivos;
+  `git push origin restore-engine` retornou exit 0 e confirmou `8c0d197..0b3bb51`.
+  Este adendo registra o resultado observado após o primeiro envio; o HEAD definitivo
+  da branch é a referência para recuperar o registro completo, incluindo o adendo.
+- **Provas locais:** `/private/tmp/boomer-save-check.json` passou (15 IDs de pendência,
+  cópia conferida contra as cinco origens, histórico e link preservados, outros
+  arquivos intactos e nenhum padrão de credencial nas linhas adicionadas).
+  `git diff --cached --check` e `python3 tools/validate_governanca.py` passaram (exit 0).
+- Os testes da aplicação não foram repetidos nesta rotina documental. O workflow
+  de qualidade disparado pelo push tem estado próprio no GitHub; envio do registro
+  não é afirmação de que esse workflow terminou nem de que a aplicação foi testada.
+- Contrato FGSS desta rotina: `20260905T050735218070-d61e8b`. Nenhum deploy, render
+  pago, publicação de episódio ou commit dos diffs de código preexistentes ocorreu.
 
 ## Consulta eventual ao histórico
 
