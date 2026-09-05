@@ -1,3 +1,7 @@
+> **HISTÓRICO — congelado em 05/09/2026.** Para retomar ou registrar trabalho,
+> leia apenas o bloco atual do [HANDOFF.md](HANDOFF.md). As tarefas, prioridades e
+> hierarquias abaixo refletem outra data e não são instruções atuais.
+
 # 🌅 HANDOFF — PRÓXIMA SESSÃO
 # Boomer & Kev Studio | Atualizado: 2026-07-19 (pós Sessão 007 + descoberta n8n)
 

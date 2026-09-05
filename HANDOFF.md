@@ -1,3 +1,245 @@
+<!-- CONTINUIDADE_ATUAL_INICIO -->
+# Boomer & Kev — continuidade única
+
+Atualizado em **05/09/2026, AEST**. Este bloco é a fonte operacional de pendências,
+atualizações e descobertas de todo o projeto. Leia até `CONTINUIDADE_ATUAL_FIM`;
+o histórico abaixo só precisa ser consultado para investigar uma decisão específica.
+
+## Um projeto, um ponto de retomada
+
+- Abra sempre `PROJETOBoomer and Kev/`. O `HANDOFF.md` dessa raiz é um link para
+  este mesmo arquivo, versionado em `BOOMER AND KEV/boomer-and-kev-studio/HANDOFF.md`.
+  Há **um único conteúdo**, acessível pelos dois caminhos.
+- Neste documento, **STUDIO** significa `BOOMER AND KEV/boomer-and-kev-studio`,
+  relativo à raiz do workspace. Código e Git vivem em STUDIO; mídias ficam nas
+  pastas `00_Legacy_Archives` a `04_Delivery` dentro de `BOOMER AND KEV`.
+- Registre novas pendências, atualizações e descobertas **somente neste bloco**.
+  Ao consolidar sessões, preserve o registro anterior no histórico deste arquivo.
+  Não crie novos `HANDOFF_*.md` nem listas paralelas de continuidade.
+- `progress.md`, `findings.md`, `task_plan.md`, `PLAN.md`, `HANDOFF_AMANHA.md` e
+  `HANDOFF_VLAEG.md` são referências históricas, consultadas sob demanda. Checkboxes
+  antigos não reabrem tarefas. `gemini.md` e `architecture/` continuam como contratos
+  técnicos; atualize-os quando o contrato mudar, sem duplicar a lista de pendências.
+- Instruções FGSS vêm de `/Users/felipegouveia/Developer/CÉREBRO/LEIS_FGSS.md` e do
+  roteamento canônico do FGSS Brain. Hierarquias antigas no histórico estão superadas.
+
+## Estado conhecido e próximo passo
+
+**Próximo trabalho:** retomar a revisão de usabilidade local iniciada em 05/09,
+resolver o acesso visual ao localhost e reproduzir os defeitos antes de corrigi-los.
+
+- **Inspecionado nesta consolidação:** existe um único aplicativo e um único Git,
+  em STUDIO, na branch `restore-engine`. A pasta `boomer-and-kev-studio` diretamente
+  na raiz contém apenas diretórios vazios. A raiz já encaminha `npm run dev` e
+  `npm run check:connections` para a instalação ativa.
+- **Registrado em 05/09, não retestado aqui:** servidor local em
+  `http://127.0.0.1:3000`; 401 sem login é esperado (Basic Auth).
+  A sessão de browser encontrou `ERR_BLOCKED_BY_CLIENT`; revisão visual incompleta.
+- **Registrado em 04/09:** episódio FREE produzido; nenhum episódio publicado.
+  Render pago completo e publicação continuam dependentes da decisão do Felipe.
+  Preços, saldos e disponibilidade de serviços em registros antigos são históricos.
+- **Código local inspecionado:** `/api/trends` usa contagem de veículos via RSS;
+  o filtro de relevância e o `LOOP_GATE` existem; backend aceita `aspect`.
+  Isso supera tarefas antigas que pediam construir essas três primeiras funções.
+- **Diff local preexistente:** `DirectorTerminal.tsx` já cancela consultas antigas,
+  trata erros e troca região apenas por estado. A correção está escrita; falta
+  comprovar o comportamento no browser. Não implementá-la de novo com base no log antigo.
+- **Validação histórica de 04/09:** TypeScript, 61 testes e build passaram; o registro
+  também relata 48 erros de lint preexistentes. Esta sessão verificou documentação
+  e integridade local; não repetiu testes da aplicação nem consultou a produção.
+
+## Pendências abertas
+
+### Retomada técnica
+
+| ID | Pendência | Critério de conclusão |
+|---|---|---|
+| BK-01 | Completar revisão de usabilidade local | Acesso ao browser resolvido; navegação, cenas, modais e erros percorridos com mouse/teclado; evidência registrada. Direção visual via Open Design quando necessária. |
+| BK-02 | Validar correção local preexistente das tendências ao trocar região | Código já usa cancelamento, tratamento de erros e mudança por estado. Comprovar no browser: uma consulta por mudança, nenhuma resposta antiga sobrescrita e erro visível. |
+| BK-03 | Corrigir polling que continua após erro HTTP | Interface sai do processamento infinito, preservando o job pago; nenhum novo render por tentativa de consulta. Achado de inspeção de 05/09. |
+| BK-04 | Expor seleção de formato na interface | 9:16 e 16:9 selecionáveis; `aspect` chega a `/api/pipeline/run`. Backend já aceita o campo; envio pela UI ainda pendente. |
+| BK-05 | Checkpoint e retomada por cena | Uma falha na cena 6 permite continuar sem pagar novamente as cenas 1–5. Alteração do core depende da autorização já exigida pelo Felipe. |
+| BK-06 | Revisar navegação em 1440px e captions do episódio FREE | Controles acessíveis nessa largura e legendas verificadas no vídeo; itens I7/I3 do registro de 04/09. |
+
+### Decisões e validações com Felipe
+
+| ID | Pendência | Resultado necessário |
+|---|---|---|
+| BK-07 | Escolher roteiro e autorizar validação paga | Roteiro escolhido entre os materiais de `STUDIO/04_Delivery/script_ab`; custo consultado e autorizado; avaliar vídeo, áudio, wardrobe, enquadramento e ambos os formatos. |
+| BK-08 | Decidir destino de Studio Labs | Remover a aba ou definir implementação real. Hoje está identificada como simulação; não é fila de produção. |
+| BK-09 | Avaliar prova opcional de lipsync animal e voz do Boomer | POC só com autorização específica; ouvir A/B e amostras em `BOOMER AND KEV/04_Delivery/voice_clone`, confirmar voz/`voice_id`. Aceitar sem lipsync segue válido até nova decisão. |
+| BK-10 | Confirmar contas sociais e executar primeira publicação | URLs e contas do Down Under Discourse confirmadas; material aprovado e publicação autorizada. Auditorias das plataformas são frente separada, ainda sem conclusão comprovada. |
+
+### Backlog preservado, sem execução automática
+
+- **BK-11 — Produto/comercial:** avaliador visual, analytics real, retenção no prompt;
+  decisões do Foundation Pack (contato, entidade, papel público, nome, preços e
+  categorias), reel, revisão jurídica, relatórios 7/30 dias e case Bushproof Multi-Tool.
+- **BK-12 — Interface/marca:** tokens e dados para white-label, nomes das abas em inglês,
+  contatos/canais reais, fonte vetorial da marca, texto e integração da capa,
+  unificação de prompts do PDF, refatoração do monolito somente se justificada.
+- **BK-13 — Operação:** revalidar pendências antigas de PM2 startup, segredos de
+  automação, chamadores com idempotência/aprovação, sonda dedicada, alerta por ausência
+  de sonda e pré-voo. Estado atual não medido nesta sessão; não tratar como falha confirmada.
+- **BK-14 — Versionamento:** revisar os diffs locais preexistentes antes de qualquer
+  commit de código; avaliar merge `restore-engine` → `main` após validação do pipeline.
+  O salvamento documental autorizado nesta sessão é independente dessa revisão.
+- **BK-15 — Diagnóstico local:** validar o conjunto preexistente de consulta de saldo,
+  tratamento de permissões e `tools/check-connections.mjs`, com os testes pertinentes.
+  Os arquivos estão locais e não entram no commit documental; ver inventário abaixo.
+- O plano de 19/07 de reescrever a orquestração em seis workflows n8n foi superado
+  pela decisão de 05/08 de manter o pipeline. Publicação automática e extensões
+  especulativas continuam adiadas; não retomar sprints de março como ordens atuais.
+
+## Atualizações — sessão de consolidação de 05/09
+
+- Continuidade reunida neste bloco; entrada na raiz aponta para o mesmo arquivo
+  mantido pelo Git do Studio. Aplicativo e mídias mantêm seus caminhos existentes.
+- Handoffs antigos identificados como históricos; regras de entrada alinhadas em
+  `AGENTS.md`, `CLAUDE.md` e README. A raiz deixa de apresentar um registro de outro
+  componente FGSS como estado deste projeto.
+- Histórico original do Studio preservado abaixo, inclusive os diffs de documentação
+  que já estavam sem commit. O registro FGSS Brain da antiga raiz foi preservado
+  em bloco separado, com valores de segredo removidos desta documentação.
+- Reconciliados os registros de 04/09: filtro de recibos, `LOOP_GATE` e pauta RSS já
+  implementados; âncoras reais, retirada de wav2lip, nome do botão pago, aviso DEMO,
+  modal de compliance e remoção de métricas fictícias já constam como realizados.
+  Checkpoint e seleção de formato continuam abertos entre os cinco itens do plano antigo.
+- Código, dependências, configuração de execução e mídias não foram alterados por
+  esta consolidação. Já havia alterações locais nessas áreas de outras sessões.
+- **Verificação desta sessão:** links válidos; raiz e Studio resolvem o mesmo arquivo;
+  histórico do Studio preservado integralmente; 328 arquivos preexistentes fora do
+  escopo documental conferidos por hash, sem mudanças; `git diff --check` passou.
+  Relatório local: `/private/tmp/boomer-continuity-check.json` (exit 0).
+  Contrato FGSS `20260905T045724848912-8e4a52`.
+- Grafo local atualizado pelo Graphify sem LLM. Houve avisos de arquivos sem nós
+  e parser SQL ausente; a conferência documental usou leitura direta e hashes.
+- Na primeira etapa não houve commit/push. Em seguida Felipe pediu explicitamente
+  a rotina completa de salvar; a execução e o escopo estão registrados a seguir.
+
+## Descobertas duráveis
+
+- Várias pastas com o nome Boomer & Kev não significam vários aplicativos. Só o
+  Studio interno contém `src`, dependências e Git; o outro Studio é estrutura vazia.
+- Data no cabeçalho não bastava: o handoff dizia agosto, mas continha sessões de
+  setembro e listas contraditórias do mesmo dia. Usar fatos/evidências mais recentes,
+  sem declarar resolvido o que apenas mudou de plano.
+- O handoff antigo da raiz era do FGSS Brain/Portfolio, sem relação com o Studio.
+  Suas pendências ficam no histórico de origem externa, fora da lista Boomer & Kev.
+- Um link de arquivo permite abrir a continuidade pela raiz sem copiar o documento
+  e sem mover o Git ou quebrar caminhos de mídia. Ferramentas que substituem links
+  devem editar o destino em STUDIO para manter o acesso único.
+- Inspeção não substitui teste real: `LOOP_GATE` pode seguir como `UNJUDGED` quando
+  o juiz falha; contagem de veículos não é prova automática de relevância; formato
+  do contêiner final não comprova enquadramento dos personagens.
+- Diffs sem commit são trabalho existente: não usar restauração global para limpar
+  o workspace. Salvar estado e verificar o escopo antes de mexer em arquivos.
+- O Git interno não inclui automaticamente arquivos da raiz do workspace. Uma
+  cópia de recuperação limitada aos arquivos de entrada preserva a organização
+  sem criar outro Git, mover a aplicação ou duplicar o conteúdo do handoff.
+
+## Salvamento detalhado — 05/09/2026
+
+**Pedido:** “salve entao novas pendencias atualizacoes descobertas e handff detalhado”.
+Aplica-se a rotina FGSS: pendências → atualizações → descobertas → handoff → commit → push.
+Este bloco reúne o plano, as decisões e a prova documental desta tarefa; não cria
+outros diários em `task_plan.md`, `findings.md` ou `progress.md`.
+
+### Resultado e decisões registradas
+
+1. Um único arquivo físico de continuidade permanece dentro do Git do Studio.
+   O link da raiz permite retomar todo o workspace por `PROJETOBoomer and Kev`.
+2. O bloco atual consolida BK-01 a BK-15, com estado e critério de conclusão.
+   Pedidos já implementados foram retirados da fila de construção; validações
+   ainda não comprovadas permanecem abertas. Prioridade: BK-01, depois BK-02/BK-03.
+3. O histórico anterior do Studio foi preservado integralmente. O registro de
+   outro projeto que ocupava a raiz permanece separado e com segredo redigido.
+4. Handoffs antigos são históricos; as entradas de agentes e a orientação de
+   design passam a apontar para as leis canônicas. Documentos de arquitetura
+   continuam técnicos, sem competir com a lista operacional.
+5. Não houve reorganização física de aplicativo ou mídia. A opção apresentada
+   para reorganizar pastas não recebeu escolha nesta conversa; isso não é tarefa
+   aprovada nem condição para usar a continuidade única.
+
+### Arquivos desta consolidação
+
+| Arquivo relativo ao workspace | Alteração | Persistência |
+|---|---|---|
+| `HANDOFF.md` | Link relativo para o handoff do Studio | Cópia de recuperação guarda o link, não uma segunda cópia do conteúdo |
+| `AGENTS.md` | Entrada geral, leitura delimitada e destino correto de salvamento | Cópia de recuperação |
+| `README.md` | Instruções de retomada única, comandos e mapa das pastas | Cópia de recuperação |
+| `BOOMER AND KEV/CLAUDE.md` | Continuidade única e precedência das leis FGSS | Cópia de recuperação |
+| `STUDIO/HANDOFF.md` | Estado consolidado, BK-01 a BK-15, descobertas e histórico | Git do Studio |
+| `STUDIO/AGENTS.md` e `STUDIO/CLAUDE.md` | Entrada operacional e regras de leitura alinhadas | Git do Studio |
+| `STUDIO/HANDOFF_AMANHA.md` e `STUDIO/HANDOFF_VLAEG.md` | Avisos de arquivo histórico, mantendo conteúdo anterior | Git do Studio |
+| `STUDIO/README.md` | Orientação de continuidade e localização da cópia de recuperação | Git do Studio |
+| `STUDIO/docs/workspace-entrypoints-2026-09-05.tar.gz` | Cópia limitada dos arquivos externos ao Git | Git do Studio |
+
+### Contrato da cópia de recuperação
+
+- **Entrada:** cinco caminhos explícitos, relativos à raiz: `AGENTS.md`, `README.md`,
+  `package.json`, `HANDOFF.md` e `BOOMER AND KEV/CLAUDE.md`.
+- **Saída:** `docs/workspace-entrypoints-2026-09-05.tar.gz`, dentro do Git do Studio.
+  O `HANDOFF.md` é armazenado como link para
+  `BOOMER AND KEV/boomer-and-kev-studio/HANDOFF.md`; o conteúdo continua único.
+- **SHA-256:** `87290519050b4bbd95d944b3e52d3d4405da4110e685703227dfb2d67f98a4de`.
+- A cópia contém somente esses arquivos de entrada. Não inclui `.env`, credenciais,
+  `.claude/settings.local.json`, código pendente, dependências, mídias ou o grafo.
+  É um ponto de recuperação datado, não outro local para registrar continuidade.
+- **Recuperação:** primeiro posicionar o clone do Studio no caminho interno esperado,
+  inspecionar o arquivo com `tar -tzf docs/workspace-entrypoints-2026-09-05.tar.gz`,
+  extrair para uma pasta temporária e comparar antes de restaurar arquivos na raiz.
+  Nunca extrair sobre um workspace existente sem conferir diferenças.
+- Se os arquivos de entrada mudarem, atualizar a cópia no próximo salvamento.
+  O `package.json` da raiz já existia; seu `check:connections` depende do trabalho
+  local descrito abaixo, que ainda não está incluído no Git remoto.
+
+### Trabalho preexistente preservado no disco
+
+Estes arquivos não foram implementados nesta consolidação e ficam fora do commit
+documental. Sua presença não comprova testes, disponibilidade remota ou deploy.
+
+| Arquivo relativo a STUDIO | Estado observado / próximo cuidado |
+|---|---|
+| `.env.example` | Modificação local preexistente; revisar somente nomes e exemplos, sem publicar valores reais |
+| `package.json` e `tools/check-connections.mjs` | Comando e ferramenta de diagnóstico local; validar antes do commit próprio |
+| `src/app/api/keys/balance/route.ts` e `tests/balance-connection.test.ts` | Tratamento de limites/permissões e valor ausente como `null`; testes locais presentes, não executados nesta tarefa |
+| `src/app/page.tsx` | Ajustes de exibição/consulta do saldo; polling infinito e seleção de formato continuam como BK-03/BK-04 |
+| `src/components/studio/DirectorTerminal.tsx` | Cancelamento, timeout e erros de tendências já escritos; falta comprovação visual em BK-02 |
+| `src/app/api/video/generate/route.ts` | Remoção local de callback legado; revisão específica antes de salvar como alteração de código |
+| `architecture/local-connections.md` | Contrato do diagnóstico da outra frente; mantido local junto dos arquivos correspondentes |
+| `graphify-out/` | Mapa gerado localmente e atualizado sem LLM; não precisa acompanhar o commit documental |
+
+### Verificação e publicação do registro
+
+- Antes do salvamento: Git em `restore-engine`, HEAD `8c0d197`; remoto existente
+  `https://github.com/fbgouveia/boomer-and-kev-studio.git`; índice sem arquivos staged.
+- Critérios: link raiz/Studio resolve o mesmo arquivo, histórico preservado, cópia
+  idêntica aos cinco caminhos de origem, nenhum segredo novo na documentação,
+  nenhum arquivo da outra frente staged, diff documental válido e SHA remoto igual
+  ao commit enviado. O push será normal, sem force e sem merge para `main`.
+- A workflow de `restore-engine` executa verificações de qualidade; não contém
+  etapa de deploy. Push de documentação não declara aplicação publicada.
+- Revisão crítica desta solução: cópia fora do Git perderia os arquivos da raiz;
+  duplicar o handoff criaria divergência; incluir todos os diffs salvaria código
+  de outra frente sem validação. A cópia limitada e o stage explícito tratam esses pontos.
+- Contrato FGSS desta rotina: `20260905T050735218070-d61e8b`. O resultado efetivo
+  do commit/push será conferido no remoto e registrado ao finalizar.
+
+## Consulta eventual ao histórico
+
+O histórico deste arquivo contém as sessões completas do Studio e o registro de
+origem externa. Em STUDIO, `HANDOFF_AMANHA.md` (19/07), `HANDOFF_VLAEG.md` e
+`task_plan.md` (março), `progress.md`, `findings.md` e `PLAN.md` permanecem disponíveis
+para consultas pontuais. Nada disso precisa ser lido inteiro para retomar o projeto.
+
+<!-- CONTINUIDADE_ATUAL_FIM -->
+
+## Histórico preservado — não é a lista atual de tarefas
+
+<details>
+<summary>Sessões anteriores do Studio — conteúdo preservado em 05/09/2026</summary>
+
 # HANDOFF.md — Registro de Continuidade entre Sessões
 # Boomer & Kev Studio | Atualizado: 2026-08-07 AEST (v5.9)
 
@@ -8,6 +250,27 @@
 > **Hierarquia de leitura:** HANDOFF.md → GEMINI.md → CLAUDE.md → AGENTS.md
 
 ---
+
+## Sessão 05/09/2026 — revisão de usabilidade local iniciada
+
+### Atualizações
+- Pedido de Felipe: abrir o Studio no localhost e testar com mouse, corrigindo controles e erros de interface.
+- Servidor de desenvolvimento iniciado em `http://127.0.0.1:3000`, escutando somente no loopback. Sonda HTTP retornou 401: Basic Auth está ativo.
+- Chrome conectado pela skill Browser, mas a navegação mostrou `ERR_BLOCKED_BY_CLIENT`. Solicitado ao operador abrir a página, fazer login e liberar o acesso local se a extensão solicitar. Nenhum controle da interface foi testado nesta sessão ainda.
+- Mapa local de dependências criado em `graphify-out/graph.json`, somente AST, sem chamadas LLM: 1041 nós e 1823 arestas. SQL não indexado por ausência do parser opcional.
+- Contrato FGSS Brain aberto: `20260905T043549915891-af074a`, nível medium. Trabalho permanece incompleto.
+- Open Design abriu o formulário de direção visual, ainda sem confirmação; nenhuma geração iniciada.
+
+### Descobertas por inspeção do código — ainda sem reprodução visual
+- `DirectorTerminal.tsx`: trocar região dispara `fetchTrends` diretamente e também pelo efeito dependente de `geo`; respostas antigas não são canceladas e erros não são apresentados ao operador.
+- `page.tsx`: polling de render continua indefinidamente em respostas HTTP de erro, mantendo a tela de processamento; precisa de tratamento que preserve o job pago sem criar outro.
+- O formato `aspect` aceito pelo backend não é enviado pela interface.
+
+### Pendências de retomada
+- Acesso visual ao localhost e confirmação do formulário Open Design para a direção visual.
+- Percorrer navegação, edição de cenas, modais e estados de erro usando mouse e teclado; registrar evidência antes/depois das correções.
+- Implementar as correções verificadas e validar TypeScript, testes pertinentes e interface no browser.
+- Nenhum código de aplicação alterado, render pago disparado, deploy, commit ou push executado nesta sessão.
 
 ## 🚦 COMECE AQUI — estado em 04/09/2026 fim do dia (v6.0)
 
@@ -1534,3 +1797,42 @@ junto com o render de validação. Ver seção "SESSÃO 30/07/2026" acima.
 - Atualizado `GEMINI.md` v3.0 → v3.1
 
 **Não feito:** P1-P6 listados acima.
+
+</details>
+
+<details>
+<summary>Registro externo: FGSS Brain/Portfolio, 08/08/2026 — não pertence à fila Boomer & Kev</summary>
+
+Este registro estava na raiz por engano. Preservado para rastreabilidade; não é uma instrução de execução para este projeto. Valores de segredo foram redigidos.
+
+# HANDOFF - FGSS Brain Session (8 de agosto de 2026)
+
+## 1. Pendências
+- [ ] Configurar as variáveis `SUPABASE_SERVICE_ROLE_KEY` e `FGSS_MAIN_BRAIN_SECRET` (copiando a chave gerada: `[SEGREDO REMOVIDO DA DOCUMENTAÇÃO]`) no ambiente de produção real do Admin (VPS, Vercel ou Docker).
+- [ ] Observar o funcionamento do transporte de telemetria do projeto piloto (`loja-a`) por 7 dias em staging/local antes de conectar os demais subprojetos.
+- [ ] Validar a integração global de Claude e Gemini em cada ambiente antes de declarar que todas as LLMs usam o cérebro automaticamente.
+- [ ] Decidir se a skill `andrej-karpathy/SKILL.md` (persona, 54 KB) permanece no repositório do cérebro ou migra definitivamente para as skills sob demanda.
+
+## 2. Atualizações
+- **Criptografia & Configuração:**
+  - Gerado segredo criptográfico seguro de 32 bytes hex (`[SEGREDO REMOVIDO DA DOCUMENTAÇÃO]`) e configurado na variável `FGSS_MAIN_BRAIN_SECRET` no arquivo `.env` local do Felipe Portfolio.
+- **Banco de Dados (Supabase):**
+  - Aplicada a migração SQL do Supabase [`001_fgss_main.sql`](file:///Users/felipegouveia/Developer/CÉREBRO/FGSS MAIN BRAIN/supabase/001_fgss_main.sql) no projeto ativo `aifgtfwiqodikqhytcuh` (Felipe Portfolio).
+  - Executadas com sucesso as consultas do validador SQL [`verify_fgss_main.sql`](file:///Users/felipegouveia/Developer/CÉREBRO/FGSS MAIN BRAIN/supabase/verify_fgss_main.sql) na instância Supabase, retornando zero linhas/anomalias (RLS e permissões ativas em todas as 8 tabelas).
+- **Contrato Piloto:**
+  - Cadastrado localmente (SQLite) e no banco remoto (Supabase) o contrato do primeiro projeto piloto (`loja-a`), contendo o coletor (`collector-loja-a`), a demanda (`custo-verificado`) e a política de observação (`policy-loja-a-custo`).
+- **Testes & Validação:**
+  - Executada a suíte com 30 testes unitários e de integração de telemetria no motor do MAIN BRAIN (exit 0).
+  - Executados 11 testes unitários (`npm run test:main-brain`) no repositório do Felipe Portfolio (exit 0).
+- **Ajustes de Hooks do Claude:**
+  - Corrigido o aninhamento inválido de hooks no arquivo [`~/.claude/settings.json`](file:///Users/felipegouveia/.claude/settings.json), movendo os comandos `cat` diretamente para o array de `SessionStart`, garantindo que a injeção do protocolo mestre funcione no início das sessões.
+- **Segurança e Versionamento:**
+  - Criado arquivo `.gitignore` robusto no diretório de configuração do Claude (`~/.claude/`) para ignorar credenciais, histórico de sessão e caches caso o diretório seja versionado.
+  - Adicionado `ignore = dirty` no arquivo `.gitmodules` do cérebro para evitar que o sync de parâmetros dinamizados suje a árvore do git de submódulos como o `code-graph-rag`.
+  - Commits e pushes aplicados localmente e no repositório remoto.
+
+## 3. Descobertas
+- **Sintaxe de Hooks do Claude:** O hook `SessionStart` do Claude Code exige um array plano de ações de comando (com atributos `"type"` e `"command"`) diretamente sob `SessionStart`. O formato anteriormente usado (`{ "hooks": [ ... ] }`) impedia o correto processamento dos ganchos no início das sessões.
+- **Controle de Submódulos Ativos:** Configurar `ignore = dirty` no arquivo `.gitmodules` é o padrão ideal para gerenciar submódulos que contêm arquivos dinamicamente alterados por scripts de sincronização de limites em tempo de execução (como `sync_runtime_config.py` modificando `.env.example` no `code-graph-rag`).
+
+</details>

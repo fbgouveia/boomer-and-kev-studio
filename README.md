@@ -53,6 +53,19 @@ This is an active pre-launch system.
 
 ## Local development
 
+### Project continuity and workspace recovery
+
+Read only the current block at the start of [HANDOFF.md](HANDOFF.md), ending at
+`CONTINUIDADE_ATUAL_FIM`, to resume work. It consolidates open tasks, updates and
+findings. Older handoffs and session logs are historical references.
+
+In Felipe's workspace, the outer `PROJETOBoomer and Kev/HANDOFF.md` links to this
+same tracked file. The application remains at `BOOMER AND KEV/boomer-and-kev-studio`.
+The dated [workspace entrypoints archive](docs/workspace-entrypoints-2026-09-05.tar.gz)
+preserves the outer entry files and the handoff link. See the current handoff for
+its inventory, checksum and recovery procedure. It contains no application copy
+or media; the pending local connection-checking tool is not part of this save.
+
 The project uses Next.js and requires the environment described in the local configuration and handoff records.
 
 ```bash

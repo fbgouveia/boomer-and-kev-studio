@@ -1,3 +1,7 @@
+> **HISTÓRICO — congelado em 05/09/2026.** Para retomar ou registrar trabalho,
+> leia apenas o bloco atual do [HANDOFF.md](HANDOFF.md). As tarefas, prioridades e
+> hierarquias abaixo refletem outra data e não são instruções atuais.
+
 # 🏛️ HANDOFF V.L.A.E.G. — ORDENS DE EXECUÇÃO
 # Boomer & Kev Studio | Arquitetado por Antigravity
 # Data: 2026-03-29 | Para: Gemini 3.1 (Executor)

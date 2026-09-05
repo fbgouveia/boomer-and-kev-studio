@@ -1,3 +1,16 @@
+# Entrada operacional — atualizada em 05/09/2026
+
+Leia o bloco atual de [HANDOFF.md](HANDOFF.md), até `CONTINUIDADE_ATUAL_FIM`.
+Ele reúne a continuidade de todo o projeto. Quando o workspace completo estiver
+presente, a entrada geral é [AGENTS.md da raiz](../../AGENTS.md).
+
+As leis canônicas são `/Users/felipegouveia/Developer/CÉREBRO/LEIS_FGSS.md` e o
+roteamento do FGSS Brain. Elas e as decisões atuais prevalecem sobre o catálogo
+abaixo. O catálogo descreve papéis da produtora; não ordena iniciar 26 agentes nem
+comprova implementação, preços, provedores ou estado atual. Consulte-o sob demanda.
+
+---
+
 # 🎬 AGENTS.md — Produtora Virtual Boomer & Kev
 # Definição Completa da Equipe de Agentes AI
 # Atualizado: 2026-07-19

@@ -1,3 +1,15 @@
+# Continuidade do projeto — 05/09/2026
+
+Comece pelo bloco atual do [HANDOFF único](HANDOFF.md), até `CONTINUIDADE_ATUAL_FIM`.
+Registre ali pendências, atualizações e descobertas. Handoffs alternativos,
+`progress.md`, `findings.md` e planos antigos são histórico sob demanda.
+Esta regra supera hierarquias antigas de leitura. As leis FGSS e o roteamento
+canônico determinam a proporcionalidade de Karpathy, VLAEG e Ponytail.
+Dados de disponibilidade e provedores datados abaixo precisam ser revalidados
+quando forem usados, sem repetir essa pesquisa para simples retomada documental.
+
+---
+
 # CLAUDE.md — Diretrizes de Desenvolvimento e Comandos
 
 Este arquivo serve como guia de referência rápida de comandos e políticas de desenvolvimento para este projeto.
@@ -12,7 +24,7 @@ Este arquivo serve como guia de referência rápida de comandos e políticas de 
 ---
 
 ## 🎨 DIRETRIZES DE DESIGN (UI/UX)
-**Sempre usar a skill `ui-ux-pro-max`** antes de tomar qualquer decisão de design (cores, tipografia, layout, componentes). Nunca decida no olho.
+Siga a lei de design em `/Users/felipegouveia/Developer/CÉREBRO/LEIS_FGSS.md`: Open Design produz e o Gestor pertinente aprova. As referências visuais abaixo não substituem essa regra.
 - Cor primária: `#FF5F1F` (Signal Orange).
 - Fundo: `#000000` / `#0d0d0d`.
 - Estilo: Brutalist Neural Glass (bordas sólidas de 4px laranja, overlays HUD com blur).
