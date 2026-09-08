@@ -132,3 +132,4 @@ assert.equal(invalidDeleteId.body.error, 'INVALID_EPISODE_ID');
 console.log(`Pipeline seguro: job ${first.body.jobId}; aprovação ausente/expirada=403; 30 leituras íntegras; IDs/engine inválidos=400.`);
 
 export const testedJobId = first.body.jobId;
+export const testedPayload = payload;

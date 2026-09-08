@@ -84,6 +84,8 @@ export default function Home() {
   const renderIdempotencyKey = useRef<string | null>(null);
   const renderApproval = useRef<{ confirmed: true; source: 'studio_ui'; approvedAt: string } | null>(null);
   const [renderEngine, setRenderEngine] = useState<'kling' | 'higgsfield'>('kling');
+  const [renderAspect, setRenderAspect] = useState<'9:16' | '16:9'>('9:16');
+  const [failedJobId, setFailedJobId] = useState<string | null>(null);
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
   const [assembledVideoUrl, setAssembledVideoUrl] = useState<string | null>(null);
@@ -176,7 +178,7 @@ export default function Home() {
   });
   const [balanceData, setBalanceData] = useState<{
     replicate?: { status: string, balance: string },
-    elevenlabs?: { status: string, balance: string, percent?: number }
+    elevenlabs?: { status: string, balance: string, percent?: number | null }
   } | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
   const [renderMode, setRenderMode] = useState<'REAL' | 'SANDBOX' | null>(null);
@@ -190,7 +192,6 @@ export default function Home() {
   const [storyboardMode, setStoryboardMode] = useState<'classic' | 'ekonte'>('classic');
 
   const refreshBalance = useCallback(async (keys = apiKeys) => {
-    if (!keys.replicate && !keys.elevenlabs) return;
     setIsCheckingBalance(true);
     try {
       const res = await fetch('/api/keys/balance', {
@@ -200,7 +201,7 @@ export default function Home() {
       });
       const data = await res.json() as {
         replicate?: { status: string, balance: string },
-        elevenlabs?: { status: string, balance: string, percent?: number }
+        elevenlabs?: { status: string, balance: string, percent?: number | null }
       };
       setBalanceData(data);
     } catch (err) {
@@ -893,6 +894,9 @@ export default function Home() {
       };
     }
     renderInFlight.current = true;
+    // Retomada = payload diferente do POST original; reusar a mesma Idempotency-Key
+    // provocaria IDEMPOTENCY_CONFLICT. Rotação garante o resume limpo.
+    if (failedJobId) renderIdempotencyKey.current = null;
     renderIdempotencyKey.current ||= crypto.randomUUID();
 
     console.log("RENDER_PROJECT_TRIGGERED");
@@ -934,6 +938,14 @@ export default function Home() {
       directorIdea,
       directorSnippet,
       engine: renderEngine,
+      aspect: renderAspect,
+      resumeJobId: failedJobId || undefined,
+      // BK-16: vozes editadas na Engine DNA entram na execução (antes: descartadas,
+      // o run usava a voz estática de CHARACTERS).
+      voiceIds: {
+        boomer: voiceIds.boomer || undefined,
+        kev: voiceIds.kev || undefined,
+      },
       wardrobe: wardrobeConfig,
       approval: renderApproval.current
     };
@@ -969,14 +981,29 @@ export default function Home() {
       const jobId = runData.jobId;
       setRenderLogs(prev => [`HANDSHAKE_SUCCESSFUL. JOB_ID: ${jobId}`, ...prev]);
 
-      // Polling loop
+      // Polling loop com circuit-breaker para impedir processamento infinito (BK-03)
+      let consecutiveErrors = 0;
       const pollInterval = setInterval(async () => {
         try {
           const pollRes = await fetch(`/api/pipeline/run?id=${jobId}`);
           if (!pollRes.ok) {
-            console.error("Polling check failed status:", pollRes.status);
+            consecutiveErrors++;
+            console.error(`Polling check failed (HTTP ${pollRes.status}), attempt ${consecutiveErrors}/4`);
+            if (pollRes.status === 404 || consecutiveErrors >= 4) {
+              clearInterval(pollInterval);
+              renderInFlight.current = false;
+              setFailedJobId(jobId);
+              setRenderLogs(prev => [
+                `⚠️ POLLING_HALTED: Erro HTTP ${pollRes.status} no servidor. O job (${jobId}) e suas cenas estão preservados em checkpoint.`,
+                ...prev
+              ]);
+              toast.error(`Conexão com o servidor oscilou (HTTP ${pollRes.status}). O checkpoint foi preservado para retomada.`);
+              setTimeout(() => setIsRenderingProject(false), 4000);
+            }
             return;
           }
+
+          consecutiveErrors = 0;
           const jobState = await pollRes.json();
           
           // Update logs and progress
@@ -990,6 +1017,7 @@ export default function Home() {
             renderInFlight.current = false;
             renderIdempotencyKey.current = null;
             renderApproval.current = null;
+            setFailedJobId(null);
             setAssembledVideoUrl(jobState.finalVideoUrl);
             setRenderProgress(100);
             setRenderLogs(prev => ["🎉 SUCCESS: PRODUCTION_READY. ALL_SCENES_SYNTHESIZED.", ...prev]);
@@ -1001,14 +1029,31 @@ export default function Home() {
             renderInFlight.current = false;
             renderIdempotencyKey.current = null;
             renderApproval.current = null;
+            setFailedJobId(jobId);
             setRenderProgress(0);
-            setRenderLogs(prev => ["🔴 CRITICAL_PIPELINE_FAILURE.", ...prev]);
+            setRenderLogs(prev => [
+              "🔴 CRITICAL_PIPELINE_FAILURE: O render falhou. Cenas finalizadas foram salvas no checkpoint.",
+              ...prev
+            ]);
+            toast.error("O render falhou. As cenas concluídas foram preservadas para retomada.");
             setTimeout(() => {
               setIsRenderingProject(false);
             }, 4000);
           }
         } catch (pollErr: any) {
-          console.error("Error in status polling:", pollErr);
+          consecutiveErrors++;
+          console.error(`Error in status polling (${consecutiveErrors}/4):`, pollErr);
+          if (consecutiveErrors >= 4) {
+            clearInterval(pollInterval);
+            renderInFlight.current = false;
+            setFailedJobId(jobId);
+            setRenderLogs(prev => [
+              `⚠️ POLLING_HALTED: Falha de rede após múltiplas tentativas. O job (${jobId}) continua salvo no checkpoint.`,
+              ...prev
+            ]);
+            toast.error("Falha de rede ao consultar status. O checkpoint do job foi preservado.");
+            setTimeout(() => setIsRenderingProject(false), 4000);
+          }
         }
       }, 4000);
 
@@ -1887,6 +1932,18 @@ export default function Home() {
             </div>
           </div>
 
+          {/* BK-04: Seletor de Formato (Aspect Ratio) */}
+          <select
+            value={renderAspect}
+            onChange={(e) => setRenderAspect(e.target.value as '9:16' | '16:9')}
+            disabled={isRenderingProject}
+            className="bg-black/80 border-2 border-white/20 text-sm font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
+            aria-label="Select Video Aspect Ratio"
+          >
+            <option value="9:16">9:16 (Vertical · Shorts/Reels)</option>
+            <option value="16:9">16:9 (Horizontal · YouTube)</option>
+          </select>
+
           <select
             value={renderEngine}
             onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
@@ -1896,6 +1953,23 @@ export default function Home() {
             <option value="kling">Kling (Replicate)</option>
             <option value="higgsfield" disabled>Higgsfield.ai (not wired to full pipeline)</option>
           </select>
+
+          {failedJobId && (
+            <button
+              onClick={() => {
+                setFailedJobId(null);
+                renderIdempotencyKey.current = null;
+                renderApproval.current = null;
+                toast.success("Checkpoint resetado. A próxima produção iniciará do zero.");
+              }}
+              disabled={isRenderingProject}
+              title="Descartar checkpoint salvo e iniciar uma nova produção do zero"
+              className="px-3 py-2 text-xs font-black uppercase border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Reset Checkpoint
+            </button>
+          )}
+
           <button
             onClick={renderProject}
             disabled={isRenderingProject || script.length === 0}
@@ -1904,7 +1978,13 @@ export default function Home() {
           >
             <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
             <MonitorPlay size={16} fill="currentColor" className="relative z-10" />
-            <span className="relative z-10">{isRenderingProject ? "RENDERING..." : `RENDER EPISODE · ${script.length} SCENES · ~$${totalCost}`}</span>
+            <span className="relative z-10">
+              {isRenderingProject
+                ? (failedJobId ? "RESUMING..." : "RENDERING...")
+                : failedJobId
+                ? `RESUME FROM CHECKPOINT · ${script.length} SCENES`
+                : `RENDER EPISODE · ${renderAspect} · ${script.length} SCENES · ~$${totalCost}`}
+            </span>
           </button>
         </div>
       </div>
@@ -2219,7 +2299,7 @@ export default function Home() {
                               </span>
                               <div className="flex flex-col items-end">
                                 <span className="text-xs font-black text-white/60 uppercase">{balanceData.elevenlabs.balance}</span>
-                                {balanceData.elevenlabs.percent !== undefined && (
+                                {balanceData.elevenlabs.percent != null && (
                                   <div className="w-24 h-1 bg-white/5 mt-1">
                                     <div className="h-full bg-[#FF5F1F]" style={{ width: `${balanceData.elevenlabs.percent}%` }} />
                                   </div>

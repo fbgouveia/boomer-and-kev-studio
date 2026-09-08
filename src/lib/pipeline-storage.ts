@@ -1,8 +1,84 @@
-import { readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 const JOB_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SCENE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const INTERMEDIATE_PREFIXES = ['audio_', 'kling_', 'sync_', 'anchor_', 'lastframe_'];
+
+export type SceneCheckpoint = {
+    audioExists: boolean;
+    videoExists: boolean;
+    audioPath?: string;
+    videoPath?: string;
+};
+
+// ponytail: Helper direto para checagem e reuso de checkpoint de cena sem dependências extras
+export function getSceneCheckpoint(storageDir: string, jobId: string, sceneId: string): SceneCheckpoint {
+    if (!JOB_ID_PATTERN.test(jobId)) {
+        throw new Error(`Invalid pipeline job ID: ${jobId}`);
+    }
+    if (!SCENE_ID_PATTERN.test(sceneId)) {
+        throw new Error(`Invalid scene ID for checkpoint: ${sceneId}`);
+    }
+
+    const audioPath = path.join(storageDir, `audio_${jobId}_${sceneId}.mp3`);
+    const videoPath = path.join(storageDir, `sync_${jobId}_${sceneId}.mp4`);
+
+    const audioExists = existsSync(audioPath) && statSync(audioPath).size > 0;
+    const videoExists = existsSync(videoPath) && statSync(videoPath).size > 0;
+
+    return {
+        audioExists,
+        videoExists,
+        audioPath: audioExists ? audioPath : undefined,
+        videoPath: videoExists ? videoPath : undefined,
+    };
+}
+
+// BK-16: arquivo não vazio não é garantia de mídia íntegra. Antes de reutilizar um
+// checkpoint (e economizar geração paga), confere com ffprobe se o stream esperado
+// existe e tem duração real — checkpoint corrompido não é reutilizado.
+export type ValidatedSceneCheckpoint = {
+    audioValid: boolean;
+    videoValid: boolean;
+    audioPath?: string;
+    videoPath?: string;
+};
+
+function probeMediaDuration(filePath: string, stream: 'audio' | 'video'): Promise<boolean> {
+    return new Promise((resolve) => {
+        const fp = spawn('ffprobe', [
+            '-v', 'error',
+            '-select_streams', stream === 'video' ? 'v:0' : 'a:0',
+            '-show_entries', 'format=duration',
+            '-of', 'csv=p=0',
+            filePath,
+        ], { stdio: ['ignore', 'pipe', 'ignore'] });
+        let out = '';
+        fp.stdout.on('data', (d) => (out += d));
+        fp.on('error', () => resolve(false));
+        fp.on('close', (code) => {
+            const duration = parseFloat(out.trim());
+            resolve(code === 0 && Number.isFinite(duration) && duration > 0.1);
+        });
+    });
+}
+
+export async function validateSceneArtifacts(checkpoint: SceneCheckpoint): Promise<ValidatedSceneCheckpoint> {
+    const audioValid = checkpoint.audioExists && checkpoint.audioPath
+        ? await probeMediaDuration(checkpoint.audioPath, 'audio')
+        : false;
+    const videoValid = checkpoint.videoExists && checkpoint.videoPath
+        ? await probeMediaDuration(checkpoint.videoPath, 'video')
+        : false;
+    return {
+        audioValid,
+        videoValid,
+        audioPath: audioValid ? checkpoint.audioPath : undefined,
+        videoPath: videoValid ? checkpoint.videoPath : undefined,
+    };
+}
 
 export function cleanupPipelineIntermediates(storageDir: string, jobId: string) {
     if (!JOB_ID_PATTERN.test(jobId)) {

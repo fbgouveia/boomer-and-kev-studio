@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -8,39 +8,30 @@ import { z } from 'zod';
 import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
 import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
-import { cleanupPipelineIntermediates } from '@/lib/pipeline-storage';
+import { cleanupPipelineIntermediates, getSceneCheckpoint, validateSceneArtifacts } from '@/lib/pipeline-storage';
+import {
+  pipelineConfigHash,
+  acquireResumeLease,
+  releaseResumeLease,
+  refreshResumeLease,
+  evaluateResume,
+} from '@/lib/resume-policy';
 import { buildEditingPlan, type EditingPlan } from '@/lib/editing-policy';
 
-// Zod Input Validation
-const runPipelineSchema = z.object({
-    script: z.array(z.object({
-    id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
-    characterId: z.enum(['boomer', 'kev']),
-    text: z.string().trim().min(1).max(5_000),
-    shotType: z.enum(['WIDE', 'BOOMER_MCU', 'KEV_CU', 'OTS_BOOMER', 'LOW_ANGLE_BOOMER', 'GOPRO_FISHEYE']),
-    action: z.string().trim().min(1).max(2_000),
-    emotion: z.string().trim().min(1).max(128),
-    durationEst: z.number().finite().positive().max(10)
-  })).min(1).max(32),
-  directorIdea: z.string().max(20_000).optional(),
-  directorSnippet: z.string().max(20_000).optional(),
-  engine: z.literal('kling').optional().default('kling'),
-  aspect: z.enum(['9:16', '16:9']).optional().default('9:16'), // formato selecionável (Kling + montagem)
-  wardrobe: z.object({
-    boomer: z.string().max(5_000).optional(),
-    kev: z.string().max(5_000).optional(),
-    studio: z.string().max(5_000).optional()
-  }).optional(),
-  approval: z.object({
-    confirmed: z.literal(true),
-    source: z.enum(['studio_ui', 'n8n_manual']),
-    approvedAt: z.string().datetime()
-  }).optional()
-});
+import { runPipelineSchema } from '@/lib/validations';
 
 const idempotencyKeySchema = z.string().min(16).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 const jobIdSchema = z.string().uuid();
 const workerInstanceId = crypto.randomUUID();
+// Runs em curso NESTE processo: um job ativo tem um único executor autorizado.
+const activeRuns = new Set<string>();
+
+type SceneProviderRequest = {
+  provider: string;
+  model: string;
+  predictionId: string;
+  launchedAt: string;
+};
 
 type IdempotencyRecord = {
   jobId: string;
@@ -358,11 +349,23 @@ async function processPipeline(
   directorIdea: string,
   directorSnippet: string,
   aspect: '9:16' | '16:9',
-  wardrobe?: { boomer?: string, kev?: string, studio?: string }
+  wardrobe?: { boomer?: string, kev?: string, studio?: string },
+  voiceIds?: { boomer?: string, kev?: string }
 ) {
   const target = aspectTarget(aspect);
   const tmpDir = path.resolve(process.cwd(), '.tmp');
   const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
+  // BK-16: identifica a etapa da falha — o estado final diz ONDE o job parou,
+  // e a retomada refaz só o necessário a partir dos checkpoints.
+  let currentStage = 'startup';
+  // BK-17 (parcial local): predições pagas persistidas ANTES do polling —
+  // se o processo cair depois da cobrança, o resultado incerto fica conservado
+  // no estado do job em vez de sumir com a memória do worker.
+  let providerRequests: Record<string, SceneProviderRequest> = {};
+  try {
+    const existingState = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+    providerRequests = existingState.providerRequests || {};
+  } catch { /* job novo sem estado prévio */ }
 
   const updateJob = (updates: any) => {
     try {
@@ -374,6 +377,9 @@ async function processPipeline(
         logs: [...currentData.logs, ...(updates.logs || [])]
       };
       writeJsonAtomic(jobFilePath, newData);
+      // Heartbeat do lease: o dono vivo atualiza o prazo; silence longo não expira
+      // o lease desde que abaixo do TTL.
+      refreshResumeLease(tmpDir, jobId, workerInstanceId);
     } catch (e) {
       console.error("Failed to write job status file:", e);
     }
@@ -416,20 +422,43 @@ async function processPipeline(
     // Step 1a: VOICE GATE — TODAS as vozes sintetizadas ANTES de qualquer render.
     // Decisão Felipe 19/07 (doutrina Deriva: degradar calado, nunca): voz falhou →
     // o run FALHA aqui, com US$0 gastos em Kling, em vez de gerar vídeo mudo "com sucesso".
+    currentStage = 'voice_gate';
     const audioByScene = new Map<string, string>();
 
     for (let i = 0; i < script.length; i++) {
       const line = script[i];
       const index = i + 1;
+
+      // BK-05: Checkpoint de áudio — se já foi sintetizado para este job, reutiliza sem gastar ElevenLabs.
+      // BK-16: só reutiliza após validar conteúdo (ffprobe) — arquivo não vazio não é mídia íntegra.
+      const checkpoint = getSceneCheckpoint(tmpDir, jobId, line.id);
+      if (checkpoint.audioExists && checkpoint.audioPath) {
+        const validated = await validateSceneArtifacts(checkpoint);
+        if (validated.audioValid && validated.audioPath) {
+          const buffer = readFileSync(validated.audioPath);
+          audioByScene.set(line.id, `data:audio/mpeg;base64,${buffer.toString('base64')}`);
+          updateJob({ logs: [`♻️ [Scene ${index}] Checkpoint áudio: sintetização prévia validada e reutilizada (ElevenLabs pulado).`] });
+          continue;
+        }
+        // Checkpoint corrompido/parcial: descarta e ressintetiza — nunca mistura mídia inválida.
+        try { unlinkSync(checkpoint.audioPath); } catch { /* já removido */ }
+        updateJob({ logs: [`⚠️ [Scene ${index}] Checkpoint áudio inválido (corrompido/vazio) — ressintetizando.`] });
+      }
+
       const character = CHARACTERS.find(c => c.id === line.characterId);
-      if (!character?.voiceId) {
+      if (!character) {
+        throw new Error(`VOICE_GATE: personagem '${line.characterId}' desconhecido (cena ${index}).`);
+      }
+      // BK-16: voiceId editado na Engine DNA (interface) é efetivo na execução.
+      const voiceId = voiceIds?.[line.characterId as 'boomer' | 'kev'] || character.voiceId;
+      if (!voiceId) {
         throw new Error(`VOICE_GATE: personagem '${line.characterId}' sem voiceId (cena ${index}) — run cancelado antes de gastar render.`);
       }
 
-      updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio...`] });
+      updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio (voice: ${voiceId === character.voiceId ? 'canônica' : 'override da interface'})...`] });
       let response: Response;
       try {
-        response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${character.voiceId}`, {
+        response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -460,6 +489,7 @@ async function processPipeline(
     updateJob({ progress: 25, logs: ["✅ VOICE_GATE_PASSED: todas as vozes prontas. Liberando renders."] });
 
     // Step 1b: Kling Launch — só executa com o gate de voz 100% verde
+    currentStage = 'video_generation';
     const scenesToProcess = [];
 
     for (let i = 0; i < script.length; i++) {
@@ -468,9 +498,22 @@ async function processPipeline(
       const index = i + 1;
       const audioDataUri = audioByScene.get(line.id)!;
 
+      // BK-05: Checkpoint de vídeo — se já foi renderizado e sincronizado, reutiliza sem gastar Kling/Replicate.
+      // BK-16: só reutiliza após validar conteúdo (ffprobe) — checkpoint corrompido é descartado e re-renderizado.
+      const checkpoint = getSceneCheckpoint(tmpDir, jobId, sceneId);
+      if (checkpoint.videoExists && checkpoint.videoPath) {
+        const validated = await validateSceneArtifacts(checkpoint);
+        if (validated.videoValid && validated.videoPath) {
+          updateJob({ logs: [`♻️ [Scene ${index}] Checkpoint vídeo: render prévio validado e reutilizado (Kling pulado).`] });
+          continue;
+        }
+        try { unlinkSync(checkpoint.videoPath); } catch { /* já removido */ }
+        updateJob({ logs: [`⚠️ [Scene ${index}] Checkpoint vídeo inválido (corrompido/parcial) — re-renderizando.`] });
+      }
+
       // 1b. Video Generation (Kling)
       let videoUrl = "";
-      let isSandbox = !replicate;
+      const isSandbox = !replicate;
 
       // WP 1.6: mesma personagem em cenas consecutivas → a cena N+1 nasce do último
       // frame da cena N (continuidade real). O launch é ADIADO p/ o Step 2, quando o
@@ -498,13 +541,18 @@ async function processPipeline(
           // ponytail: two-shot vertical de verdade (OTS/empilhado) exige arte nova — P0a item 4.
           // Mesma regra do prompt (SOLO_SHOTS_IN_VERTICAL): two-shot so em 16:9. Se estas duas
           // condicoes divergirem, o prompt volta a pedir dois personagens com ancora de um.
-          const anchorImage = (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER'))
-            ? '/assets/master_wide.png'
-            : character?.referenceImage;
+          // BK-16: referência escolhida na interface (Engine DNA) é efetiva — vence a canônica.
+          const anchorImage = line.characterReference
+            || (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER')
+              ? '/assets/master_wide.png'
+              : character?.referenceImage);
 
           // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
           const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
           const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`, anchorFocusX);
+          if (line.characterReference && line.characterReference !== character?.referenceImage) {
+            updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
+          }
 
           const prediction = await createKlingPrediction(replicate, {
             prompt: prompt,
@@ -515,6 +563,16 @@ async function processPipeline(
             generate_audio: false
           });
 
+          // Persiste a predição paga ANTES do polling: queda após cobrança deixa
+          // o ID conservado no estado do job p/ reconciliação (não retry cego).
+          providerRequests[sceneId] = {
+            provider: 'replicate',
+            model: 'kwaivgi/kling-v2.6',
+            predictionId: prediction.id,
+            launchedAt: new Date().toISOString(),
+          };
+          updateJob({ providerRequests });
+
           scenesToProcess.push({
             sceneId,
             index,
@@ -523,8 +581,10 @@ async function processPipeline(
             status: "PROCESSING"
           });
         } catch (e: any) {
-          updateJob({ logs: [`⚠️ [Scene ${index}] Replicate Kling launch failed: ${e.message}. Falling back to sandbox pilot video.`] });
-          isSandbox = true;
+          // BK-16: com Replicate configurado, falha de launch é falha real —
+          // sem piloto silencioso. Estado identifica a etapa; intermediários
+          // preservados no finally para retomada.
+          throw new Error(`[Scene ${index}] Kling launch failed (${currentStage}): ${e.message}`);
         }
       }
 
@@ -543,6 +603,7 @@ async function processPipeline(
     }
 
     // Step 2: Poll Kling video generations and trigger LipSync
+    currentStage = 'video_poll';
     updateJob({ progress: 40 });
 
     const finalClipPaths: string[] = [];
@@ -565,6 +626,13 @@ async function processPipeline(
             generate_audio: false
           });
           scene.predictionId = prediction.id;
+          providerRequests[scene.sceneId] = {
+            provider: 'replicate',
+            model: 'kwaivgi/kling-v2.6',
+            predictionId: prediction.id,
+            launchedAt: new Date().toISOString(),
+          };
+          updateJob({ providerRequests });
         }
 
         if (!scene.predictionId) throw new Error(`cena ${scene.index}: sem predictionId (launch encadeado falhou?)`);
@@ -579,6 +647,7 @@ async function processPipeline(
         const syncVideoUrl = klingVideoUrl;
 
         // Download final synced video to local disk
+        currentStage = 'download';
         updateJob({ logs: [`📥 [Scene ${scene.index}] Downloading scene video...`] });
         const videoResponse = await fetchWithTimeout(syncVideoUrl, {}, 120_000);
         if (!videoResponse.ok) {
@@ -592,6 +661,7 @@ async function processPipeline(
         const audioPath = path.resolve(tmpDir, `audio_${jobId}_${scene.sceneId}.mp3`);
 
         // Sem lipsync: sempre multiplexa o áudio TTS por cima do clipe do Kling.
+        currentStage = 'mux';
         updateJob({ logs: [`🎵 [Scene ${scene.index}] Multiplexing audio and video locally...`] });
         await new Promise((resolve, reject) => {
             const args = ['-y', '-i', scenePath];
@@ -613,29 +683,28 @@ async function processPipeline(
         finalClipPaths.push(finalScenePath);
         updateJob({ logs: [`✅ [Scene ${scene.index}] Scene completed & saved.`] });
       } catch (err: any) {
-        updateJob({ logs: [`❌ [Scene ${scene.index}] Real execution crashed: ${err.message}. Falling back to sandbox pilot scene.`] });
-        const pilotPath = path.resolve(process.cwd(), '../00_Legacy_Archives/Piloto', `cena${(scene.index - 1) % 4 + 1}.mp4`);
-        const targetPath = path.resolve(tmpDir, `sync_${jobId}_${scene.sceneId}.mp4`);
-        if (existsSync(pilotPath)) {
-          copyFileSync(pilotPath, targetPath);
-          finalClipPaths.push(targetPath);
-        } else {
-          // Produção sem piloto — propaga a causa real em vez de mascarar como sandbox.
-          throw new Error(`[Scene ${scene.index}] Falha real e sem piloto de fallback (produção): ${err.message}. Causa provável: crédito/rate-limit do Replicate.`);
-        }
+        // BK-16: falha real com provedor configurado — estado identifica a etapa
+        // e a causa; sem substituição silenciosa por piloto. Intermediários e
+        // checkpoints ficam preservados no finally para retomada.
+        updateJob({ logs: [`❌ [Scene ${scene.index}] Falha real em ${currentStage}: ${err.message}. Job interrompido; checkpoints preservados para retomada.`] });
+        throw err;
       }
     }
 
-    // Add sandbox clips to final lists if not processed by replicate
+    // Reúne todos os clipes na ordem estrita do roteiro (1..N), garantindo que checkpoints e novos renders fiquem ordenados
+    finalClipPaths.length = 0;
     for (let i = 0; i < script.length; i++) {
       const sceneId = script[i].id;
       const scenePath = path.resolve(tmpDir, `sync_${jobId}_${sceneId}.mp4`);
-      if (existsSync(scenePath) && !finalClipPaths.includes(scenePath)) {
+      if (existsSync(scenePath) && statSync(scenePath).size > 0) {
         finalClipPaths.push(scenePath);
+      } else {
+        throw new Error(`Cena ${i + 1} (${sceneId}) não gerou vídeo sincronizado válido para a montagem.`);
       }
     }
 
     // Step 3: Run Video Assembly (FFmpeg merge)
+    currentStage = 'assembly';
     updateJob({ progress: 85, logs: ["🎬 LAUNCHING_FFMPEG_VIDEO_ASSEMBLER...", "STITCHING_SCENES_AND_NORMALIZING_AUDIO..."] });
 
     const finalVideoPath = path.resolve(tmpDir, `final_${jobId}.mp4`);
@@ -655,7 +724,9 @@ async function processPipeline(
     await assembleVideo(finalClipPaths, finalVideoPath, target, editingPlan);
 
     let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
+    let delivery: 'cloud' | 'local' = 'local';
     try {
+      currentStage = 'delivery';
       const fileBuffer = readFileSync(finalVideoPath);
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
       const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -674,14 +745,15 @@ async function processPipeline(
         
         if (res.ok) {
           finalVideoUrl = `${supabaseUrl}/storage/v1/object/public/videos/${jobId}.mp4`;
-          updateJob({ logs: ["✅ UPLOAD_SUCCESSFUL."] });
+          delivery = 'cloud';
+          updateJob({ logs: ["✅ UPLOAD_SUCCESSFUL. Entrega em cloud storage confirmada."] });
         } else {
           const errText = await res.text();
-          updateJob({ logs: [`⚠️ UPLOAD_FAILED: ${errText}. Falling back to local URL.`] });
+          updateJob({ logs: [`⚠️ UPLOAD_FAILED: ${errText}. Entrega LOCAL explícita (não é entrega cloud): ${finalVideoUrl}`] });
         }
       }
     } catch (e: any) {
-      updateJob({ logs: [`⚠️ UPLOAD_ERROR: ${e.message}. Falling back to local URL.`] });
+      updateJob({ logs: [`⚠️ UPLOAD_ERROR: ${e.message}. Entrega LOCAL explícita (não é entrega cloud): ${finalVideoUrl}`] });
     }
 
     // Update Supabase episode state
@@ -699,10 +771,11 @@ async function processPipeline(
       console.warn("[Supabase] Failed to update episode row:", e.message);
     }
 
-    // Done!
+    // Done! BK-16: a entrega real (cloud vs local) fica explícita no estado.
     updateJob({
       status: "COMPLETED",
       progress: 100,
+      delivery,
       logs: ["🎉 PIPELINE_ASSEMBLY_COMPLETE. FINAL_VIDEO_RENDERED_SUCCESSFULLY."],
       finalVideoUrl
     });
@@ -724,16 +797,36 @@ async function processPipeline(
       }
     }
 
+    const uncertainPredictions = Object.entries(providerRequests)
+      .map(([sceneId, request]) => `${sceneId}:${request.predictionId}`);
     updateJob({
       status: "FAILED",
       progress: 0,
-      logs: [`🔴 CRITICAL_PIPELINE_ERROR: ${error.message}`]
+      failureStage: currentStage,
+      logs: [
+        `🔴 CRITICAL_PIPELINE_ERROR em ${currentStage}: ${error.message}`,
+        ...(uncertainPredictions.length
+          ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
+          : [])
+      ]
     });
   } finally {
+    activeRuns.delete(jobId);
+    releaseResumeLease(tmpDir, jobId);
     try {
-      const removed = cleanupPipelineIntermediates(tmpDir, jobId);
-      if (removed.length) {
-        console.log(`[Pipeline Cleanup] Removed ${removed.length} intermediate files for ${jobId}.`);
+      // BK-05: Só remove intermediários se o job terminou com sucesso (COMPLETED).
+      // Se falhou, os intermediários são preservados para permitir retomada do checkpoint!
+      const currentJobState = existsSync(jobFilePath)
+        ? JSON.parse(readFileSync(jobFilePath, 'utf8'))
+        : null;
+
+      if (currentJobState?.status === 'COMPLETED') {
+        const removed = cleanupPipelineIntermediates(tmpDir, jobId);
+        if (removed.length) {
+          console.log(`[Pipeline Cleanup] Removed ${removed.length} intermediate files for completed job ${jobId}.`);
+        }
+      } else {
+        console.log(`[Pipeline Checkpoint] Job ${jobId} não concluiu com sucesso; intermediários preservados para retomada.`);
       }
     } catch (cleanupError) {
       console.warn(`[Pipeline Cleanup] Failed for ${jobId}:`, cleanupError);
@@ -764,7 +857,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe } = validation.data;
+    const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe, resumeJobId } = validation.data;
 
     // Create .tmp directory
     const tmpDir = path.resolve(process.cwd(), '.tmp');
@@ -783,50 +876,118 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "RENDER_APPROVAL_EXPIRED" }, { status: 403 });
     }
 
-    const jobId = crypto.randomUUID();
+    const isResume = Boolean(resumeJobId);
+    const jobId = resumeJobId || crypto.randomUUID();
     const jobFilePath = path.resolve(tmpDir, `job_${jobId}.json`);
-    const idempotencyRecord: IdempotencyRecord = {
-      jobId,
-      payloadHash,
-      createdAt: new Date().toISOString()
-    };
 
-    try {
-      writeFileSync(idempotencyPath, JSON.stringify(idempotencyRecord, null, 2), { flag: 'wx' });
-    } catch (error) {
-      const fileError = error as NodeJS.ErrnoException;
-      if (fileError.code !== 'EEXIST') throw error;
-      return replayIdempotentJob(idempotencyPath, payloadHash, tmpDir)!;
-    }
+    if (isResume) {
+      if (!existsSync(jobFilePath)) {
+        return NextResponse.json({
+          error: "RESUME_JOB_NOT_FOUND",
+          details: `O job ${jobId} para retomada não existe no storage local.`
+        }, { status: 404 });
+      }
 
-    const now = new Date().toISOString();
-    const initialJobState = {
-      id: jobId,
-      status: "PROCESSING",
-      progress: 0,
-      logs: ["🚀 PIPELINE_ORCHESTRATOR_TRIGGERED.", `JOB_ID: ${jobId}`],
-      engine,
-      workerInstanceId,
-      createdAt: now,
-      updatedAt: now,
-      finalVideoUrl: null
-    };
+      const existingData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+      if (existingData.status === 'COMPLETED') {
+        return NextResponse.json({
+          status: "COMPLETED",
+          jobId,
+          finalVideoUrl: existingData.finalVideoUrl,
+          replayed: true
+        });
+      }
 
-    try {
-      if (existsSync(jobFilePath)) throw new Error(`Job file collision: ${jobId}`);
-      writeJsonAtomic(jobFilePath, initialJobState);
-    } catch (error) {
-      unlinkSync(idempotencyPath);
-      throw error;
+      // BK-16: retomada usa a versão aprovada. Roteiro/voz/aspecto/referências/
+      // figurino diferentes = conflito explícito (nova versão ou job novo), nunca
+      // mistura de cache antigo com payload novo.
+      const configHash = pipelineConfigHash(validation.data);
+      const decision = evaluateResume(
+        existingData,
+        { configHash },
+        { isRunActive: activeRuns.has(jobId) },
+      );
+      if (decision.action === 'conflict') {
+        return NextResponse.json({
+          error: decision.code,
+          details: decision.code === 'RESUME_CONFIG_CONFLICT'
+            ? "O roteiro/voz/aspecto/referências mudaram desde o job original. Crie um novo job (nova versão) em vez de retomar com conteúdo alterado."
+            : "Este job já tem um executor ativo. Aguarde a conclusão ou a reconciliação do worker atual."
+        }, { status: 409 });
+      }
+
+      // Exclusividade entre processos: lease atômico em disco. De dois resumes
+      // simultâneos, no máximo um vira executor.
+      const lease = acquireResumeLease(tmpDir, jobId, workerInstanceId);
+      if (!lease.acquired) {
+        return NextResponse.json({
+          error: "RESUME_ACTIVE_WORKER",
+          details: "Outro executor assumiu este job neste momento (lease ativo). Não há segundo worker."
+        }, { status: 409 });
+      }
+
+      const resumeJobState = {
+        ...existingData,
+        status: "PROCESSING",
+        configHash,
+        workerInstanceId,
+        updatedAt: new Date().toISOString(),
+        logs: [
+          ...(Array.isArray(existingData.logs) ? existingData.logs : []),
+          `🔄 RESUMING_PIPELINE_FROM_CHECKPOINT...`,
+          `JOB_ID: ${jobId}`
+        ]
+      };
+      writeJsonAtomic(jobFilePath, resumeJobState);
+    } else {
+      const idempotencyRecord: IdempotencyRecord = {
+        jobId,
+        payloadHash,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        writeFileSync(idempotencyPath, JSON.stringify(idempotencyRecord, null, 2), { flag: 'wx' });
+      } catch (error) {
+        const fileError = error as NodeJS.ErrnoException;
+        if (fileError.code !== 'EEXIST') throw error;
+        return replayIdempotentJob(idempotencyPath, payloadHash, tmpDir)!;
+      }
+
+      const now = new Date().toISOString();
+      const initialJobState = {
+        id: jobId,
+        status: "PROCESSING",
+        progress: 0,
+        logs: ["🚀 PIPELINE_ORCHESTRATOR_TRIGGERED.", `JOB_ID: ${jobId}`],
+        engine,
+        // BK-16: identidade da versão aprovada — retomadas com conteúdo diferente
+        // são rejeitadas por comparação de hash, não por confiança do cliente.
+        configHash: pipelineConfigHash(validation.data),
+        providerRequests: {},
+        workerInstanceId,
+        createdAt: now,
+        updatedAt: now,
+        finalVideoUrl: null
+      };
+
+      try {
+        if (existsSync(jobFilePath)) throw new Error(`Job file collision: ${jobId}`);
+        writeJsonAtomic(jobFilePath, initialJobState);
+      } catch (error) {
+        unlinkSync(idempotencyPath);
+        throw error;
+      }
     }
 
     // Fire background task
-    processPipeline(jobId, script, directorIdea, directorSnippet, aspect, wardrobe).catch(err => {
+    activeRuns.add(jobId);
+    processPipeline(jobId, script, directorIdea, directorSnippet, aspect, wardrobe, validation.data.voiceIds).catch(err => {
       console.error(`Uncaught background task error for job ${jobId}:`, err);
     });
 
     return NextResponse.json({
-      status: "QUEUED",
+      status: isResume ? "RESUMING" : "QUEUED",
       jobId,
       statusUrl: `/api/pipeline/run?id=${jobId}`
     });
@@ -854,23 +1015,30 @@ export async function GET(req: Request) {
 
     let jobData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
     if (jobData.status === 'PROCESSING' && jobData.workerInstanceId !== workerInstanceId) {
+      // BK-16: reconciliação de estado — o worker original morreu com o restart do
+      // processo. O job é marcado FAILED (sem retry automático), mas os artefatos
+      // e checkpoints são PRESERVADOS: retomada valida e reutiliza o que já foi pago.
+      const uncertainPredictions = Object.entries(jobData.providerRequests || {})
+        .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
       jobData = {
         ...jobData,
         status: 'FAILED',
         progress: 0,
         failureCode: 'WORKER_RESTARTED',
+        failureStage: 'reconciliation',
         updatedAt: new Date().toISOString(),
         logs: [
           ...(Array.isArray(jobData.logs) ? jobData.logs : []),
-          '🔴 WORKER_RESTARTED: o processo original não existe mais; job encerrado sem retry automático.'
+          '🔴 WORKER_RESTARTED: o processo original não existe mais; job encerrado sem retry automático.',
+          '♻️ Checkpoints e intermediários preservados para retomada com reuso validado.',
+          ...(uncertainPredictions.length
+            ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
+            : [])
         ]
       };
       writeJsonAtomic(jobFilePath, jobData);
-      try {
-        cleanupPipelineIntermediates(path.resolve(process.cwd(), '.tmp'), idValidation.data);
-      } catch (cleanupError) {
-        console.warn(`[Pipeline Cleanup] Failed while reconciling ${idValidation.data}:`, cleanupError);
-      }
+      // O dono anterior do lease está morto (provado acima): libera para a retomada.
+      releaseResumeLease(path.resolve(process.cwd(), '.tmp'), idValidation.data);
     }
     return NextResponse.json(jobData);
 

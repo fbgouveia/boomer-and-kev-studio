@@ -25,9 +25,18 @@ o histórico abaixo só precisa ser consultado para investigar uma decisão espe
 
 ## Estado conhecido e próximo passo
 
-**Próximo trabalho:** revisar BK-06 (navegação em 1440px e legendas) e apoiar Felipe
-nas decisões BK-07 a BK-10 (aprovação de roteiro pago, destino de Studio Labs,
-lipsync animal opcional e publicação oficial nas redes sociais).
+**Estado após sessão de 09/09 (execução autônoma aprovada por Felipe):** o primeiro
+pacote executável (BK-05 + parte de BK-16 — recuperação e identidade do job) está
+implementado e provado por testes (7/7 cenários de aceite, 97/97 unitários, standalone
+verdes; detalhes na seção "Pacote 1" abaixo). **Próximo trabalho:** restante de
+BK-16 (fala inteira no mux, polling sem resume automático), depois régua vocal
+(BK-18) e BK-17. BK-06 e decisões BK-07..BK-10 permanecem pertinentes.
+
+**Continuidade confirmada por Felipe:** na próxima sessão ele usará
+**GLM-5.3-Flash para seguir as recomendações desta auditoria**. Isso confirma o
+modelo de trabalho da próxima sessão; não significa que a aplicação já chama
+GLM nem que a migração de todos os provedores está concluída. O roteiro de
+retomada abaixo é a entrada para esse trabalho.
 
 - **Revisão de usabilidade e pipeline visual concluída (09/09):** BK-01 e BK-02 100%
   resolvidos. O bloqueio Chromium de `user:pass@origin` que impedia o `fetch()` nativo
@@ -52,7 +61,7 @@ lipsync animal opcional e publicação oficial nas redes sociais).
 | BK-02 | **RESOLVIDO (09/09)** — Validar correção de tendências ao trocar região | Comprovado no browser ao vivo: troca de região (AU → US) cancela requisições pendentes, agrega 78 veículos sem race condition e renderiza o feed sem conflito. |
 | BK-03 | **RESOLVIDO (08/09)** — Corrigir polling que continua após erro HTTP | Circuit-breaker no frontend (`page.tsx`): 4 tentativas com erro ou 404 encerram o polling sem travar a interface, emitindo aviso visual e preservando o `jobId` no checkpoint para retomada. |
 | BK-04 | **RESOLVIDO (08/09)** — Expor seleção de formato na interface | Seletor 9:16 e 16:9 adicionado na barra inferior; parâmetro `aspect` propagado via `page.tsx` para `runPipelineSchema` e processado em `/api/pipeline/run`. |
-| BK-05 | **RESOLVIDO (08/09)** — Checkpoint e retomada por cena | `getSceneCheckpoint` adicionado em `pipeline-storage.ts`; reuso automático de áudio e vídeo prévios; preservação de intermediários em falhas no `finally`; parâmetro `resumeJobId` em `runPipelineSchema` e botão visual de retomada no Studio. |
+| BK-05 | **PARCIAL / REABERTO (auditoria 09/09)** — Checkpoint e retomada por cena | Reuso local e preservação no `finally` existem. Falta preservar intermediários no `GET` após reinício, comparar identidade do conteúdo, impedir workers concorrentes e reconciliar predições externas. Aceite: reinício/retomada sem perda das cenas válidas, mistura de versões ou nova cobrança indevida. |
 | BK-06 | Revisar navegação em 1440px e captions do episódio FREE | Controles acessíveis nessa largura e legendas verificadas no vídeo; itens I7/I3 do registro de 04/09. |
 
 ### Decisões e validações com Felipe
@@ -84,6 +93,498 @@ lipsync animal opcional e publicação oficial nas redes sociais).
 - O plano de 19/07 de reescrever a orquestração em seis workflows n8n foi superado
   pela decisão de 05/08 de manter o pipeline. Publicação automática e extensões
   especulativas continuam adiadas; não retomar sprints de março como ordens atuais.
+
+## Preparação detalhada da próxima sessão com GLM-5.3-Flash — 09/09/2026
+
+### Pedido mais recente e atualização de decisão
+
+Felipe pediu: “atualize as descobertas atualizacoes pendencias e handoff detalhado
+bem explicado.....vou usar o glm 5.3 flash para seguir suas recomendacoes....na
+proxima sessao”. Esta atualização organiza a passagem de contexto; a implementação
+fica para a próxima sessão. O plano completo, achados, notas e fontes continuam
+na seção de auditoria imediatamente abaixo. Não criar outro arquivo de handoff.
+
+Há duas decisões diferentes a preservar:
+
+1. **GLM como agente de desenvolvimento:** escolha confirmada para a próxima
+   sessão. Deve ler este documento, conferir o estado local e executar as correções
+   incrementais conforme as instruções de Felipe nessa sessão.
+2. **GLM como diretor dentro do produto:** objetivo de arquitetura registrado em
+   BK-20. Ainda exige implementação, configuração do provedor, avaliação e gates.
+   Abrir o projeto com GLM não integra automaticamente esse modelo à aplicação.
+
+Não alterar o modelo desta sessão nem presumir que GLM terá as mesmas ferramentas,
+permissões ou contexto. O próximo agente deve verificar suas capacidades reais.
+
+### Como começar sem perder contexto nem reabrir histórico
+
+1. Ler as leis FGSS e o roteador canônico apontados no AGENTS.md; classificar o
+   trabalho efetivo. Não reutilizar a classificação documental desta gravação
+   para uma futura alteração de recuperação, dinheiro ou autenticação.
+2. Ler somente este bloco atual do HANDOFF, até CONTINUIDADE_ATUAL_FIM. As sessões
+   antigas abaixo do marcador são evidência histórica, não ordens pendentes.
+3. Trabalhar em `BOOMER AND KEV/boomer-and-kev-studio`. A raiz tem um link para
+   este arquivo; não criar outro aplicativo nem mover mídias ou repositório.
+4. Executar `git status --short`, inspecionar os diffs relevantes e preservar o
+   trabalho local. Há correções de checkpoint, formato, polling e conexões ainda
+   sem commit; elas pertencem ao estado existente. Não resetar nem reimplementar
+   como se o repositório estivesse limpo.
+5. Começar pelo contrato de BK-05/BK-16 e seus testes. A revisão de 1440px, vozes,
+   integração GLM e SaaS não substitui o conserto da recuperação.
+6. Atualizar este mesmo bloco a cada marco com o que foi alterado, como foi
+   verificado e o que continua sem prova. Não transformar estimativas em resultados.
+
+### Primeiro pacote executável recomendado: recuperação e identidade do job
+
+**Problema de negócio:** uma oscilação de conexão ou reinício pode perder cenas
+pagas, repetir trabalho ou retomar com conteúdo diferente. Isso impede confiar
+em lotes e dificulta prometer custo e prazo ao cliente.
+
+**Arquivos de partida:** `src/app/api/pipeline/run/route.ts`,
+`src/lib/pipeline-storage.ts`, `src/lib/validations.ts`, `src/app/page.tsx`,
+`tests/pipeline-checkpoint.test.ts`, `tests/pipeline-storage.test.ts` e
+`tools/test-idempotency-standalone.mjs`. Localizar símbolos; as linhas da auditoria
+podem mudar depois das primeiras correções.
+
+**Contrato a definir antes da mudança:**
+
+- Uma cena tem ID único no roteiro. Mesmo job/cena não pode designar conteúdos
+  diferentes silenciosamente.
+- A retomada usa a versão aprovada: texto, personagem, voz, referências, figurino,
+  formato e parâmetros relevantes. Mudança de conteúdo precisa de nova versão ou
+  invalidação explícita dos artefatos dependentes.
+- Um job ativo tem um único executor autorizado. Novo pedido de retomada não
+  inicia outro worker enquanto o primeiro ainda é dono válido do trabalho.
+- Perder a conexão do painel não equivale a falha do worker. Primeiro reconectar
+  e consultar; retomar somente após reconciliação do estado real.
+- Áudio/vídeo completos sobrevivem ao restart. Arquivo não vazio não é garantia
+  de mídia íntegra; validar formato/duração e identidade antes do reuso.
+- Predição paga com resultado incerto exige consulta/reconciliação. Não fazer
+  nova geração apenas porque o resultado ainda não está no disco.
+
+**Cenários de aceite do primeiro pacote:**
+
+| Cenário | Resultado esperado |
+|---|---|
+| Duas cenas com o mesmo ID | Rejeição antes de chamar qualquer provedor. |
+| Reinício após uma cena concluída | Artefato preservado e reutilizado após validação. |
+| Dois pedidos de resume simultâneos | No máximo um executor; o outro recebe estado/conflito claro. |
+| Resume com texto, voz ou aspecto alterado | Conflito explícito ou nova versão; nunca mistura de cache antigo. |
+| Painel perde quatro consultas de status | Job pode continuar; reconexão não cria novo render. |
+| Provedor aceitou pedido, processo caiu antes do download | Estado incerto conservado e reconciliado; retry pago não é automático. |
+| Falha na montagem ou upload | Estado identifica a etapa; só refaz o necessário. |
+
+Começar com mocks e arquivos de teste isolados, sem gastos. Corrigir o teste
+standalone que hoje exige a exclusão do checkpoint ao detectar WORKER_RESTARTED:
+o verde atual desse teste confirma um comportamento incompatível com a nova meta.
+O pacote não está concluído apenas porque o helper de existência de arquivo passa.
+A recuperação distribuída e o ledger de provedor completos continuam BK-17;
+separar o que o primeiro patch local prova do que ainda exige persistência durável.
+
+### Ordem seguinte e dependências
+
+| Ordem | Pendências | Entrega esperada |
+|---|---|---|
+| 1 | BK-05 e parte de BK-16 | Recuperação local correta e identidade/IDs validados. |
+| 2 | Restante de BK-16 | Falhas explícitas, ausência de piloto automático, configurações da UI efetivas, entrega verdadeira e fala sem truncamento. |
+| 3, em paralelo quando viável | BK-18, BK-09 e BK-06 | Régua vocal com os pilotos, A/B aprovado, captions e enquadramento conferidos. |
+| 4 | BK-17 | Worker durável, estado por cena, orçamento e reconciliação de provedores. |
+| 5 | BK-19 e BK-20 | Elencos por configuração e direção GLM homologada. |
+| 6 | BK-21 e BK-22 | Isolamento comercial, custo reconciliado, lote de aceitação e beta. |
+
+As duas primeiras entregas devem permanecer pequenas e verificáveis. Não iniciar
+uma reescrita geral de page.tsx ou migração para n8n antes de resolver o mecanismo
+das falhas. Extrair responsabilidades gradualmente quando isso permitir testar
+ou corrigir esses caminhos; tamanho de arquivo sozinho não é critério de sucesso.
+
+### Descobertas e preferências que o próximo agente não pode perder
+
+- Felipe sente falta das vozes divertidas e excêntricas dos pilotos gerados com
+  áudio do Kling. Esse é um requisito artístico explícito, não um erro de volume.
+- A pipeline atual desativa áudio Kling e substitui pela faixa ElevenLabs. As
+  duas rotas de lançamento e a montagem precisam de contrato coerente se houver
+  opção de áudio nativo; não basta `generate_audio:true`.
+- O plano pede recuperar atuação de Boomer e Kev, preservando contraste. Mais
+  grito, mais SFX ou mais velocidade não são equivalentes a mais humor.
+- A aparência canônica já consta nos prompts. A auditoria anterior registrou
+  mudança de figurino durante o vídeo; adicionar mais palavras ao prompt não
+  comprova correção. Comparar referência e resultado desde o primeiro frame.
+- O render de 12,3s com duas cenas e os testes de software são evidências úteis,
+  mas não comprovam temporada, produção de 30–60s em lote ou retenção real.
+- Os testes passaram apesar de faltarem cenários de recuperação e identidade.
+  Há ainda defeitos reproduzidos de IDs duplicados e referências descartadas.
+- A auditoria de arquitetura não repetiu escuta nem inspeção visual; afirmações
+  perceptivas antigas continuam registros de outra sessão, não nova aprovação.
+- GLM, com sua preferência confirmada, ainda deve demonstrar qualidade no contexto
+  do produto. A troca de modelo não resolve falta de fila, estado durável ou tenants.
+
+### Decisões abertas e limites preservados
+
+- Volume inicial: 20 vídeos aprovados/dia de 30–60s foi hipótese do plano, não
+  resposta de Felipe. As opções 50/100 também não foram escolhidas.
+- Oferta inicial: produção gerenciada para poucos clientes foi recomendação;
+  self-service imediato ou white label dedicado continuam escolhas de negócio.
+- Faltam orçamento de testes pagos, teto por vídeo/dia, referência vocal final,
+  número de clientes iniciais e provedor/credenciais/limites GLM efetivamente usados.
+  Confirmar quando essas escolhas forem necessárias; não bloquear inspeção local
+  e testes com mocks que independam delas.
+- O pedido atual autoriza atualizar a continuidade. Não autoriza render pago,
+  publicação social, deploy, merge ou mudanças de banco remoto. A próxima sessão
+  deve usar as instruções efetivas de Felipe para execução e autorização financeira.
+- Não trocar a referência de voz nem adotar clonagem sem avaliação de amostras e
+  origem apropriada. Lipsync animal continua opcional; wav2lip não está aprovado
+  para retorno. BK-18 expande a avaliação vocal e não reverte decisões anteriores.
+- “Qualquer personagem” é a ambição de extensão. A primeira oferta deve declarar
+  elencos/formatos homologados; múltiplos personagens no mesmo plano exigem prova.
+
+### Verificação e persistência desta atualização documental
+
+Esta gravação acrescenta o roteiro de retomada e confirma GLM como modelo da
+próxima sessão. Não modifica código, configuração de provedores ou mídia.
+Os resultados 76/76, build e standalone registrados abaixo são da auditoria
+imediatamente anterior; não foram apresentados como nova execução nesta gravação.
+Validação desta atualização: leitura do bloco, diff sem erro, integridade do
+histórico/link e conferência de que os diffs de código existentes não mudaram.
+Contrato documental: `20260908T150840564745-73a4f6` (small).
+Veredito observado: **pass**; governança exit 0. Hashes do histórico e do diff
+não documental permaneceram idênticos antes/depois; link da raiz preservado.
+Registro fica no arquivo versionado do Studio, acessível pelo link da raiz.
+Commit/push não executados nesta atualização local; a revisão dos diffs de código
+continua BK-14. Um clone remoto sem esses diffs não reproduz o estado auditado.
+
+## Atualizações — sessão de 09/09/2026 (Pacote 1: recuperação e identidade do job, BK-05 + BK-16)
+
+**Pedido de Felipe:** "comece e não pare até acabar" — aprovação explícita do plano
+do primeiro pacote executável (recuperação e identidade do job), executada de forma
+autônoma. Sem render pago, deploy ou publicação. Sem gasto em provedores: todos os
+testes rodam com mocks/ambiente sem credenciais.
+
+### O que foi implementado (contrato do primeiro pacote, cenário por cenário)
+
+| Cenário de aceite | Estado |
+|---|---|
+| Duas cenas com o mesmo ID | **Feito.** `runPipelineSchema` rejeita IDs repetidos (refine) antes de qualquer provedor. |
+| Reinício após cena concluída | **Feito.** GET reconciliando WORKER_RESTARTED **preserva** intermediários (cleanup removido) e lista predições pagas incertas; checkpoint só é reutilizado após validação ffprobe (`validateSceneArtifacts`). |
+| Dois resumes simultâneos | **Feito.** Lease atômico em disco (`acquireResumeLease`, flag 'wx' + renomeação do lease vencido) + `activeRuns` no processo: no máximo um executor; o outro recebe 409 `RESUME_ACTIVE_WORKER`. |
+| Resume com conteúdo alterado | **Feito.** `configHash` (sha256 do subconjunto imutável: script/aspect/wardrobe/voiceIds/refs/directorIdea+Snippet/engine) persistido no job; mismatch => 409 `RESUME_CONFIG_CONFLICT`. approval/resumeJobId ficam fora do hash. |
+| Painel perde consultas de status | **Feito.** Reconciliação no GET só dispara por `workerInstanceId` diferente (restart real); job ao vivo no mesmo processo não é tocado; lease com TTL 10 min e heartbeat no `updateJob`. |
+| Provedor aceitou e processo caiu | **Feito (parcial local, BK-17 continua).** `providerRequests` por cena persistido ANTES do polling; reconciliado como incerto com IDs listados no log. Retry pago não é automático. |
+| Falha na montagem/upload | **Feito.** `failureStage` (startup/voice_gate/video_generation/video_poll/download/mux/assembly/delivery/reconciliation); upload com falha => entrega `local` explícita, não "cloud"; pilotos locais não substituem mais falha real quando Replicate está configurado. |
+
+### BK-16 — configuração da interface agora é efetiva
+
+- `characterReference`/`studioReference` por cena deixam de ser descartados pelo
+  schema; `characterReference` vira âncora do Kling quando presente (vence a
+  canônica), com log explícito quando não canônica. `studioReference` entra no
+  `configHash` (identidade da versão), sem mecanismo de geração novo (decisão de
+  arte para BK-19/BK-20).
+- `voiceIds` (boomer/kev) editados na Engine DNA entram no payload (`page.tsx`) e
+  na síntese ElevenLabs; string vazia vira undefined (campo limpo não quebra).
+- `page.tsx`: retomada (`failedJobId`) rotaciona a Idempotency-Key (payload de
+  resume difere do POST original — antes dava IDEMPOTENCY_CONFLICT em duas cliques).
+
+### Testes
+
+- **Novos:** `tests/resume-policy.test.ts` (hash, decisão de resume, lease entre
+  processos, takeover de lease vencido), casos de IDs duplicados/referências/voiceIds
+  em `tests/pipeline-checkpoint.test.ts`, validação de mídia real (ffprobe, com
+  guard de ausência de ffmpeg p/ CI) em `tests/pipeline-storage.test.ts`.
+- **Corrigido o teste que sancionava o comportamento errado:**
+  `tools/test-idempotency-standalone.mjs` agora EXIGE checkpoint preservado no
+  WORKER_RESTARTED e prova retomada idêntica aceita + conflito de conteúdo 409
+  (antes exigia exclusão do checkpoint — verde incompatível com a meta).
+- `tools/test-pipeline-idempotency.mjs`: exporta `testedPayload` p/ o standalone.
+
+### Verificação desta sessão (executada, não herdada)
+
+- `npx tsc --noEmit`: OK. `npm run test:unit`: **97/97** (eram 76; +21 novos).
+- `npm run build`: OK. `npm run verify:standalone`: OK (91,7 MB, sem .tmp).
+- `npm run test:deploy`, `test:security:standalone`, `test:idempotency:standalone`: OK.
+- Lint: baseline preexistente mantida (nenhum erro novo; 18 no route.ts eram anteriores).
+- Cenários do pacote: 7/7 provados por teste automatizado. NÃO provado aqui: render
+  real pago, recuperação com predição incerta contra o Replicate de verdade
+  (reconciliação automática é BK-17), carga concorrente real de resumes.
+
+### Arquivos desta sessão
+
+| Arquivo | Alteração |
+|---|---|
+| `src/lib/resume-policy.ts` | **Novo.** Hash de config, evaluateResume, lease atômico, heartbeat/release. |
+| `src/app/api/pipeline/run/route.ts` | Resume com exclusividade/conflito; providerRequests; sem piloto silencioso em produção; failureStage; entrega explícita; GET preserva artefatos. |
+| `src/lib/validations.ts` | IDs únicos; characterReference/studioReference/voiceIds efetivos. |
+| `src/lib/pipeline-storage.ts` | `validateSceneArtifacts` (ffprobe). |
+| `src/app/page.tsx` | voiceIds no payload; rotação de key no resume. |
+| `tests/*`, `tools/test-*idempotency*.mjs` | Testes novos e correção do contrato do standalone. |
+
+Escopo do commit desta sessão: apenas os arquivos acima + este HANDOFF. Diffs
+preexistentes NÃO tocados por esta sessão (`.env.example`, `package.json`,
+`keys/balance`, `video/generate`, `DirectorTerminal`, `architecture/`,
+`graphify-out/`, mídias e testes de outras frentes) permanecem fora do commit.
+Nos arquivos compartilhados (route.ts, validations.ts, pipeline-storage.ts,
+page.tsx, pipeline-checkpoint.test.ts) o commit acumula os diffs preexistentes de
+BK-02..BK-05 (já verificados por 76 testes na sessão 08/09) com as mudanças deste
+pacote — revisão separada desses diffs continua registrada como BK-14.
+
+### Pendências resultantes
+
+1. **Restante de BK-16:** fala inteira (mux `-shortest` pode truncar), polling que
+   reconecta sem disparar resume automático, fala literal no prompt de vídeo.
+2. **BK-17:** reconciliação automática de `providerRequests` contra o provedor
+   (hoje: IDs conservados e logados, consulta é manual), worker durável, orçamento.
+3. **BK-18:** régua vocal (A/B/C cego) — vozes excêntricas dos pilotos são
+   requisito artístico do Felipe.
+4. BK-06, BK-07..BK-10, BK-19..BK-22 conforme ordem registrada acima.
+
+## Auditoria e plano de evolução — 09/09/2026
+
+### Objetivo refinado e limites desta sessão
+
+Transformar o Studio em uma fábrica de vídeos com personagens reconhecíveis,
+atuação divertida, qualidade verificável e custo controlado; depois oferecer a
+mesma engine como produto white label para elencos homologados. GLM-5.3-Flash é
+a preferência de Felipe para direção/orquestração em volume. Viralidade deve ser
+medida em audiência real; nenhum modelo ou nota interna a garante.
+
+FGSS Brain acionado pela skill `fgss-brain`, classificado `large`, contrato
+`20260908T145625560100-373e89`. VLAEG aplicado ao plano, Graphify atualizado sem
+LLM e consultado, crítica independente de SaaS realizada. Sem reescrita do core,
+render pago, acesso autenticado a provedores, deploy, publicação, commit ou push.
+O relógio do contrato produziu ID UTC de 08/09; este registro segue a data de
+continuidade do ambiente, 09/09. Não usar a data do ID como prova de ordem entre sessões.
+
+Premissas de planejamento ainda não confirmadas: primeira escala de 20 vídeos
+aprovados/dia, 30–60s, 9:16 prioritário e 16:9 homologado; primeira oferta como
+produção gerenciada para poucos clientes. Perguntas opcionais sobre volume e
+modelo comercial enviadas a Felipe. São cenários, não metas comerciais aprovadas.
+
+### Evidências e descobertas novas
+
+1. **Recuperação contraditória:** `src/app/api/pipeline/run/route.ts:895` detecta
+   worker diferente e `:909` chama cleanup, apagando intermediários. O teste
+   `tools/test-idempotency-standalone.mjs` exige explicitamente que esse áudio
+   desapareça. Isso conflita com a promessa recente de retomada de BK-05.
+2. **Retomada sem identidade nem exclusão:** POST aceita job não concluído,
+   regrava PROCESSING e dispara worker sem comparar roteiro/aspect/voz/referência
+   originais; a reserva exclusiva de idempotência só é criada no ramo de job novo.
+   Dois resumes podem concorrer; o código permite esse caminho, carga concorrente
+   ainda não foi executada. Checkpoint usa existência/tamanho, não conteúdo válido.
+3. **Predições em memória:** IDs das predições Kling ficam em `scenesToProcess`,
+   sem persistência estruturada por cena. Uma queda após cobrança e antes do
+   download deixa recuperação dependente de reconciliação ainda não implementada.
+4. **Falha pode virar vídeo errado:** catches da pipeline copiam pilotos locais
+   em caso de falha e continuam para COMPLETED. Upload pode falhar e resultar em
+   URL local; o cliente ainda exibe PRODUCTION_READY. Para serviço interno pode
+   haver entrega local explícita; para produto cloud isso não prova entrega durável.
+5. **Configuração exibida não equivale à executada:** page.tsx envia
+   characterReference/studioReference, mas runPipelineSchema os remove. voiceIds
+   editados na interface não entram no payload; a execução usa CHARACTERS estático.
+   Diagnóstico executável confirmou `customReferenceSurvivesValidation:false`.
+6. **IDs repetidos aceitos:** diagnóstico executável confirmou
+   `duplicateSceneIdsAccepted:true`. Como os arquivos são endereçados por job/cena,
+   colisões podem reutilizar ou sobrescrever material da cena errada.
+7. **Voz nativa deliberadamente desativada:** Kling recebe generate_audio:false
+   em ambos os lançamentos; a montagem mapeia a faixa ElevenLabs por cima. O prompt
+   de vídeo não inclui a fala literal. Restaurar áudio nativo exige contrato próprio
+   e direção da fala, não apenas trocar um boolean. Já existe modulação emocional
+   ElevenLabs em characters.ts; não presumir que aumentar style resolve a atuação.
+8. **SaaS não demonstrado:** schema.sql não possui tenant/proprietário nos episódios
+   e define SELECT USING(true) para episódios/cenas; proxy usa Basic Auth global.
+   Exclusão por UUID usa service role sem propriedade. São fatos do código/schema
+   local; políticas do banco remoto não foram inspecionadas nesta sessão.
+9. **Sucesso de persistência ambíguo:** querySupabase retorna null sem configuração,
+   e chamadores podem tratar isso como sucesso; delete responde success:true mesmo
+   nesse caminho. Credencial privilegiada ausente também degrada para anon.
+10. **Automações parcialmente simuladas:** /api/cron/agent afirma geração com passos
+    comentados; callback mantém Map e apenas comenta o despacho seguinte. Isso não
+    invalida o pipeline real, mas impede vender esses endpoints como automação pronta.
+11. **White label restrito à dupla:** validações, roteiro, figurino e enquadramentos
+    contêm boomer/kev fixos. CHARACTERS configurável em arquivo não equivale a
+    cadastrar outro elenco sem alterar código.
+12. **Julgamento editorial incompleto:** LOOP_GATE permite UNJUDGED só em log;
+    resposta contendo PASS e FAIL cai no ramo PASS. Prompt ainda mistura contagem
+    rígida de oito cenas com instrução final de contagem livre. Texto externo deve
+    permanecer dado, e decisões do juiz devem usar resultado estruturado validado.
+13. **Duração e fala:** duração Kling é escolhida por estimativa (5/10s) e mux usa
+    -shortest. Falas maiores que o vídeo podem ser cortadas. Medir áudio e planejar
+    cenas por duração real antes do render; não acelerar fala sem decisão editorial.
+14. **Limite da auditoria anterior:** um episódio de duas cenas/12,3s não comprova
+    temporada, 30–60s, dois formatos, escala ou retenção. Não houve nova escuta nem
+    nova revisão visual nesta sessão. A preferência vocal relatada por Felipe é
+    requisito criativo; sua causa perceptiva ainda precisa de comparação controlada.
+
+### Novas pendências — execução ainda proposta
+
+| ID | Escopo | Aceite verificável |
+|---|---|---|
+| BK-16 | Integridade da pipeline e verdade dos estados | Sem piloto automático em produção; erros explícitos; referências/vozes efetivas; IDs únicos; fala inteira; entrega cloud confirmada separada de render local. |
+| BK-17 | Worker e persistência duráveis | Jobs/cenas e IDs de provedor persistidos; lock com prazo e heartbeat; retomada após reinício; custos incertos reconciliados antes de repetir. |
+| BK-18 | Identidade vocal e atuação | Comparação cega de Kling nativo, TTS atual e TTS dirigido; régua de Boomer/Kev aprovada por Felipe; manutenção do contraste e das pausas cômicas. |
+| BK-19 | Contrato reutilizável de personagem/elenco | Boomer & Kev + dois elencos adicionais, incluindo solo e dupla, operam sem editar engine; preview e render usam mesma versão aprovada. |
+| BK-20 | GLM-5.3-Flash como diretor controlado | Endpoint/model ID/limites validados no provedor escolhido; benchmark local; schema validado; ferramentas permitidas; teto de custo; decisões auditáveis; sem autonomia financeira irrestrita. |
+| BK-21 | SaaS e oferta white label | Identidade individual, papéis, isolamento de banco/storage/jobs/custos, credenciais protegidas, quotas, cobrança reconciliada, onboarding e suporte testados. |
+| BK-22 | Qualidade em lote e aprendizado editorial | Custo por vídeo aprovado, falhas/retries, latência, intervenção e métricas reais de audiência; lote de aceitação e rollback operacional. |
+
+### Plano por fases, dependências e prova
+
+**Fase 0 — baseline e contrato (1–2 dias úteis).** Preservar diffs existentes,
+mapear rotas realmente usadas e fixtures dos pilotos; definir sucesso técnico,
+aprovação artística e entrega comercial como estados diferentes. Criar casos de
+regressão dos achados antes de refatorar. Reconciliação de BK-07: já há um render
+pago registrado, mas A/B escolhido e ambos os formatos ainda precisam de prova.
+
+**Fase 1 — corretude e recuperação local (3–5 dias).** BK-05/BK-16: rejeitar IDs
+repetidos; impedir resume de worker ativo; comparar hash da configuração imutável;
+preservar artefatos válidos após restart; eliminar substituição silenciosa por
+pilotos; propagar configuração efetiva da interface; distinguir falha de upload;
+retirar respostas de sucesso de automações ainda simuladas já nesta fase.
+Aceite: erros injetados em voz, vídeo, download, mux e storage produzem estados
+verdadeiros e não publicam material antigo. Corrigir o teste que hoje exige apagar
+checkpoint no restart. Polling deve reconectar ao job ativo, sem disparar resume
+automaticamente apenas porque o cliente perdeu contato; timeout/cancelamento
+evitam fetch pendurado e sobreposição de consultas.
+
+**Fase 2 — atuação e qualidade audiovisual (3–5 dias, sobreposta à fase 1).**
+Inventariar pilotos e amostras existentes; Felipe escolhe referências canônicas.
+Comparar seis falas, três de cada personagem, cobrindo explosão, sarcasmo,
+hesitação, reação e punchline. A = Kling nativo dirigido; B = ElevenLabs atual;
+C = ElevenLabs com direção revisada. Fixar texto, normalizar volume de escuta e
+cegar rótulos; julgar identidade, excentricidade, humor, inteligibilidade, sotaque,
+timing e consistência. Depois repetir a opção vencedora em mais cenas. Gerar
+amostras novas apenas com orçamento específico autorizado. Clonagem opcional
+depende de origem/permissões apropriadas e não garante reproduzir atuação.
+Medir duração real, evitar cortes de fala, verificar figurino desde o primeiro
+frame, captions legíveis e ambos os formatos. Gates de arte seguem Open Design
+e o Gestor de Motion; aprovação de gosto é de Felipe. Sem restauração de wav2lip.
+
+**Fase 3 — fábrica interna durável (5–8 dias).** Extrair gradualmente submissão,
+provedores, montagem e status da rota de 920 linhas. Manter Next.js como painel/API,
+worker Node/FFmpeg separado e Postgres/Supabase como estado durável. Primeiro avaliar
+fila transacional no banco existente; Redis/n8n/microserviços adicionais só se
+medição justificar. Persistir providerRequestId antes de polling, reservar orçamento,
+aplicar concorrência limitada por provedor e operação, backoff e reconciliação de
+resultados incertos. Object storage guarda checkpoints versionados; disco é cache.
+Adicionar expiração e limpeza que preservem trabalho ativo/incerto. Aceite: reinício
+do worker e indisponibilidade temporária não exigem repetir cenas já faturadas;
+reconciliação suspende jobs ambíguos, em vez de prometer exactly-once externo.
+
+**Fase 4 — configuração reutilizável e GLM (5–8 dias).** Centralizar CharacterPack,
+Cast, ShowProfile e RenderSpec; substituir enums e regras específicas por dados
+validados. Compartilhar prompt entre preview/PDF/render. Dividir page.tsx (2.678
+linhas nesta inspeção) por configuração, timeline e ciclo de job, sem redesign
+global. Integrar adaptador GLM e usar contrato estruturado para roteiro, direção e
+avaliação. Benchmark proposto: 30 briefs representativos; medir schema, retrabalho,
+humor julgado às cegas, latência e custo real. Orquestrador só chama ferramentas
+permitidas e nunca fornece credenciais ou comandos shell. Notícias são conteúdo
+não confiável, incapaz de mudar políticas. Juiz indisponível = REVIEW_REQUIRED.
+Aceite: dois novos elencos sem mudança de engine e GLM atendendo contrato antes
+de controlar lotes; manter comparação com a baseline atual durante homologação.
+
+**Fase 5 — SaaS comercial (10–15 dias).** Tenant/membros/papéis; autorização em
+cada operação; RLS por tenant; storage privado e URLs temporárias; auditoria;
+credenciais de provedor no servidor; quotas, orçamento/reserva/consumo e cobrança
+consistentes. Definir branding, domínio, idioma, contrato de suporte e onboarding
+da oferta. Remover sucesso simulado de rotas expostas. Aceite: dois clientes não
+conseguem consultar, baixar, retomar ou excluir conteúdo um do outro; webhooks e
+cobrança repetidos não duplicam créditos/débitos. Verificar restauração de backup.
+
+**Fase 6 — aceitação em volume e beta (5–10 dias, parcialmente sobreposta).**
+Começar com simulação de 100 jobs e falhas controladas; depois lote real limitado
+ao orçamento autorizado, incluindo roteiro completo e múltiplos elencos. Metas
+propostas, não resultados: zero mistura entre clientes, nenhuma cobrança duplicada
+detectada/reconciliação de incertezas, >=95% conclusão técnica no lote real e >=90%
+aprovação artística sem correção manual. Definir SLA de latência só após medir p50/
+p95, limites de provedor e taxa de retrabalho. Fazer observação de sete dias em
+volume inicial aprovado. Primeiro publicar com aprovação; automatizar por política
+quando operação e aprovação editorial estiverem homologadas.
+
+### Contratos propostos antes de implementação (VLAEG)
+
+- **Visão:** vídeo aprovado e entregue, não apenas arquivo renderizado; régua dos
+  pilotos + parâmetros de custo/volume definidos pelo negócio.
+- **Link:** provedores atuais identificados no código; acesso, quotas e preços
+  vigentes deverão ser medidos com credenciais na fase de implementação. Nesta
+  análise não houve handshake autenticado nem consumo de geração.
+- **Arquitetura/dados:** Tenant -> Project/Show -> Cast/CharacterPack(version) ->
+  Episode/Script(version) -> RenderJob -> SceneJob -> Artifact + CostEvent.
+  RenderJob captura tenantId, projectId, scriptVersion, castVersion, aspect,
+  voiceMode, budgetLimit/currency, approvalId, inputHash e idempotencyKey.
+  SceneJob registra sceneId único, status, inputHash, provider/model/requestId,
+  tentativas, lease/heartbeat e artefatos com checksum/duração. Approval identifica
+  ator, escopo e orçamento aprovados; não confiar em boolean enviado pelo cliente.
+- **Invariantes:** conteúdo aprovado é imutável; mudança cria versão e invalida
+  somente dependentes; identidade do tenant vem da sessão autorizada; worker ativo
+  tem exclusividade por job; resultados incertos são reconciliados antes de retry;
+  dinheiro/estados/permissões são regras de código; GLM decide dentro dessas regras.
+- **Estados propostos:** DRAFT -> REVIEW_REQUIRED -> APPROVED -> QUEUED ->
+  RUNNING -> QC_PENDING -> READY -> DELIVERED. FAILED_RETRYABLE, FAILED_FINAL,
+  CANCELLED e PROVIDER_UNKNOWN têm ações próprias. Falha de rede do painel não
+  altera automaticamente estado do worker. READY requer QC; DELIVERED requer
+  persistência e acesso confirmados no destino contratado.
+- **Estilo:** preservar atuação e identidade; mudanças visuais futuras passam
+  pelo fluxo Open Design/Gestor. Esta sessão não produziu nem aprovou UI.
+- **Gatilho:** submissão por operador primeiro; batch limitado depois; publicação
+  automática somente sob contas, políticas e orçamento autorizados.
+
+### Notas e prazo estimados — julgamento, não garantia
+
+| Dimensão | Nota atual | Fundamentação |
+|---|---:|---|
+| Engine de vídeo orientada a conteúdo viral | 5/10 | Pipeline existe, mas recuperação, fidelidade de configuração e QA impedem confiança em lote; audiência não medida. |
+| SaaS profissional | 3/10 | Basic Auth e schema de operador único; isolamento/cobrança/onboarding não demonstrados. |
+| White label para novos elencos | 2/10 | Dados e contratos ainda fixam Boomer/Kev; precisa homologação por perfil. |
+| Produção em massa dirigida por GLM | 2/10 | GLM ainda não integrado e worker não durável; não é avaliação da capacidade do modelo. |
+
+10/10 significaria satisfação com critérios de aceite e evidência para um escopo
+definido, nunca garantia de viralidade, universalidade ou ausência de incidentes.
+Não atribuir nota perceptiva às vozes sem escuta comparativa nesta sessão.
+
+Faixas cumulativas desde início efetivo: produção assistida estabilizada 1–2
+semanas; fábrica interna com lotes/GLM homologados 3–5; beta gerenciado white
+label 5–7; SaaS self-service comercial 8–12. Cenário: uma pessoa de engenharia
+dedicada com agentes, revisão criativa de Felipe, credenciais/orçamento disponíveis,
+escopo inicial limitado e sobreposição possível de áudio, integração e QA. Trabalho
+intermitente, muitos idiomas/personagens ou aprovação lenta ampliam as faixas.
+Prazo comercial não se deriva do tempo de um único render.
+
+Vender primeiro perfis homologados (solo/dupla em formatos validados), não
+“qualquer personagem” sem limites. Custear por vídeo aprovado: todas as gerações
+incluindo descartes + voz + LLM + compute/storage/transferência + revisão/suporte,
+divididos pela quantidade aprovada. Não reutilizar US$3–6 históricos como orçamento
+vigente sem conciliação. Medir retenção, conclusão, replays e compartilhamentos
+quando houver publicação e acesso real aos dados.
+
+### Fontes e provas desta sessão
+
+- Fonte primária GLM: https://huggingface.co/zai-org/GLM-5.3-Flash confirma o modelo
+  e multimodalidade. Guia docs.z.ai específico falhou ao abrir; disponibilidade,
+  preço, identificador e quotas da conta ainda não validados. A model card descreve
+  reasoning_effort low/high/max com max padrão; configurar explicitamente somente
+  após conferir suporte do endpoint e medir qualidade/custo.
+- Fonte do provedor: https://replicate.com/kwaivgi/kling-v2.6 documenta áudio
+  nativo e fala no prompt. Capacidade declarada não prova consistência nesta dupla.
+- `npm run test:unit`: exit 0, 76/76. `npm run build`: exit 0, 25 páginas/rotas
+  geradas. `npm run test:idempotency:standalone`: exit 0; o teste reproduz a
+  remoção do checkpoint no restart, portanto verde não significa requisito correto.
+- `npm run verify:standalone`: exit 0, 91,7 MB, sem .tmp no artefato.
+- Diagnóstico de schema: IDs repetidos aceitos e referência removida. Primeira
+  tentativa bloqueada por sandbox EPERM do pipe tsx; repetição aprovada passou.
+- Graphify atualizado/consultado; avisos de 25 arquivos sem nós e parser SQL
+  ausente. Schema SQL e caminhos críticos conferidos diretamente.
+- `python3 tools/validate_governanca.py` no CÉREBRO: exit 0.
+- Fechamento FGSS: primeiro contrato retornou fail por falta do registro de
+  aprovação explícita, e ficou fechado; tentativas de anexar depois retornaram
+  erro. Revalidação `20260908T150416349602-d7b850`, mantida large, registrou a
+  autorização já dada pelo usuário exclusivamente para análise/plano e retornou
+  pass. O detector inclui diffs de código preexistentes; isso não significa que
+  esta sessão os implementou. Gauntlet final: accept, critérios da análise/plano
+  atendidos, nenhum achado material contra o plano. Não é certificação de produção.
+- Crítica independente confirmou isolamento ausente, falso sucesso e restrições
+  de personagem. Plano revisado para separar fábrica interna de SaaS, antecipar
+  régua vocal e condicionar as estimativas aos gates. Nenhum teste de carga real,
+  nova escuta, auditoria de UI ou verificação do banco/deploy remoto nesta sessão.
+- Alterações desta sessão: somente este registro de continuidade, metadados locais
+  FGSS/Graphify e artefatos de build/teste. Diffs de código preexistentes preservados.
+  Commit/push não executados: pedido atual de análise/plano, sem publicação Git.
 
 ## Atualizações — sessão de 09/09/2026 (Auditoria Visual, Browser e Geração de Vídeo)
 

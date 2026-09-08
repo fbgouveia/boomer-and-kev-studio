@@ -53,7 +53,7 @@ try {
   process.env.TEST_BASE_URL = baseUrl;
   process.env.TEST_AUTH_USER = authUser;
   process.env.TEST_AUTH_PASSWORD = authPassword;
-  const { testedJobId } = await import('./test-pipeline-idempotency.mjs');
+  const { testedJobId, testedPayload } = await import('./test-pipeline-idempotency.mjs');
   const authorization = `Basic ${Buffer.from(`${authUser}:${authPassword}`).toString('base64')}`;
   let jobState;
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -68,15 +68,25 @@ try {
   assert.match(jobState.logs.at(-1), /ELEVENLABS_API_KEY ausente/);
 
   const orphanedJobId = crypto.randomUUID();
-  await writeFile(path.join(runtimeTmp, `job_${orphanedJobId}.json`), JSON.stringify({
+  const orphanedJobState = {
     id: orphanedJobId,
     status: 'PROCESSING',
     progress: 42,
     logs: ['job criado por instância anterior'],
     workerInstanceId: 'previous-worker',
+    // Predição paga conservada: restart não apaga o rastro do dinheiro gasto.
+    providerRequests: {
+      'scene-1': {
+        provider: 'replicate',
+        model: 'kwaivgi/kling-v2.6',
+        predictionId: 'prediction-orphaned-paid',
+        launchedAt: new Date().toISOString()
+      }
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
-  }));
+  };
+  await writeFile(path.join(runtimeTmp, `job_${orphanedJobId}.json`), JSON.stringify(orphanedJobState));
   const orphanedIntermediate = path.join(runtimeTmp, `audio_${orphanedJobId}_scene-1.mp3`);
   await writeFile(orphanedIntermediate, 'orphaned audio');
   const orphanedResponse = await fetch(`${baseUrl}/api/pipeline/run?id=${orphanedJobId}`, {
@@ -86,12 +96,52 @@ try {
   assert.equal(orphanedResponse.status, 200);
   assert.equal(orphanedState.status, 'FAILED');
   assert.equal(orphanedState.failureCode, 'WORKER_RESTARTED');
-  assert.match(orphanedState.logs.at(-1), /WORKER_RESTARTED/);
-  assert.equal(existsSync(orphanedIntermediate), false);
+  assert.match(orphanedState.logs.at(-1), /PREDICTIONS UNCERTAIN/);
+  assert.ok(orphanedState.logs.some(log => /WORKER_RESTARTED/.test(log)));
+  // BK-16 (meta nova): restart NÃO apaga checkpoints — artefato pago é preservado
+  // para retomada com reuso validado. O teste antigo exigia o comportamento inverso.
+  assert.equal(existsSync(orphanedIntermediate), true);
+  assert.ok(orphanedState.logs.some(log => /PREDICTIONS UNCERTAIN.*prediction-orphaned-paid/.test(log)));
+
+  // Retomada com conteúdo alterado => conflito explícito (nunca mistura de cache antigo).
+  const conflictResume = await fetch(`${baseUrl}/api/pipeline/run`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${authUser}:${authPassword}`).toString('base64')}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `resume-${crypto.randomUUID()}`
+    },
+    body: JSON.stringify({
+      ...testedPayload,
+      directorIdea: 'Conteúdo alterado depois do job original',
+      resumeJobId: testedJobId,
+      approval: { confirmed: true, source: 'studio_ui', approvedAt: new Date().toISOString() }
+    })
+  });
+  assert.equal(conflictResume.status, 409);
+  assert.equal((await conflictResume.json()).error, 'RESUME_CONFIG_CONFLICT');
+
+  // Retomada idêntica é aceita (o job volta a PROCESSING e falha no VOICE_GATE
+  // do ambiente de teste — sem provedores configurados, US$0 gastos).
+  const validResume = await fetch(`${baseUrl}/api/pipeline/run`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${authUser}:${authPassword}`).toString('base64')}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `resume-${crypto.randomUUID()}`
+    },
+    body: JSON.stringify({
+      ...testedPayload,
+      resumeJobId: testedJobId,
+      approval: { confirmed: true, source: 'studio_ui', approvedAt: new Date().toISOString() }
+    })
+  });
+  assert.equal(validResume.status, 200);
+  assert.equal((await validResume.json()).status, 'RESUMING');
 
   assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|Replicate/i);
   assert.ok((await readdir(runtimeTmp)).every(name => !name.endsWith('.tmp')));
-  console.log(`Recuperação válida: job órfão ${orphanedJobId} reconciliado como WORKER_RESTARTED.`);
+  console.log(`Recuperação válida: job órfão ${orphanedJobId} reconciliado como WORKER_RESTARTED com checkpoint PRESERVADO; retomada idêntica aceita e conflito de conteúdo 409.`);
 } finally {
   server.kill('SIGTERM');
   await new Promise(resolve => server.once('exit', resolve));
