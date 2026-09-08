@@ -156,6 +156,17 @@ export default function Home() {
   const [studioReference, setStudioReference] = useState(DEFAULT_STUDIO_REFERENCE);
   const [dnaFolderUrl, setDnaFolderUrl] = useState(DEFAULT_DNA_FOLDER_URL);
   const [activeFooterModal, setActiveFooterModal] = useState<'docs' | 'keys' | 'support' | 'legal' | null>(null);
+  // BK-06: Escape fecha o modal ativo — padrão de acessibilidade (WAI-ARIA APG).
+  useEffect(() => {
+    if (!activeFooterModal && !isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (activeFooterModal) setActiveFooterModal(null);
+      else if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeFooterModal, isMobileMenuOpen]);
   const [complianceReport, setComplianceReport] = useState<{
     overallRisk: 'LOW' | 'MEDIUM' | 'HIGH';
     flags: { category: string; riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'; description: string; recommendation: string; targetCountry: string }[];
@@ -1157,10 +1168,11 @@ export default function Home() {
                     onClick={() => setActiveTab(tab.id)}
                     aria-label={`Switch to ${tab.label}`}
                     aria-pressed={isActive}
+                    title={tab.label}
                     className={cn(
-                      "flex items-center gap-2 px-3 lg:px-5 py-2 text-xs lg:text-sm font-black tracking-widest transition-all duration-300 relative overflow-hidden whitespace-nowrap shrink-0",
-                      isActive 
-                        ? "bg-[#FF5F1F] text-white shadow-[0_0_15px_rgba(255,95,31,0.3)] border-l-2 border-white/40" 
+                      "flex items-center gap-2 px-2 lg:px-2.5 xl:px-4 py-2 text-[11px] lg:text-xs xl:text-sm font-black tracking-wide xl:tracking-widest transition-all duration-300 relative overflow-hidden whitespace-nowrap shrink-0",
+                      isActive
+                        ? "bg-[#FF5F1F] text-white shadow-[0_0_15px_rgba(255,95,31,0.3)] border-l-2 border-white/40"
                         : "text-white/60 hover:text-white hover:bg-white/5"
                     )}
                   >

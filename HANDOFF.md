@@ -386,6 +386,51 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 - Worker durável com fila no banco segue bloqueado para sessões autônomas: exige
   migração no banco remoto (autorização do Felipe).
 
+### BK-06 — 1440px e legendas (mesmo turno; legendas eram o item principal)
+
+**Auditoria 1440px no browser (dev limpo, sem auth trap):** 8 telas + 2 modais
+percorridos, capturas em `review_frames/bk06_1440_*.png`. Zero overflow horizontal
+(medido). Achados e estado:
+
+1. **Nav truncava "COMMERCIAL"** em 1440px (`COMMER...`) — CORRIGIDO: tipografia
+   progressiva (`text-[11px]/xs/sm` + tracking/padding responsivos por breakpoint);
+   verificado em captura nova (`bk06_1440_nav_fixed.png`).
+2. **Escape não fechava modais** — CORRIGIDO: handler global (ESC fecha modal
+   ativo; sem modal, fecha menu mobile), padrão WAI-ARIA; provado no browser.
+3. **`grainy-gradients.vercel.app/noise.svg` 404** (dependência externa de textura)
+   — MANTIDO (cosmético, sem quebra funcional); pendência menor documentada.
+4. Timeline/DNA/Library/Compliance/Keys: layout interno aprovado sem sobreposição.
+5. **Legendas: confirmado que NUNCA existiram no render** (nenhum SRT/ASS/drawtext
+   no código) — a spec do AGENTS.md (branco, contorno 3px, keyword #FF5F1F,
+   centro-inferior) estava só no papel.
+
+**Legendas implementadas (burn-in de verdade):**
+
+- **`src/lib/captions.ts` (novo):** gerador ASS conforme spec — fonte pesada
+  (Montserrat Black com fallback), PrimaryColour branco, Outline 3px preto,
+  Alignment 2 (bottom-center), margens de safe area mobile (10% lateral, 230px
+  inferior em 1080x1920), keyword em override tag laranja, escape de texto.
+- **`route.ts`:** cues derivados do roteiro + durações REAIS dos clipes (ffprobe),
+  fala dividida em blocos ~7 palavras por intervalo; `.ass` gravado por job;
+  burn-in num único passo `subtitles=` sobre a montagem final; legenda é
+  acabamento — falha na geração NUNCA quebra o render (log de aviso).
+- **Descoberta crítica de ambiente (não estava escrito em lugar nenhum):** o
+  ffmpeg padrão do Homebrew (8.1.2, 489 filtros) NÃO TEM libass — filtro
+  `subtitles` ausente. `ffmpeg-full` (brew) tem. O código detecta binário capaz
+  (FFMPEG_PATH > ffmpeg-full paths > ffmpeg no PATH, cache por processo) e degrada
+  com aviso explícito em vez de quebrar o render. `brew install ffmpeg-full`
+  executado nesta sessão (binário local 9.0.1 com libass).
+- **Prova visual:** MP4 1080x1920 gerado com burn-in real (`review_frames/
+  bk06_caption_burnin_sample.png`): legenda centro-inferior, contorno preto,
+  keyword destacada — spec cumprida.
+- **Testes:** `tests/captions.test.ts` (6 casos: estilo/outline/margens, keyword
+  highlight, escape de texto hostil, cue inválido descartado, timestamps).
+- **Verificação:** tsc OK; **116/116 unitários (2 skipped: exigem ffprobe
+  indisponível em CI)**; build OK; verify/security/idempotency/deploy standalone
+  verdes; lint sem erros novos (route.ts mantém 18 preexistentes).
+- **Pop-in animado da spec NÃO implementado** (ASS com `\t()` por palavra exige
+  karaoke tags — ficou fora do mínimo; documentado como refino BK-06 restante).
+
 ### Pendências resultantes (atualizadas)
 
 1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import Replicate from 'replicate';
 import { z } from 'zod';
@@ -18,6 +18,7 @@ import {
 } from '@/lib/resume-policy';
 import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests } from '@/lib/reconciliation';
 import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
+import { buildAssSubtitles, type CaptionCue } from '@/lib/captions';
 
 import { runPipelineSchema } from '@/lib/validations';
 
@@ -91,6 +92,7 @@ async function assembleVideo(
   outPath: string,
   target: Target,
   editingPlan?: Pick<EditingPlan, 'transitions' | 'comedyCues'>,
+  subtitlesPath?: string,
 ): Promise<string> {
   if (!clips.length) throw new Error('assembleVideo: nenhum clipe fornecido');
   for (const c of clips) {
@@ -164,12 +166,24 @@ async function assembleVideo(
       `loudnorm=I=-14:LRA=7:TP=-2[finala]`;
   }
 
+  // BK-06: burn-in das legendas aplicado à saída final (não aos clipes) — um único
+  // passo de subtitles após toda a montagem, com binário que tenha libass. Escape
+  // ffmpeg: ':' -> '\:'; sem aspas externas porque spawn não passa por shell.
+  const captionFfmpeg = subtitlesPath && existsSync(subtitlesPath) ? ffmpegWithSubtitles() : null;
+  const videoOutLabel = subtitlesPath && existsSync(subtitlesPath) && captionFfmpeg
+    ? (() => {
+        const escaped = subtitlesPath.replace(/\\/g, '\\\\').replace(/:/g, '\\:');
+        filter += `;[outv]subtitles=${escaped}[subv]`;
+        return '[subv]';
+      })()
+    : '[outv]';
+
   const args = [
     '-y',
     ...clips.flatMap((c) => ['-i', c]),
     ...comedyInputs.flatMap((c) => ['-i', c]),
     '-filter_complex', filter,
-    '-map', '[outv]', '-map', audioMap,
+    '-map', videoOutLabel, '-map', audioMap,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
     '-shortest',
@@ -177,7 +191,9 @@ async function assembleVideo(
   ];
 
   return new Promise((resolve, reject) => {
-    const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'inherit'] });
+    // BK-06: se há legendas, usa o binário com libass; senão o ffmpeg padrão.
+    const ffmpegBin = (subtitlesPath && existsSync(subtitlesPath) && ffmpegWithSubtitles()) || 'ffmpeg';
+    const ff = spawn(ffmpegBin, args, { stdio: ['ignore', 'ignore', 'inherit'] });
     ff.on('error', reject);
     ff.on('close', (code) =>
       code === 0 ? resolve(outPath) : reject(new Error(`ffmpeg saiu com código ${code}`))
@@ -252,9 +268,33 @@ export const getDetailedPrompt = (line: any, directorIdea = "Trending News", dir
   return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar ${aspect} --v 6.0`;
 };
 
+// BK-06: o binário ffmpeg precisa de libass (filtro subtitles). O ffmpeg padrão do
+// Homebrew vem sem; ffmpeg-full tem. Detecção uma vez por processo, com fallback
+// ordenado. null => sem burn-in (render segue, aviso explícito no job).
+let captionCapableFfmpeg: string | null | undefined;
+function ffmpegWithSubtitles(): string | null {
+  if (captionCapableFfmpeg !== undefined) return captionCapableFfmpeg;
+  const candidates = [
+    process.env.FFMPEG_PATH,
+    '/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg',
+    '/usr/local/opt/ffmpeg-full/bin/ffmpeg',
+    'ffmpeg',
+  ].filter(Boolean) as string[];
+  for (const bin of candidates) {
+    try {
+      const out = spawnSync(bin, ['-hide_banner', '-filters'], { timeout: 10_000 });
+      if (out.status === 0 && out.stdout.toString().includes('subtitles')) {
+        captionCapableFfmpeg = bin;
+        return captionCapableFfmpeg;
+      }
+    } catch { /* tenta o próximo */ }
+  }
+  captionCapableFfmpeg = null;
+  return captionCapableFfmpeg;
+}
+
 // Replicate polling helper
-async function pollPrediction(replicate: Replicate, predictionId: string, maxAttempts = 60): Promise<any> {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+async function pollPrediction(replicate: Replicate, predictionId: string, maxAttempts = 60): Promise<any> {  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const prediction = await replicate.predictions.get(predictionId);
     if (prediction.status === 'succeeded') {
       return prediction.output;
@@ -776,6 +816,48 @@ async function processPipeline(
 
     const finalVideoPath = path.resolve(tmpDir, `final_${jobId}.mp4`);
 
+    // BK-06: legendas burn-in — spec canônica (branco, contorno 3px, keyword laranja,
+    // centro-inferior). Cues derivados do roteiro: cada cena ocupa o intervalo do
+    // clipe correspondente; sem quebrar o render se algo falhar (legenda é acabamento).
+    const subtitlesPath = path.resolve(tmpDir, `captions_${jobId}.ass`);
+    try {
+      const durations = await Promise.all(finalClipPaths.map(probeDuration));
+      let elapsed = 0;
+      const captionCues: CaptionCue[] = [];
+      for (let i = 0; i < finalClipPaths.length; i++) {
+        const line = script[i];
+        const start = elapsed;
+        elapsed += durations[i];
+        if (!line?.text) continue;
+        // Fala dividida em blocos legíveis (~7 palavras por cue).
+        const words = line.text.split(/\s+/).filter(Boolean);
+        const chunkSize = 7;
+        const chunks: string[][] = [];
+        for (let w = 0; w < words.length; w += chunkSize) chunks.push(words.slice(w, w + chunkSize));
+        const sceneSpan = Math.max(0.5, durations[i] - 0.2);
+        chunks.forEach((chunk, chunkIdx) => {
+          const chunkStart = start + 0.1 + (sceneSpan * chunkIdx) / chunks.length;
+          const chunkEnd = start + 0.1 + (sceneSpan * (chunkIdx + 1)) / chunks.length;
+          captionCues.push({
+            start: chunkStart,
+            end: Math.min(chunkEnd, start + durations[i] - 0.05),
+            text: chunk.join(' '),
+          });
+        });
+      }
+      if (captionCues.length) {
+        writeFileSync(subtitlesPath, buildAssSubtitles(captionCues, target.width, target.height));
+        const captionFfmpeg = ffmpegWithSubtitles();
+        if (!captionFfmpeg) {
+          updateJob({ logs: [`⚠️ [Captions] ${captionCues.length} cues gerados, mas o ffmpeg local não tem libass (filtro subtitles). Instale ffmpeg-full ou defina FFMPEG_PATH — render segue SEM burn-in.`] });
+        } else {
+          updateJob({ logs: [`💬 [Captions] ${captionCues.length} cues gerados (spec canônica) — burn-in via ${captionFfmpeg === 'ffmpeg' ? 'ffmpeg' : path.basename(path.dirname(path.dirname(captionFfmpeg)))}.`] });
+        }
+      }
+    } catch (captionError) {
+      updateJob({ logs: [`⚠️ [Captions] Falha ao gerar legendas — render segue sem burn-in: ${captionError instanceof Error ? captionError.message : String(captionError)}`] });
+    }
+
     // Constituição de edição: beats, transições e SFX derivam do roteiro.
     const editingPlan = finalClipPaths.length === script.length
       ? buildEditingPlan(script)
@@ -788,7 +870,7 @@ async function processPipeline(
       ] });
     }
 
-    await assembleVideo(finalClipPaths, finalVideoPath, target, editingPlan);
+    await assembleVideo(finalClipPaths, finalVideoPath, target, editingPlan, existsSync(subtitlesPath) ? subtitlesPath : undefined);
 
     let finalVideoUrl = `/api/pipeline/download?id=${jobId}`;
     let delivery: 'cloud' | 'local' = 'local';
