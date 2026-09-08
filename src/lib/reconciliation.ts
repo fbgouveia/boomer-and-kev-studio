@@ -60,3 +60,39 @@ export function reconciliationAction(outcome: PredictionOutcome): Reconciliation
       return 'RECONCILE_UNAVAILABLE';
   }
 }
+
+export type SceneReconciliation = {
+  sceneId: string;
+  predictionId: string;
+  action: ReconciliationAction;
+  detail?: string;
+};
+
+type PendingRequestLike = { predictionId: string };
+
+// BK-17 (incremento 2): reconciliação em lote para a rota de status — o operador
+// vê o destino de cada predição paga no GET, sem precisar retomar o job.
+export async function reconcileProviderRequests(
+  client: PredictionClient | null,
+  requests: Record<string, PendingRequestLike>,
+): Promise<Record<string, SceneReconciliation>> {
+  if (!client) return {};
+  const results: Record<string, SceneReconciliation> = {};
+  for (const [sceneId, request] of Object.entries(requests)) {
+    if (!request?.predictionId) continue;
+    const outcome = await fetchPredictionOutcome(client, request.predictionId);
+    results[sceneId] = {
+      sceneId,
+      predictionId: request.predictionId,
+      action: reconciliationAction(outcome),
+      detail: outcome.kind === 'succeeded'
+        ? outcome.outputUrl
+        : outcome.kind === 'failed'
+          ? outcome.error
+          : outcome.kind === 'unknown'
+            ? outcome.reason
+            : undefined,
+    };
+  }
+  return results;
+}

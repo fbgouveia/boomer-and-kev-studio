@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { fetchPredictionOutcome, reconciliationAction } from '../src/lib/reconciliation';
+import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests } from '../src/lib/reconciliation';
 
 const stubClient = (response: Record<string, unknown> | Error) => ({
     predictions: {
@@ -62,5 +62,46 @@ describe('fetchPredictionOutcome + reconciliationAction — BK-17', () => {
     it('status desconhecido do provedor => RECONCILE_UNAVAILABLE', async () => {
         const outcome = await fetchPredictionOutcome(stubClient({ status: 'weird_state' }), 'pred-9');
         assert.equal(reconciliationAction(outcome), 'RECONCILE_UNAVAILABLE');
+    });
+});
+
+describe('reconcileProviderRequests — lote para o GET de status (BK-17 inc. 2)', () => {
+    it('sem cliente (sem credencial) => mapa vazio, sem chamadas', async () => {
+        const results = await reconcileProviderRequests(null, {
+            'scene-1': { predictionId: 'pred-a' },
+        });
+        assert.deepEqual(results, {});
+    });
+
+    it('reconcilia cada cena com a ação correta', async () => {
+        const client = {
+            predictions: {
+                get: async (id: string) => {
+                    if (id === 'pred-ok') return { status: 'succeeded', output: ['https://v/a.mp4'] };
+                    if (id === 'pred-running') return { status: 'processing' };
+                    if (id === 'pred-dead') return { status: 'failed', error: 'gpu oom' };
+                    throw new Error('connection refused');
+                },
+            },
+        };
+        const results = await reconcileProviderRequests(client, {
+            'scene-1': { predictionId: 'pred-ok' },
+            'scene-2': { predictionId: 'pred-running' },
+            'scene-3': { predictionId: 'pred-dead' },
+            'scene-4': { predictionId: 'pred-offline' },
+        });
+        assert.equal(results['scene-1'].action, 'REUSE');
+        assert.equal(results['scene-1'].detail, 'https://v/a.mp4');
+        assert.equal(results['scene-2'].action, 'KEEP_POLLING');
+        assert.equal(results['scene-3'].action, 'RELAUNCH');
+        assert.equal(results['scene-3'].detail, 'gpu oom');
+        assert.equal(results['scene-4'].action, 'RECONCILE_UNAVAILABLE');
+    });
+
+    it('entrada sem predictionId é ignorada sem quebrar o lote', async () => {
+        const results = await reconcileProviderRequests(stubClient({ status: 'succeeded', output: ['u'] }), {
+            'scene-1': { predictionId: '' } as never,
+        });
+        assert.deepEqual(results, {});
     });
 });

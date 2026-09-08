@@ -370,6 +370,22 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 - **Continua em BK-17:** reconciliação na GET de status (hoje só no resume),
   worker durável com fila no banco, orçamento/reserva.
 
+### BK-17 — incremento 2 (mesmo turno): reconciliação no GET de status
+
+- **`reconcileProviderRequests` (lib):** lote que reconcilia todas as predições
+  pendentes e devolve ação por cena (REUSE/KEEP_POLLING/RELAUNCH/UNAVAILABLE +
+  detalhe).
+- **GET `/api/pipeline/run?id=`:** na reconciliação de WORKER_RESTARTED, se existe
+  `REPLICATE_API_TOKEN`, cada predição paga é consultada AGORA e o resultado entra
+  no log do job (`🔎 RECONCILED scene:X => REUSE (url)` etc.). O operador vê o
+  destino do dinheiro pago no próprio status, sem retomar. Sem credencial,
+  mantém o aviso PREDICTIONS UNCERTAIN. Falha de consulta nunca quebra o status.
+- **Testes:** +3 casos (cliente nulo, lote com as 4 ações, entrada sem predictionId).
+- **Verificação:** tsc OK; **110/110 unitários**; build OK; verify/security/
+  idempotency standalone verdes; route.ts mantém baseline de lint (18 preexistentes).
+- Worker durável com fila no banco segue bloqueado para sessões autônomas: exige
+  migração no banco remoto (autorização do Felipe).
+
 ### Pendências resultantes (atualizadas)
 
 1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva,

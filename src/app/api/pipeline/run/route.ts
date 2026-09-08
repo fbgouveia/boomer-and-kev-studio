@@ -16,7 +16,7 @@ import {
   refreshResumeLease,
   evaluateResume,
 } from '@/lib/resume-policy';
-import { fetchPredictionOutcome, reconciliationAction } from '@/lib/reconciliation';
+import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests } from '@/lib/reconciliation';
 import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
 
 import { runPipelineSchema } from '@/lib/validations';
@@ -1087,6 +1087,23 @@ export async function GET(req: Request) {
       // e checkpoints são PRESERVADOS: retomada valida e reutiliza o que já foi pago.
       const uncertainPredictions = Object.entries(jobData.providerRequests || {})
         .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
+      // BK-17 (incremento 2): se há credencial do provedor, reconcilia AGORA —
+      // o operador vê o destino de cada predição paga no próprio status.
+      let reconciliationLogs: string[] = [];
+      if (uncertainPredictions.length && process.env.REPLICATE_API_TOKEN) {
+        try {
+          const reconciled = await reconcileProviderRequests(
+            new Replicate({ auth: process.env.REPLICATE_API_TOKEN }),
+            jobData.providerRequests || {},
+          );
+          reconciliationLogs = Object.values(reconciled).map((r) =>
+            `🔎 RECONCILED ${r.sceneId}:${r.predictionId} => ${r.action}${r.detail ? ` (${r.detail})` : ''}`
+          );
+        } catch (reconcileError) {
+          console.warn(`[Pipeline Status] Reconciliação falhou para ${idValidation.data}:`, reconcileError);
+          reconciliationLogs = [`⚠️ RECONCILE_UNAVAILABLE: não foi possível consultar as predições pagas agora.`];
+        }
+      }
       jobData = {
         ...jobData,
         status: 'FAILED',
@@ -1098,7 +1115,8 @@ export async function GET(req: Request) {
           ...(Array.isArray(jobData.logs) ? jobData.logs : []),
           '🔴 WORKER_RESTARTED: o processo original não existe mais; job encerrado sem retry automático.',
           '♻️ Checkpoints e intermediários preservados para retomada com reuso validado.',
-          ...(uncertainPredictions.length
+          ...reconciliationLogs,
+          ...(uncertainPredictions.length && !reconciliationLogs.length
             ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
             : [])
         ]
