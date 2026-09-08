@@ -327,13 +327,27 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 
 ### Pendências resultantes
 
-1. **Restante de BK-16:** fala inteira (mux `-shortest` pode truncar), polling que
-   reconecta sem disparar resume automático, fala literal no prompt de vídeo.
+1. **Restante de BK-16:** ~~fala inteira~~ **feito no complemento abaixo**; polling
+   com timeout **feito**; falta: fala literal no prompt de vídeo (BK-18).
 2. **BK-17:** reconciliação automática de `providerRequests` contra o provedor
    (hoje: IDs conservados e logados, consulta é manual), worker durável, orçamento.
 3. **BK-18:** régua vocal (A/B/C cego) — vozes excêntricas dos pilotos são
    requisito artístico do Felipe.
 4. BK-06, BK-07..BK-10, BK-19..BK-22 conforme ordem registrada acima.
+
+### Complemento do mesmo turno (trecho aprovado: restante de BK-16)
+
+- **Fala inteira:** `klingDurationForAudio` (editing-policy) dimensiona o clipe
+  Kling pela duração REAL do áudio sintetizado (ffprobe): áudio > 5s => clipe de
+  10s, com log explícito. O mux `-shortest` deixa de truncar falas longas; sem
+  acelerar fala (decisão editorial preservada). Sem medição (legado), cai na
+  estimativa do roteiro. Testes incluídos.
+- **Polling:** consulta de status no `page.tsx` com `AbortSignal.timeout(15s)` —
+  fetch pendurado não acumula consultas sobrepostas nem trava o circuit-breaker.
+  Reconexão de job vivo segue sem criar render novo (resume continua manual).
+- Verificação adicional: tsc OK; **100/100 unitários**; lint sem erros novos.
+- Fala literal no prompt de vídeo segue em aberto (acoplada à decisão de áudio
+  nativo do Kling — BK-18).
 
 ## Auditoria e plano de evolução — 09/09/2026
 

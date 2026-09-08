@@ -73,7 +73,6 @@ function transitionFor(
 
 export function buildEditingPlan(script: EditingScene[]): EditingPlan {
   if (!script.length) throw new Error('editing plan exige pelo menos uma cena');
-
   const beats = script.map((_, index) => beatFor(index, script.length));
   const transitions = script.slice(1).map((scene, offset) =>
     transitionFor(script[offset], scene, beats[offset + 1], beats[offset]),
@@ -93,4 +92,15 @@ export function buildEditingPlan(script: EditingScene[]): EditingPlan {
       laughSceneIndex: climax >= 0 ? climax : last,
     },
   };
+}
+
+// BK-16 (fala inteira): o Kling aceita clipes de 5s ou 10s. Escolher pela
+// ESTIMATIVA do roteiro truncava falas no mux (-shortest corta o áudio quando
+// o clipe acaba). Com a duração REAL do áudio já sintetizado, o clipe deve
+// acomodá-la: áudio > 5s => clipe de 10s. Sem acelerar fala (decisão editorial).
+export function klingDurationForAudio(audioDuration: number | undefined, fallback: 5 | 10): 5 | 10 {
+  if (audioDuration === undefined || !Number.isFinite(audioDuration) || audioDuration <= 0) {
+    return fallback;
+  }
+  return audioDuration > 5 ? 10 : 5;
 }

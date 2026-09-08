@@ -982,10 +982,12 @@ export default function Home() {
       setRenderLogs(prev => [`HANDSHAKE_SUCCESSFUL. JOB_ID: ${jobId}`, ...prev]);
 
       // Polling loop com circuit-breaker para impedir processamento infinito (BK-03)
+      // BK-16: cada consulta tem timeout — fetch pendurado não acumula consultas
+      // sobrepostas nem trava o circuit-breaker.
       let consecutiveErrors = 0;
       const pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`/api/pipeline/run?id=${jobId}`);
+          const pollRes = await fetch(`/api/pipeline/run?id=${jobId}`, { signal: AbortSignal.timeout(15_000) });
           if (!pollRes.ok) {
             consecutiveErrors++;
             console.error(`Polling check failed (HTTP ${pollRes.status}), attempt ${consecutiveErrors}/4`);

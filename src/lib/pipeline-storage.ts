@@ -46,7 +46,7 @@ export type ValidatedSceneCheckpoint = {
     videoPath?: string;
 };
 
-function probeMediaDuration(filePath: string, stream: 'audio' | 'video'): Promise<boolean> {
+function probeMediaDuration(filePath: string, stream: 'audio' | 'video'): Promise<number | null> {
     return new Promise((resolve) => {
         const fp = spawn('ffprobe', [
             '-v', 'error',
@@ -57,27 +57,35 @@ function probeMediaDuration(filePath: string, stream: 'audio' | 'video'): Promis
         ], { stdio: ['ignore', 'pipe', 'ignore'] });
         let out = '';
         fp.stdout.on('data', (d) => (out += d));
-        fp.on('error', () => resolve(false));
+        fp.on('error', () => resolve(null));
         fp.on('close', (code) => {
             const duration = parseFloat(out.trim());
-            resolve(code === 0 && Number.isFinite(duration) && duration > 0.1);
+            resolve(code === 0 && Number.isFinite(duration) ? duration : null);
         });
     });
 }
 
 export async function validateSceneArtifacts(checkpoint: SceneCheckpoint): Promise<ValidatedSceneCheckpoint> {
-    const audioValid = checkpoint.audioExists && checkpoint.audioPath
+    const audioDuration = checkpoint.audioExists && checkpoint.audioPath
         ? await probeMediaDuration(checkpoint.audioPath, 'audio')
-        : false;
-    const videoValid = checkpoint.videoExists && checkpoint.videoPath
+        : null;
+    const videoDuration = checkpoint.videoExists && checkpoint.videoPath
         ? await probeMediaDuration(checkpoint.videoPath, 'video')
-        : false;
+        : null;
+    const audioValid = audioDuration !== null && audioDuration > 0.1;
+    const videoValid = videoDuration !== null && videoDuration > 0.1;
     return {
         audioValid,
         videoValid,
         audioPath: audioValid ? checkpoint.audioPath : undefined,
         videoPath: videoValid ? checkpoint.videoPath : undefined,
     };
+}
+
+// BK-16 (fala inteira): duração real de um áudio sintetizado, para dimensionar o
+// clipe do Kling sem truncar a fala no mux (-shortest). null = não medível.
+export function probeAudioDuration(filePath: string): Promise<number | null> {
+    return probeMediaDuration(filePath, 'audio');
 }
 
 export function cleanupPipelineIntermediates(storageDir: string, jobId: string) {

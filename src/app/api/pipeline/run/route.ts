@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
 import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
-import { cleanupPipelineIntermediates, getSceneCheckpoint, validateSceneArtifacts } from '@/lib/pipeline-storage';
+import { cleanupPipelineIntermediates, getSceneCheckpoint, validateSceneArtifacts, probeAudioDuration } from '@/lib/pipeline-storage';
 import {
   pipelineConfigHash,
   acquireResumeLease,
@@ -16,7 +16,7 @@ import {
   refreshResumeLease,
   evaluateResume,
 } from '@/lib/resume-policy';
-import { buildEditingPlan, type EditingPlan } from '@/lib/editing-policy';
+import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
 
 import { runPipelineSchema } from '@/lib/validations';
 
@@ -424,6 +424,9 @@ async function processPipeline(
     // o run FALHA aqui, com US$0 gastos em Kling, em vez de gerar vídeo mudo "com sucesso".
     currentStage = 'voice_gate';
     const audioByScene = new Map<string, string>();
+    // BK-16 (fala inteira): duração real do áudio por cena — dimensiona o clipe
+    // do Kling em vez de confiar na estimativa do roteiro.
+    const audioDurations = new Map<string, number>();
 
     for (let i = 0; i < script.length; i++) {
       const line = script[i];
@@ -437,6 +440,8 @@ async function processPipeline(
         if (validated.audioValid && validated.audioPath) {
           const buffer = readFileSync(validated.audioPath);
           audioByScene.set(line.id, `data:audio/mpeg;base64,${buffer.toString('base64')}`);
+          const measured = await probeAudioDuration(validated.audioPath);
+          if (measured !== null) audioDurations.set(line.id, measured);
           updateJob({ logs: [`♻️ [Scene ${index}] Checkpoint áudio: sintetização prévia validada e reutilizada (ElevenLabs pulado).`] });
           continue;
         }
@@ -482,7 +487,10 @@ async function processPipeline(
 
       const buffer = await response.arrayBuffer();
       audioByScene.set(line.id, `data:audio/mpeg;base64,${Buffer.from(buffer).toString('base64')}`);
-      writeFileSync(path.resolve(tmpDir, `audio_${jobId}_${line.id}.mp3`), Buffer.from(buffer));
+      const sceneAudioPath = path.resolve(tmpDir, `audio_${jobId}_${line.id}.mp3`);
+      writeFileSync(sceneAudioPath, Buffer.from(buffer));
+      const measured = await probeAudioDuration(sceneAudioPath);
+      if (measured !== null) audioDurations.set(line.id, measured);
       updateJob({ logs: [`✅ [Scene ${index}] Voice synthesized successfully.`] });
     }
 
@@ -525,7 +533,7 @@ async function processPipeline(
         scenesToProcess.push({
           sceneId, index, predictionId: null as string | null, audioDataUri, status: "CHAINED",
           chainFrom,
-          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect), duration: line.durationEst <= 5 ? 5 : 10 }
+          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect), duration: klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10) }
         });
         continue;
       }
@@ -554,9 +562,16 @@ async function processPipeline(
             updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
           }
 
+          // BK-16 (fala inteira): clipe Kling dimensionado pelo áudio REAL medido —
+          // áudio > 5s pede clipe de 10s; -shortest no mux não corta mais a fala.
+          const klingDuration = klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10);
+          if (klingDuration === 10 && (line.durationEst <= 5)) {
+            updateJob({ logs: [`⏱️ [Scene ${index}] Áudio real excede 5s — clipe Kling de 10s para fala inteira.`] });
+          }
+
           const prediction = await createKlingPrediction(replicate, {
             prompt: prompt,
-            duration: line.durationEst <= 5 ? 5 : 10,
+            duration: klingDuration,
             aspect_ratio: aspect,
             start_image: startImage,
             negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",

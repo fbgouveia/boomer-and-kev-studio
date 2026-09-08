@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import test, { describe } from 'node:test';
-import { buildEditingPlan } from '../src/lib/editing-policy';
+import test, { describe, it } from 'node:test';
+import { buildEditingPlan, klingDurationForAudio } from '../src/lib/editing-policy';
 
 const episode = [
   { characterId: 'boomer', emotion: 'EXCITED' },
@@ -61,5 +61,23 @@ describe('buildEditingPlan — constituição de edição e retenção', () => {
 
   test('rejeita roteiro vazio', () => {
     assert.throws(() => buildEditingPlan([]), /pelo menos uma cena/);
+  });
+});
+
+describe('klingDurationForAudio — fala inteira (BK-16)', () => {
+  it('áudio dentro de 5s mantém clipe de 5s', () => {
+    assert.equal(klingDurationForAudio(4.2, 5), 5);
+    assert.equal(klingDurationForAudio(5, 5), 5);
+  });
+
+  it('áudio maior que 5s pede clipe de 10s (não trunca no mux)', () => {
+    assert.equal(klingDurationForAudio(5.2, 5), 10);
+    assert.equal(klingDurationForAudio(9.9, 5), 10);
+  });
+
+  it('sem medição (checkpoint legado) cai na estimativa do roteiro', () => {
+    assert.equal(klingDurationForAudio(undefined, 10), 10);
+    assert.equal(klingDurationForAudio(0, 5), 5);
+    assert.equal(klingDurationForAudio(NaN, 5), 5);
   });
 });
