@@ -16,6 +16,7 @@ import {
   refreshResumeLease,
   evaluateResume,
 } from '@/lib/resume-policy';
+import { fetchPredictionOutcome, reconciliationAction } from '@/lib/reconciliation';
 import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
 
 import { runPipelineSchema } from '@/lib/validations';
@@ -362,10 +363,19 @@ async function processPipeline(
   // se o processo cair depois da cobrança, o resultado incerto fica conservado
   // no estado do job em vez de sumir com a memória do worker.
   let providerRequests: Record<string, SceneProviderRequest> = {};
+  // BK-17 (incremento 1): ledger de estado por cena — o estado do job diz quais
+  // cenas têm áudio/vídeo prontos mesmo após falha ou reinício.
+  let sceneStates: Record<string, string> = {};
   try {
     const existingState = JSON.parse(readFileSync(jobFilePath, 'utf8'));
     providerRequests = existingState.providerRequests || {};
+    sceneStates = existingState.sceneStates || {};
   } catch { /* job novo sem estado prévio */ }
+
+  const markScene = (sceneId: string, state: 'AUDIO_READY' | 'VIDEO_READY') => {
+    sceneStates = { ...sceneStates, [sceneId]: state };
+    updateJob({ sceneStates });
+  };
 
   const updateJob = (updates: any) => {
     try {
@@ -442,6 +452,7 @@ async function processPipeline(
           audioByScene.set(line.id, `data:audio/mpeg;base64,${buffer.toString('base64')}`);
           const measured = await probeAudioDuration(validated.audioPath);
           if (measured !== null) audioDurations.set(line.id, measured);
+          markScene(line.id, 'AUDIO_READY');
           updateJob({ logs: [`♻️ [Scene ${index}] Checkpoint áudio: sintetização prévia validada e reutilizada (ElevenLabs pulado).`] });
           continue;
         }
@@ -491,6 +502,7 @@ async function processPipeline(
       writeFileSync(sceneAudioPath, Buffer.from(buffer));
       const measured = await probeAudioDuration(sceneAudioPath);
       if (measured !== null) audioDurations.set(line.id, measured);
+      markScene(line.id, 'AUDIO_READY');
       updateJob({ logs: [`✅ [Scene ${index}] Voice synthesized successfully.`] });
     }
 
@@ -513,6 +525,7 @@ async function processPipeline(
         const validated = await validateSceneArtifacts(checkpoint);
         if (validated.videoValid && validated.videoPath) {
           updateJob({ logs: [`♻️ [Scene ${index}] Checkpoint vídeo: render prévio validado e reutilizado (Kling pulado).`] });
+          markScene(sceneId, 'VIDEO_READY');
           continue;
         }
         try { unlinkSync(checkpoint.videoPath); } catch { /* já removido */ }
@@ -522,6 +535,38 @@ async function processPipeline(
       // 1b. Video Generation (Kling)
       let videoUrl = "";
       const isSandbox = !replicate;
+
+      // BK-17: reconciliação de predições incertas ANTES de repetir cobrança.
+      // Sucesso => reutiliza o resultado pago; processando => retoma polling;
+      // falha confirmada => nova predição; incerto/indisponível => run para
+      // (PROVIDER_UNKNOWN), nunca predição nova às cegas.
+      const pendingRequest = providerRequests[sceneId];
+      if (replicate && pendingRequest?.predictionId) {
+        const outcome = await fetchPredictionOutcome(replicate, pendingRequest.predictionId);
+        const action = reconciliationAction(outcome);
+        if (action === 'REUSE') {
+          updateJob({ logs: [`🛟 [Scene ${index}] Predição paga reconciliada: SUCESSO no provedor — resultado reutilizado (Kling novo NÃO lançado).`] });
+          scenesToProcess.push({
+            sceneId, index, predictionId: pendingRequest.predictionId,
+            audioDataUri, status: "PROCESSING",
+            reconciledUrl: outcome.kind === 'succeeded' ? outcome.outputUrl : undefined
+          });
+          continue;
+        }
+        if (action === 'KEEP_POLLING') {
+          updateJob({ logs: [`⏳ [Scene ${index}] Predição paga ainda processando no provedor — polling retomado sem nova cobrança.`] });
+          scenesToProcess.push({ sceneId, index, predictionId: pendingRequest.predictionId, audioDataUri, status: "PROCESSING" });
+          continue;
+        }
+        if (action === 'RELAUNCH') {
+          updateJob({ logs: [`⚠️ [Scene ${index}] Predição paga confirmada como FALHA pelo provedor (${outcome.kind === 'failed' ? outcome.error : 'sem detalhe'}) — lançando nova predição.`] });
+          delete providerRequests[sceneId];
+          updateJob({ providerRequests });
+        }
+        if (action === 'RECONCILE_UNAVAILABLE') {
+          throw new Error(`PROVIDER_UNKNOWN: não foi possível reconciliar a predição paga ${pendingRequest.predictionId} (${outcome.kind === 'unknown' ? outcome.reason : 'desconhecido'}). Run interrompido para evitar cobrança duplicada — reconcilie e retome.`);
+        }
+      }
 
       // WP 1.6: mesma personagem em cenas consecutivas → a cena N+1 nasce do último
       // frame da cena N (continuidade real). O launch é ADIADO p/ o Step 2, quando o
@@ -651,9 +696,15 @@ async function processPipeline(
         }
 
         if (!scene.predictionId) throw new Error(`cena ${scene.index}: sem predictionId (launch encadeado falhou?)`);
-        updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
-        const output = await pollPrediction(replicate!, scene.predictionId);
-        const klingVideoUrl = Array.isArray(output) ? output[0] : output;
+        let klingVideoUrl: string;
+        if ('reconciledUrl' in scene && scene.reconciledUrl) {
+          klingVideoUrl = scene.reconciledUrl;
+          updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do provedor em uso (polling pulado).`] });
+        } else {
+          updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
+          const output = await pollPrediction(replicate!, scene.predictionId);
+          klingVideoUrl = Array.isArray(output) ? output[0] : output;
+        }
         updateJob({ logs: [`✅ [Scene ${scene.index}] Kling video generated: ${klingVideoUrl}`] });
 
         // Wav2Lip removido (decisão 06/08 §P0): lipsync descartado por decisão do Felipe —
@@ -696,6 +747,7 @@ async function processPipeline(
         });
 
         finalClipPaths.push(finalScenePath);
+        markScene(scene.sceneId, 'VIDEO_READY');
         updateJob({ logs: [`✅ [Scene ${scene.index}] Scene completed & saved.`] });
       } catch (err: any) {
         // BK-16: falha real com provedor configurado — estado identifica a etapa

@@ -345,9 +345,38 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 - **Polling:** consulta de status no `page.tsx` com `AbortSignal.timeout(15s)` —
   fetch pendurado não acumula consultas sobrepostas nem trava o circuit-breaker.
   Reconexão de job vivo segue sem criar render novo (resume continua manual).
-- Verificação adicional: tsc OK; **100/100 unitários**; lint sem erros novos.
 - Fala literal no prompt de vídeo segue em aberto (acoplada à decisão de áudio
   nativo do Kling — BK-18).
+
+### BK-17 — incremento 1 (mesmo turno, sem gasto): reconciliação antes de repetir
+
+- **`src/lib/reconciliation.ts` (novo):** consulta o status da predição paga no
+  provedor e decide: SUCESSO => `REUSE` (resultado pago reutilizado, Kling novo
+  NÃO lançado); PROCESSING/STARTING => `KEEP_POLLING` (polling retomado sem nova
+  cobrança); FAILED/CANCELED => `RELAUNCH` (falha confirmada permite nova
+  predição); erro de rede/status estranho => `RECONCILE_UNAVAILABLE`.
+- **`route.ts` (Step 1b):** ao retomar um job com `providerRequests` pendentes, a
+  reconciliação roda ANTES de qualquer novo lançamento. Resultado incerto
+  (indisponível) INTERROMPE o run com `PROVIDER_UNKNOWN` em vez de lançar
+  predição nova às cegas — cobrança duplicada evitada por contrato, não por sorte.
+- **Ledger de estado por cena:** `sceneStates` (PENDING→AUDIO_READY→VIDEO_READY)
+  persistido no job em cada transição; após falha/restart, o estado diz quais
+  cenas estão prontas sem depender de varredura de disco.
+- **Testes:** `tests/reconciliation.test.ts` (7 casos: REUSE array/string, falha
+  confirmada, canceled, keep-polling, rede indisponível, status estranho).
+- **Verificação:** tsc OK; **107/107 unitários**; build OK; verify/security/
+  idempotency/deploy standalone todos verdes; lint sem erros novos (route.ts
+  mantém os 18 preexistentes).
+- **Continua em BK-17:** reconciliação na GET de status (hoje só no resume),
+  worker durável com fila no banco, orçamento/reserva.
+
+### Pendências resultantes (atualizadas)
+
+1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva,
+   reconciliação no GET de status.
+2. **BK-18:** régua vocal (A/B/C cego) — vozes excêntricas dos pilotos são
+   requisito artístico do Felipe; fala literal no prompt acoplada a essa decisão.
+3. BK-06, BK-07..BK-10, BK-19..BK-22 conforme ordem registrada acima.
 
 ## Auditoria e plano de evolução — 09/09/2026
 
