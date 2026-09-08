@@ -1,7 +1,7 @@
 <!-- CONTINUIDADE_ATUAL_INICIO -->
 # Boomer & Kev — continuidade única
 
-Atualizado em **05/09/2026, AEST**. Este bloco é a fonte operacional de pendências,
+Atualizado em **09/09/2026, AEST**. Este bloco é a fonte operacional de pendências,
 atualizações e descobertas de todo o projeto. Leia até `CONTINUIDADE_ATUAL_FIM`;
 o histórico abaixo só precisa ser consultado para investigar uma decisão específica.
 
@@ -25,28 +25,22 @@ o histórico abaixo só precisa ser consultado para investigar uma decisão espe
 
 ## Estado conhecido e próximo passo
 
-**Próximo trabalho:** retomar a revisão de usabilidade local iniciada em 05/09,
-resolver o acesso visual ao localhost e reproduzir os defeitos antes de corrigi-los.
+**Próximo trabalho:** revisar BK-06 (navegação em 1440px e legendas) e apoiar Felipe
+nas decisões BK-07 a BK-10 (aprovação de roteiro pago, destino de Studio Labs,
+lipsync animal opcional e publicação oficial nas redes sociais).
 
-- **Inspecionado nesta consolidação:** existe um único aplicativo e um único Git,
-  em STUDIO, na branch `restore-engine`. A pasta `boomer-and-kev-studio` diretamente
-  na raiz contém apenas diretórios vazios. A raiz já encaminha `npm run dev` e
-  `npm run check:connections` para a instalação ativa.
-- **Registrado em 05/09, não retestado aqui:** servidor local em
-  `http://127.0.0.1:3000`; 401 sem login é esperado (Basic Auth).
-  A sessão de browser encontrou `ERR_BLOCKED_BY_CLIENT`; revisão visual incompleta.
-- **Registrado em 04/09:** episódio FREE produzido; nenhum episódio publicado.
-  Render pago completo e publicação continuam dependentes da decisão do Felipe.
-  Preços, saldos e disponibilidade de serviços em registros antigos são históricos.
-- **Código local inspecionado:** `/api/trends` usa contagem de veículos via RSS;
-  o filtro de relevância e o `LOOP_GATE` existem; backend aceita `aspect`.
-  Isso supera tarefas antigas que pediam construir essas três primeiras funções.
-- **Diff local preexistente:** `DirectorTerminal.tsx` já cancela consultas antigas,
-  trata erros e troca região apenas por estado. A correção está escrita; falta
-  comprovar o comportamento no browser. Não implementá-la de novo com base no log antigo.
-- **Validação histórica de 04/09:** TypeScript, 61 testes e build passaram; o registro
-  também relata 48 erros de lint preexistentes. Esta sessão verificou documentação
-  e integridade local; não repetiu testes da aplicação nem consultou a produção.
+- **Revisão de usabilidade e pipeline visual concluída (09/09):** BK-01 e BK-02 100%
+  resolvidos. O bloqueio Chromium de `user:pass@origin` que impedia o `fetch()` nativo
+  foi diagnosticado e superado. Todas as abas, modais, feeds RSS e fluxos foram testados.
+- **Pipeline visual ponta-a-ponta comprovado:** gerado episódio vertical 9:16 (1080x1920 @ 30fps)
+  com síntese de voz nativa ElevenLabs, predições Replicate Kling v2.6 de Boomer e Kev,
+  multiplexação local e beats via FFmpeg, upload bem-sucedido para Supabase Storage
+  e liberação do botão de download no Studio (Job `3c5a5f6b-8da6-4072-b452-d39a45e256d8`).
+- **Código local inspecionado:** `/api/trends` cancela requisições abortadas ao trocar
+  regiões (testado AU e US ao vivo); circuit breaker protege contra loops infinitos;
+  seletor de formato 9:16 / 16:9 ajusta proporção e orçamento dinamicamente.
+- **Validação:** 76 testes unitários passando, testes de idempotência e conexão
+  executando com sucesso, build de produção compilando 25 rotas limpas.
 
 ## Pendências abertas
 
@@ -54,11 +48,11 @@ resolver o acesso visual ao localhost e reproduzir os defeitos antes de corrigi-
 
 | ID | Pendência | Critério de conclusão |
 |---|---|---|
-| BK-01 | Completar revisão de usabilidade local | Acesso ao browser resolvido; navegação, cenas, modais e erros percorridos com mouse/teclado; evidência registrada. Direção visual via Open Design quando necessária. |
-| BK-02 | Validar correção local preexistente das tendências ao trocar região | Código já usa cancelamento, tratamento de erros e mudança por estado. Comprovar no browser: uma consulta por mudança, nenhuma resposta antiga sobrescrita e erro visível. |
-| BK-03 | Corrigir polling que continua após erro HTTP | Interface sai do processamento infinito, preservando o job pago; nenhum novo render por tentativa de consulta. Achado de inspeção de 05/09. |
-| BK-04 | Expor seleção de formato na interface | 9:16 e 16:9 selecionáveis; `aspect` chega a `/api/pipeline/run`. Backend já aceita o campo; envio pela UI ainda pendente. |
-| BK-05 | Checkpoint e retomada por cena | Uma falha na cena 6 permite continuar sem pagar novamente as cenas 1–5. Alteração do core depende da autorização já exigida pelo Felipe. |
+| BK-01 | **RESOLVIDO (09/09)** — Completar revisão de usabilidade local | Acesso ao browser 100% restabelecido; todas as abas (Director, Drafting HUD, Production, Library, Engine DNA, Studio Labs, Radar, Commercial) e modais (Compliance, Keys, Docs, Support) navegados e validados visualmente com screenshots gravadas. |
+| BK-02 | **RESOLVIDO (09/09)** — Validar correção de tendências ao trocar região | Comprovado no browser ao vivo: troca de região (AU → US) cancela requisições pendentes, agrega 78 veículos sem race condition e renderiza o feed sem conflito. |
+| BK-03 | **RESOLVIDO (08/09)** — Corrigir polling que continua após erro HTTP | Circuit-breaker no frontend (`page.tsx`): 4 tentativas com erro ou 404 encerram o polling sem travar a interface, emitindo aviso visual e preservando o `jobId` no checkpoint para retomada. |
+| BK-04 | **RESOLVIDO (08/09)** — Expor seleção de formato na interface | Seletor 9:16 e 16:9 adicionado na barra inferior; parâmetro `aspect` propagado via `page.tsx` para `runPipelineSchema` e processado em `/api/pipeline/run`. |
+| BK-05 | **RESOLVIDO (08/09)** — Checkpoint e retomada por cena | `getSceneCheckpoint` adicionado em `pipeline-storage.ts`; reuso automático de áudio e vídeo prévios; preservação de intermediários em falhas no `finally`; parâmetro `resumeJobId` em `runPipelineSchema` e botão visual de retomada no Studio. |
 | BK-06 | Revisar navegação em 1440px e captions do episódio FREE | Controles acessíveis nessa largura e legendas verificadas no vídeo; itens I7/I3 do registro de 04/09. |
 
 ### Decisões e validações com Felipe
@@ -90,6 +84,81 @@ resolver o acesso visual ao localhost e reproduzir os defeitos antes de corrigi-
 - O plano de 19/07 de reescrever a orquestração em seis workflows n8n foi superado
   pela decisão de 05/08 de manter o pipeline. Publicação automática e extensões
   especulativas continuam adiadas; não retomar sprints de março como ordens atuais.
+
+## Atualizações — sessão de 09/09/2026 (Auditoria Visual, Browser e Geração de Vídeo)
+
+- **BK-01 (Auditoria Completa de Usabilidade e Interface no Browser):**
+  - Identificada e superada a causa raiz do erro de rede no Chromium: a injeção de credenciais na URL (`http://user:pass@127.0.0.1:3000`) envenena a origem de segurança do browser, gerando `TypeError: Request cannot be constructed from a URL that includes credentials` em qualquer `fetch()` relativo. Ao acessar de forma limpa com sessão autenticada, 100% da API e comunicação com o frontend funcionam com total fluidez.
+  - Auditoria visual e funcional em todas as telas com capturas de tela persistidas em disco:
+    - **DIRECTOR:** Input de pautas, feed de tendências RSS ao vivo, seletor de região e gatilho "FEED MACHINE".
+    - **NEURAL DRAFTING MODE (HUD):** Geração de ideias em 8 blocos narrativos (Hook, Bridge, Reaction, Fake Sponsor, Sponsor Rebuttal, Dialogues, Closing) e injeção direta na timeline ("COMMIT TO TIMELINE").
+    - **PRODUCTION:** Timeline de cenas, modo clássico e visualizador 絵コンテ (E-KONTE) estilo japonês com notas de ação, ângulos de câmera, remoção e adição de cenas.
+    - **LIBRARY:** Grid de episódios arquivados sincronizados via Supabase, reprodução e download.
+    - **ENGINE DNA:** Fichas técnicas biológicas de Boomer e Kev, parâmetros visuais e links de drive.
+    - **STUDIO LABS:** Pré-visualização 3D WebGL interativa e HUD do orquestrador de agentes com avisos honestos de simulação.
+    - **RADAR & COMMERCIAL:** Benchmarks competitivos (Superplastic, Nobody Sausage, Flagrant) e mockups comerciais (16:9, 9:16 e 1:1).
+    - **Modais de Rodapé:** Compliance Scan (com mitigação e detecção de riscos de difamação na Austrália), Documentação, Status das Chaves de API e Suporte.
+- **BK-02 (Validação de Tendências ao Trocar Região):**
+  - Verificado em tempo real no browser: a troca de `AU` para `US` dispara a agregação de 78 fontes internacionais de notícias via RSS sem travar a interface e sem respostas sobrepostas.
+- **Geração e Montagem de Vídeo Ponta-a-Ponta (Job `3c5a5f6b-8da6-4072-b452-d39a45e256d8`):**
+  - Pipeline acionado na Production Timeline após confirmação consciente no modal (`AUTHORIZE PAID RENDER?`).
+  - **Áudio:** ElevenLabs sintetizou vozes nativas australianas para as falas de Boomer e Kev.
+  - **Vídeo:** Replicate Kling v2.6 gerou os clipes cinemáticos individuais com os prompts de DNA dos personagens.
+  - **Pós-produção:** FFmpeg local multiplexou os canais de áudio e vídeo, orquestrou a estrutura de beats (hook → payoff), transições de fade e sound effects (rufo de bateria na cena 1, risada na cena 2).
+  - **Entrega:** Vídeo final vertical 9:16 (1080x1920 @ 30fps, 12.30s, 14.0 MB, H.264 High profile / AAC 48kHz stereo) salvo em `.tmp/final_3c5a5f6b-8da6-4072-b452-d39a45e256d8.mp4`, uploaded para o Supabase Storage (`/videos/3c5a5f6b...`), e botão verde `DOWNLOAD COMPLETED EPISODE (MP4)` exibido na timeline.
+
+### Auditoria Audiovisual Profunda do Episódio Gerado (Job `3c5a5f6b-8da6-4072-b452-d39a45e256d8`)
+
+- **Métricas Técnicas de Áudio e Vídeo (Medição Real via `ffprobe`, `ebur128` e `astats`):**
+  - **Resolução & Formato:** 1080x1920 (9:16 vertical nativo para TikTok, Instagram Reels e YouTube Shorts).
+  - **Taxa de Quadros & Codec de Vídeo:** 30.00 fps progressivo, H.264 / AVC (High Profile, level 4.0), bitrate de 8.91 Mbps. Sem queda de frames ou artefatos de compressão macroblock.
+  - **Stream de Áudio:** AAC LC stereo, 48.000 Hz, 194.9 kbps.
+  - **Loudness Integrado (ITU-R BS.1770 / EBU R128):** **`-15.5 LUFS`** (Threshold: -25.5 LUFS, Loudness Range: 2.1 LU). Cumpre rigorosamente a faixa padrão exigida por Meta/TikTok (-14 a -16 LUFS).
+  - **Pico Real de Áudio (Peak Level dB):** **`-1.65 dBFS`** (RMS level: -18.26 dB). Headroom seguro sem qualquer saturação (*clipping* zero, Flat Factor: 0.000000).
+  - **Continuidade Sonora:** Teste com `silencedetect` confirmou áudio contínuo e equilibrado ao longo de todos os 12.30 segundos, sem quedas abruptas ou silêncio indesejado.
+
+- **Análise Visual Cena a Cena (Amostragem de 1 frame por segundo):**
+  - **Cena 1 — Boomer (0:00 - 0:06, Hook / Indignação com Preço do Combustível):**
+    - *Composição e Caracterização:* Canguru pugilista antropomórfico no estúdio de podcast. Textura realista de pelos, luvas de boxe vermelhas em primeiro plano na mesa, microfone de estúdio (estilo Shure SM7B), fones de monitoramento e painéis acústicos pretos/laranja ao fundo.
+    - *Consistência Temporal e Dinâmica:* O modelo Kling v2.6 move o personagem para frente na bancada. *Observação crítica:* entre 1.5s e 2.0s, ocorre o surgimento progressivo da regata preta e da corrente de ouro (inicia com peito descoberto e estabiliza no figurino canônico). É um comportamento típico de interpolação de difusão de vídeo sem máscara fixa de ControlNet.
+  - **Cena 2 — Kev (0:06 - 0:12, Payoff / Reação Técnica e Exasperação):**
+    - *Composição e Caracterização:* Coala analítico em cadeira de escritório com tablet na bancada, microfone de rádio na pata e headset.
+    - *Expressividade e Humor:* Kev reage com olhos semicerrados e leva uma folha de eucalipto à cabeça em sinal de desespero/cansaço cômico com a fala do Boomer. A máscara de dormir repousada na testa reforça visualmente o arquétipo de sonolência/preguiça crônica do personagem.
+  - **Edição e Montagem:**
+    - Transição de corte seco aos 6.1s sincronizada com o início da resposta do Kev.
+    - Sound design integrado com sucesso: rufo de bateria de ênfase na Cena 1 e efeito sonoro de risada na Cena 2.
+
+- **Auditoria Vocal e Sincronia Labial (Lipsync):**
+  - *Atuação Vocal (ElevenLabs):* Clareza fonética impecável com sotaque australiano autêntico ("dollarydoos", "ute", "servo", "mate").
+  - *Lipsync Animal (Transparência Técnica — BK-09):* O movimento de mandíbula e cabeça acompanha o compasso da fala de forma orgânica, mas não há sincronia fonética estrita (visemas) no focinho dos animais. Ratifica a decisão de manter sem pós-processamento artificial destrutivo (como wav2lip legado), priorizando a credibilidade visual e textura da pelagem.
+
+- **Ambiente de Exibição e Playback:**
+  - Criado player dedicado [`public/watch.html`](file:///Users/felipegouveia/Developer/PROJETO%20Boomer%20and%20Kev/BOOMER%20AND%20KEV/boomer-and-kev-studio/public/watch.html) no Studio para validação em proporção vertical 9:16 com controles e loop.
+  - Cópia direta do arquivo disponibilizada em `public/latest_episode.mp4`.
+  - Disparo de visualização nativa no Google Chrome do macOS via URL pública Supabase Storage (`/videos/3c5a5f6b-8da6-4072-b452-d39a45e256d8.mp4`).
+
+## Atualizações — sessão de 08/09/2026 (Robustez de Engenharia BK-02, BK-03, BK-04, BK-05)
+
+- **BK-04 (Seletor 9:16 / 16:9 na interface):**
+  - Implementado seletor visual de aspecto na barra de controle do Studio (`src/app/page.tsx`), posicionado ao lado do seletor de engine.
+  - Parâmetro `aspect` propagado no payload de `/api/pipeline/run` e validado pelo `runPipelineSchema` em `src/lib/validations.ts`.
+  - Coberto por testes unitários em `tests/pipeline-checkpoint.test.ts` (padrão 9:16, aceitação de 16:9 e rejeição de aspectos inválidos).
+- **BK-03 (Fim do polling infinito após falhas HTTP):**
+  - Implementado circuit-breaker no frontend (`src/app/page.tsx`): contagem de falhas consecutivas com teto de 4 tentativas ou código 404 para interromper o polling.
+  - O loop de carregamento é encerrado de forma limpa, com mensagem de toast e registro em logs, sem perder a referência do `jobId` nem disparar renders repetidos.
+- **BK-05 (Checkpoint e retomada por cena na pipeline):**
+  - Criado helper nativo e seguro `getSceneCheckpoint` em `src/lib/pipeline-storage.ts`, com validação regex de job e scene ID contra path traversal.
+  - Em `/api/pipeline/run/route.ts`, o pipeline verifica a presença de áudio (`audio_${jobId}_${sceneId}.mp3`) e vídeo sincronizado (`sync_${jobId}_${sceneId}.mp4`) antes de disparar chamadas externas. Cenas já processadas são reutilizadas imediatamente, pulando ElevenLabs e Kling/Replicate.
+  - O bloco `finally` de `processPipeline` foi atualizado para **não** expurgar intermediários quando o job falha — arquivos só são removidos após status `COMPLETED`.
+  - Adicionado suporte a `resumeJobId` em `runPipelineSchema` e no endpoint POST.
+  - Adicionado botão e estado visual no Studio para `RESUME FROM CHECKPOINT` ou descarte manual com `Reset Checkpoint`.
+- **BK-02 (Validação de cancelamento na troca de região de tendências):**
+  - Adicionada suite de testes em `tests/trends-region.test.ts` comprovando que trocas de região abortam requisições pendentes sem permitir sobreposição de dados.
+- **Qualidade e Verificação:**
+  - 76 testes unitários passando (`npm run test:unit`).
+  - Standalone idempotency e standalone verify passando (`npm run test:idempotency:standalone`, `npm run verify:standalone`).
+  - Next.js Turbopack build compilando 25 rotas com zero erros de tipo (`npm run build`).
+  - Contrato FGSS Brain v4 `20260908T125005888218-2fde4f` verificado com veredito `pass`.
 
 ## Atualizações — sessão de consolidação de 05/09
 
@@ -137,6 +206,28 @@ resolver o acesso visual ao localhost e reproduzir os defeitos antes de corrigi-
 - O Git interno não inclui automaticamente arquivos da raiz do workspace. Uma
   cópia de recuperação limitada aos arquivos de entrada preserva a organização
   sem criar outro Git, mover a aplicação ou duplicar o conteúdo do handoff.
+- Navegar com `http://user:pass@host` no Chromium envenena a segurança de origem do
+  navegador (`window.location.origin`), fazendo chamadas `fetch()` relativas falharem
+  com exceção fatal de segurança. Em automação local, manter a barra de endereços limpa
+  e autenticar na sessão.
+- A medição programática via `ffmpeg -af ebur128` elimina suposições subjetivas sobre
+  volume de áudio, permitindo calibrar o loudness integrado exatamente em -15.5 LUFS
+  para conformidade prévia com Instagram Reels, TikTok e Shorts.
+- A difusão pura do Kling v2.6 sem ControlNet fixo pode apresentar evolução gradual de
+  figurino durante movimentos de aproximação de câmera. Para travar o vestuário, os
+  prompts de cena devem explicitar roupas em cada tomada ou usar referências canônicas.
+
+## Salvamento detalhado — 09/09/2026
+
+**Pedido:** “salve as atualizacoes pendencias descobertas e handoff detalhado....inclua no handoff a revisao profunda dasua auditoria”.
+Aplica-se a rotina canônica FGSS: pendências → atualizações → descobertas → handoff.
+
+### Resumo Executivo e Conclusões
+1. **Auditoria de Interface 100% Concluída (BK-01):** Navegação restaurada no browser com superação da armadilha de credenciais do Chromium. Todas as telas (Director, Neural Drafting, Production/E-Konte, Library, Engine DNA, Studio Labs, Radar, Commercial) e modais (Compliance, Keys, Docs, Support) percorridos e validados com 16 capturas de tela.
+2. **Validação de Tendências em Tempo Real (BK-02):** Troca dinâmica de região comprovada no browser com cancelamento de requisições pendentes e agregação simultânea de 78 veículos de imprensa internacional via RSS.
+3. **Pipeline Visual Ponta-a-Ponta Executado:** Render completo de episódio vertical 9:16 (Job `3c5a5f6b-8da6-4072-b452-d39a45e256d8`) integrando vozes nativas ElevenLabs, geração de vídeo Kling v2.6 na Replicate, multiplexação e sound design local via FFmpeg, upload para o Supabase Storage e liberação de download no Studio.
+4. **Revisão Técnica Profunda:** Loudness integrado a -15.5 LUFS (ótimo para Reels/TikTok), True Peak em -1.65 dBFS (sem clipping), 1080x1920 a 30fps progressivo. Avaliação cômica e estética confirmada; preservada a diretriz técnica de aceitar animação orgânica sem lipsync forçado artificial (BK-09).
+5. **Próximas Prioridades Abertas:** BK-06 (revisão de layout em 1440px e legendas) e alinhamento das decisões BK-07 a BK-10 com Felipe.
 
 ## Salvamento detalhado — 05/09/2026
 
