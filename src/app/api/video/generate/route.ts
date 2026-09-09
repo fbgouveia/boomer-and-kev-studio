@@ -110,7 +110,6 @@ export async function POST(request: Request) {
     }
 
     const replicate = new Replicate({ auth: replicateToken });
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://boomer-kev-studio.vercel.app';
     const prediction = await replicate.predictions.create({
       model: 'kwaivgi/kling-v2.6',
       input: {
@@ -119,8 +118,8 @@ export async function POST(request: Request) {
         aspect_ratio: aspectRatio,
         ...(firstFrameAnchor ? { input_image: firstFrameAnchor } : {}),
       },
-      webhook: `${siteUrl}/api/ai/callback`,
-      webhook_events_filter: ['completed'],
+      // Status is read through /api/render/status; the legacy callback cannot
+      // authenticate provider requests and must not receive a webhook.
     });
     const responseBody = {
       status: 'processing',
