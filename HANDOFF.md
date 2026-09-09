@@ -428,8 +428,44 @@ percorridos, capturas em `review_frames/bk06_1440_*.png`. Zero overflow horizont
 - **Verificação:** tsc OK; **116/116 unitários (2 skipped: exigem ffprobe
   indisponível em CI)**; build OK; verify/security/idempotency/deploy standalone
   verdes; lint sem erros novos (route.ts mantém 18 preexistentes).
-- **Pop-in animado da spec NÃO implementado** (ASS com `\t()` por palavra exige
-  karaoke tags — ficou fora do mínimo; documentado como refino BK-06 restante).
+- **Pop-in animado:** ver complemento BK-14 abaixo (implementado depois).
+
+### BK-14 concluída + refinamentos BK-06 (mesmo turno)
+
+**BK-14 — diffs preexistentes revisados e commitados (5 commits, cada frente com
+prova):** árvore de trabalho limpa; restam sem commit apenas `graphify-out/`
+(mapa local, não precisa de git) e `public/latest_episode.mp4` (mídia, fora do
+commit por política).
+
+| Commit | Frente | Prova |
+|---|---|---|
+| `d468022` | balance: taxonomia RESTRICTED/RATE_LIMITED/OFFLINE + percent null-safe | `tests/balance-connection.test.ts` (na suite verde) |
+| `c363ed0` | DirectorTerminal: cancelamento/timeout 20s/toast em trends | `tests/trends-region.test.ts` (na suite verde) |
+| `f95f775` | `check:connections` — diagnóstico read-only + `architecture/local-connections.md` | ferramenta revisada (sem segredos na saída; Supabase URL validada) |
+| `9a8dabe` | video/generate: webhook não autenticado removido (status via `/api/render/status`, confirmado existente) + `.env.example` documenta `ANTHROPIC_API_KEY`/`SCRIPT_MODEL` (consumidos por `api/ai/script`) | leitura de rotas |
+| `6d0ed4c` | `public/watch.html` — player 9:16 standalone | código pequeno, mídia `.mp4` fica fora do git |
+
+**BK-06 refinamentos:**
+- **Pop-in das legendas implementado** (por cue: escala 82→100 em 90ms via `\t()`
+  — mais simples que karaoke tags por palavra; a leitura anterior que superestimou
+  o custo foi corrigida). Teste novo; **117/117**.
+- **`noise.svg` 404 eliminado:** asset local `public/assets/noise.svg`
+  (feTurbulence, mesma técnica) substitui as 6 referências à URL externa morta;
+  console do browser em **0 erros** na verificação. 2 referências restantes estão
+  em `page_legacy_2024.tsx_backup` (código morto não compilado — mantido, não
+  apagado sem autorização).
+- **Verificação:** tsc OK; build OK; verify/security/idempotency/deploy standalone
+  verdes; `noise.svg` local responde 200.
+
+### Pendências resultantes (atualizadas)
+
+1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva —
+   exige migração no banco remoto (autorização do Felipe).
+2. **BK-18:** régua vocal (A/B/C cego) — geração paga de amostras + julgamento de
+   gosto do Felipe; fala literal no prompt acoplada a essa decisão.
+3. **BK-06 residual:** conferir burn-in de legendas num render REAL pago (a prova
+   atual é fixture local) — acoplar ao próximo render autorizado.
+4. BK-19..BK-22 conforme ordem registrada acima (BK-19 pode começar sem gasto).
 
 ### Pendências resultantes (atualizadas)
 

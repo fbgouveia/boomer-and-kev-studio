@@ -25,6 +25,12 @@ describe('buildAssSubtitles — spec canônica de legendas (BK-06)', () => {
         assert.match(ass, new RegExp(String.raw`\{\\c${CAPTION_HIGHLIGHT}\}FUTURE\{\\c&HFFFFFF&\}`));
     });
 
+    it('aplica pop-in (escala 82 -> 100 em 90ms) no início de cada cue', () => {
+        assert.match(ass, /\{\\fscx82\\fscy82\\t\(0,90,\\fscx100\\fscy100\)\}/g);
+        const popIns = ass.match(/\\fscx82/g);
+        assert.equal(popIns?.length, 2);
+    });
+
     it('cue sem keyword fica todo branco', () => {
         assert.match(ass, /Keep it moving, mate\./);
         assert.doesNotMatch(ass, /\{\\c#FF5F1F\}Keep/);

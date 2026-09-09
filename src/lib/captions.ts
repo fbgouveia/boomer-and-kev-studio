@@ -35,16 +35,18 @@ function escapeAssText(text: string): string {
 }
 
 // Destaca a palavra-chave na cor de marca; sem keyword, texto todo branco.
+// Pop-in por cue (spec): escala 82% -> 100% em 90ms no início do bloco.
+const POP_IN = '{\\fscx82\\fscy82\\t(0,90,\\fscx100\\fscy100)}';
 function cueDialogueText(cue: CaptionCue): string {
   const safe = escapeAssText(cue.text);
-  if (!cue.keyword) return safe;
+  if (!cue.keyword) return POP_IN + safe;
   const idx = cue.text.toUpperCase().indexOf(cue.keyword.toUpperCase());
-  if (idx < 0) return safe;
+  if (idx < 0) return POP_IN + safe;
   const prefix = escapeAssText(cue.text.slice(0, idx));
   const match = escapeAssText(cue.text.slice(idx, idx + cue.keyword.length));
   const suffix = escapeAssText(cue.text.slice(idx + cue.keyword.length));
   // ponytail: highlight via override tag inline — separar em karaoke temps é overkill aqui
-  return `${prefix}{\\c${CAPTION_HIGHLIGHT}}${match}{\\c&HFFFFFF&}${suffix}`;
+  return `${POP_IN}${prefix}{\\c${CAPTION_HIGHLIGHT}}${match}{\\c&HFFFFFF&}${suffix}`;
 }
 
 export function buildAssHeader(width: number, height: number, options: CaptionStyleOptions): string {

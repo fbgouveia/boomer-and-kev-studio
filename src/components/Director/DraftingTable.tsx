@@ -262,7 +262,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
             style={{ animationDelay: `${index * 150}ms` }}
         >
             {/* Background Texture Overlay */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none group-hover:opacity-[0.05] transition-opacity bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none group-hover:opacity-[0.05] transition-opacity bg-[url('/assets/noise.svg')] bg-repeat" />
 
             <div className="flex justify-between items-start mb-6 relative z-10">
                 <div className="flex items-center gap-3">
@@ -309,7 +309,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     return (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-8 bg-black/40 backdrop-blur-xl animate-in zoom-in-95 duration-500 overflow-hidden">
             {/* NOISE TEXTURE OVERLAY */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('/assets/noise.svg')] brightness-100 contrast-150" />
 
             <div className="max-w-7xl w-full h-[90vh] bg-black/60 border-[4px] border-white/20 flex flex-col relative overflow-hidden shadow-[0_0_100px_rgba(255,95,31,0.05)] backdrop-blur-3xl">
 

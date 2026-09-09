@@ -317,7 +317,7 @@ export function ScriptTimeline({
                   </div>
 
                   {/* Scanning Line Effect */}
-                  <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
+                  <div className="absolute inset-0 pointer-events-none bg-[url('/assets/noise.svg')] opacity-[0.03]" />
                   <div className="absolute top-0 left-0 right-0 h-[1px] bg-[#FF5F1F]/20 animate-scan" />
 
                   <div className="absolute bottom-2 left-2 flex items-center gap-1">
