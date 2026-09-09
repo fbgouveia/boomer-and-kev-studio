@@ -1162,6 +1162,82 @@ documental. Sua presença não comprova testes, disponibilidade remota ou deploy
 - Contrato FGSS desta rotina: `20260905T050735218070-d61e8b`. Nenhum deploy, render
   pago, publicação de episódio ou commit dos diffs de código preexistentes ocorreu.
 
+## Salvamento consolidado — turno autônomo de 09/09/2026 (fechamento)
+
+Rotina canônica de salvar executada no fim do turno. O detalhe de cada marco está
+nas seções acima; este bloco é o índice de fechamento para retomada.
+
+### 1. Pendências (as 3 portas que dependem do Felipe)
+
+1. **BK-17 durável — autorizar a migração no Supabase remoto.** Contrato pronto:
+   `supabase/migrations/20260909000001_durable_jobs.sql` (render_jobs + scene_jobs,
+   fila transacional, lease com prazo, RLS sem políticas públicas — service role
+   só). NÃO aplicado; worker durável só entra em código depois da tabela existir.
+2. **BK-20 — credenciais/conta do GLM-5.3-Flash** (endpoint, quotas, modelo ID).
+   Adaptador/benchmark só com isso.
+3. **Julgamento visual do render nativo:** assistir
+   `review_frames/regua_native_final.mp4` (9,7s, 9:16, voz nativa + legendas).
+4. Regressão a observar: Engine DNA em 1440px com 3+ packs (layout de colunas).
+
+### 2. Atualizações — os 16 commits do turno (todos pushados em `restore-engine`)
+
+| Commit | Marco |
+|---|---|
+| `ab85b32` | Pacote 1 — recuperação e identidade do job (BK-05/BK-16, 7/7 cenários) |
+| `66f4830` | Fala inteira (clipe pelo áudio real) + polling com timeout |
+| `a630a51` | BK-17 inc.1 — reconciliação de predições pagas antes de repetir |
+| `2118c3c` | BK-17 inc.2 — reconciliação no GET de status |
+| `95baa87` | BK-06 — nav 1440px, Escape nos modais, legendas burn-in |
+| `d468022`…`6d0ed4c` | BK-14 — 5 commits dos diffs preexistentes (balance, trends, check:connections, webhook, watch.html) |
+| `703f3b9` | BK-06 refinado — pop-in das legendas + noise.svg local (console limpo) |
+| `82f2dd4` | BK-19 inc.1 — cast registry (elenco como dado validado) |
+| `37550a3` | BK-18 inc.1 — gerador da régua vocal (14 amostras cegas) |
+| `3e3b6c0` | BK-18 — âncoras do PILOTO no player |
+| `d77e21c` | BK-18 inc.2 — `voiceMode: kling_native` default + QC de fala audível |
+| `7d40d2e` | BK-18 fechado — régua fixada + render real de validação |
+| `eeb0683` | BK-19 inc.2 — UI lendo do registry + voiceIds por pack + contrato BK-17 |
+| `7d40d2e`…`eeb0683` | (HANDOFF atualizado em cada marco) |
+
+**Gasto real autorizado:** régua vocal (12 TTS + 2 clipes Kling ≈ US$1) + render
+de validação 2 cenas ≈ US$0,70 — total dentro dos tetos aprovados.
+
+### 3. Descobertas de ambiente (o ativo mais caro de reconstruir)
+
+1. **Arquivos CRLF:** `characters.ts` é CRLF; `sed`/rewrites em Python convertem
+   para LF e geram diff de arquivo inteiro — editar preservando `\r\n` (padrão
+   usado: python com `read_bytes/write_bytes` e âncoras CRLF).
+2. **`--amend` após `git commit` encadeado falho** engole o commit anterior —
+   reparo sem perda: `git fetch` + `git reset --soft origin/<branch>` e recommitar.
+3. **API raw do Replicate** (`/v1/predictions`) exige `version`, não `model` —
+   422. O SDK oficial resolve model→versão; usar sempre o SDK.
+4. **Chave ElevenLabs "RESTRICTED" na UI de keys = falta de PERMISSÃO DE
+   LEITURA de assinatura** — síntese TTS funciona normalmente. Status na UI não
+   significa TTS quebrado.
+5. **`brew install ffmpeg-full` quebra o ffmpeg/ffprobe padrão** (dyld:
+   `libx265.216.dylib` some — o full atualiza o x265). Reparo: `brew upgrade
+   ffmpeg` (8.1.2 → 9.0.1_1). O ffmpeg 9.0.1 padrão CONTINUA sem libass — o
+   burn-in de legendas depende da detecção por filtro (ffmpeg-full).
+6. **Turbopack embute `NEXT_PUBLIC_*` nos chunks do standalone** — builds locais
+   com `.env.local` carregam credenciais públicas no artefato; testes standalone
+   não são herméticos para essas vars (runtime não sobrepõe).
+7. **Guarda de teste honesta:** regex de "nenhuma chamada externa" deve mirar
+   assinaturas de chamada (`api.replicate.com`, `Requesting ElevenLabs`), não
+   prosa de mensagens de erro (que citam nomes de provedores como causa).
+8. **`volumedetect` em clipes do Kling:** QC de fala audível confiável (mean >
+   -60dB) — base do gate do modo nativo.
+9. **Estado de vídeos produzidos:** 6–7 vídeos de VALIDAÇÃO (piloto 26s, régua
+   ElevenLabs 12,3s, 4 no Library jul/set, render nativo 9,7s). Nenhuma
+   temporada/lote — produção de verdade = BK-22 após BK-17 durável.
+
+### 4. Verificação final do turno
+
+`npx tsc --noEmit` OK · **124/124 unitários (0 skip)** · build OK (25 rotas) ·
+`verify:standalone` OK (173,7 MB, sem .tmp) · `test:security:standalone` OK ·
+`test:idempotency:standalone` OK (novo contrato: checkpoint preservado no
+WORKER_RESTARTED, retomada idêntica aceita, conflito de conteúdo 409) ·
+`test:deploy` OK · lint sem erros novos (route.ts mantém 18 preexistentes).
+GitHub workflow de checks disparado por cada push (sem deploy nele).
+
 ## Consulta eventual ao histórico
 
 O histórico deste arquivo contém as sessões completas do Studio e o registro de
