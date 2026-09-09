@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AUSSIE_CALENDAR } from '@/data/calendar';
+import { toast } from '@/components/ui/Toast';
 
 export type Trend = {
   title: string;
@@ -84,31 +85,46 @@ export function DirectorTerminal({
   const [lastSyncTime, setLastSyncTime] = useState('');
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const trendsRequest = useRef<AbortController | null>(null);
 
   const fetchTrends = useCallback(async (currentGeo?: string) => {
     const targetGeo = currentGeo || geo;
+    trendsRequest.current?.abort();
+    const controller = new AbortController();
+    trendsRequest.current = controller;
     setIsLoading(true);
+    setTrends([]);
+    setLastSyncTime('');
     try {
-      const response = await fetch(`/api/trends?geo=${targetGeo}`);
-      const data = await response.json();
-      if (!data.error) {
-        setTrends(data);
-        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      const response = await fetch(`/api/trends?geo=${targetGeo}`, {
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]),
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 401
+          ? 'Your Studio session needs authentication. Reload and sign in.'
+          : `News feed unavailable (HTTP ${response.status}). Try refreshing.`);
       }
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('News feed returned an invalid response. Try refreshing.');
+      if (controller.signal.aborted) return;
+      setTrends(data);
+      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
-      console.error("TRENDS_FETCH_ERROR", err);
+      if (controller.signal.aborted) return;
+      toast.error(err instanceof Error && err.name !== 'TimeoutError'
+        ? err.message : 'News feed timed out. Try refreshing.');
     } finally {
-      setIsLoading(false);
+      if (trendsRequest.current === controller) setIsLoading(false);
     }
   }, [geo]);
 
   useEffect(() => {
     fetchTrends();
+    return () => trendsRequest.current?.abort();
   }, [fetchTrends]);
 
   const handleRegionChange = (newGeo: string) => {
     setGeo(newGeo);
-    fetchTrends(newGeo);
   };
 
   const handleFeedMachine = (trend: Trend) => {
