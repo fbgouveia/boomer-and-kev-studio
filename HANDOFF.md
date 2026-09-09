@@ -370,6 +370,47 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 - **Continua em BK-17:** reconciliação na GET de status (hoje só no resume),
   worker durável com fila no banco, orçamento/reserva.
 
+### BK-18 — incremento 1 (AUTORIZADO por Felipe, teto US$1–3): amostras da régua geradas
+
+- **Ferramenta:** `tools/regua-vocal.mjs` — gera as amostras da régua de forma
+  determinística e idempotente (`--skip-existing` não re-gasta; `--tts-only` pula
+  a rota paga). Saída FORA do git: `review_frames/regua-vocal/`.
+- **14 amostras geradas e normalizadas (-16 LUFS, julgamento justo sem viés de
+  volume):** 12 TTS (6 falas × rotas B/C) + 2 clipes Kling nativo (1 por
+  personagem — leitura direcional; o set completo de 6 clipes A custa ~US$3
+  adicionais e só com reforço de orçamento).
+  - **Rota B (TTS atual):** `voiceSettingsFor` canônico dos packs (idêntico ao
+    pipeline em produção).
+  - **Rota C (TTS dirigido):** direção revisada por emoção (ex.: EXPLOSIVE
+    stability 0.20/style 0.90; RESIGNED 0.70/0.30) — mesmo modelo e voz, muda só
+    a direção, isolando a variável.
+  - **Rota A (Kling nativo):** `generate_audio:true` + fala literal no prompt +
+    âncora canônica. Áudio REAL confirmado (AAC, mean ~-20dB, não silêncio).
+- **Julgamento às cegas pronto para o Felipe:** `review_frames/regua-vocal/
+  index.html` (player com S01–S14 embaralhados, critérios de julgamento na tela).
+  O mapa cego está em `CHAVE.json` — abrir SOMENTE depois do julgamento. Critérios:
+  identidade do personagem, excentricidade, humor, inteligibilidade, timing.
+- **Gasto real:** 2 clipes Kling + ~500 chars TTS — dentro do teto autorizado.
+- **Pendente do BK-18:** julgamento do Felipe escolhe a rota vencedora; repetir a
+  vencedora em mais cenas; régua final aprovada entra como parâmetro canônico.
+
+### Descobertas de ambiente desta sessão (não estava escrito em lugar nenhum)
+
+1. **`brew install ffmpeg-full` QUEBRA o ffmpeg/ffprobe padrão do Homebrew:** o
+   ffmpeg-full atualiza o x265 e o binário 8.1.2 fica sem `libx265.216.dylib`
+   (dyld abort em qualquer invocação). Reparo: `brew upgrade ffmpeg` (8.1.2 →
+   9.0.1_1, religado ao x265 atual). O ffmpeg 9.0.1 padrão CONTINUA sem libass —
+   o burn-in de legendas usa a detecção por filtro (ffmpeg-full), que segue
+   correta. **Correção de registro:** os "2 testes skipped" da sessão anterior
+   NÃO eram limitação de CI — era o ffprobe local quebrado por isso. Hoje:
+   **121/121, 0 skip**.
+2. **API raw do Replicate exige `version`, não `model`:** `predictions.create`
+   com `model:` falha com 422 ("version is required") quando se chama a REST
+   direta; o SDK oficial resolve model→versão. A régua usa o SDK.
+3. **A chave ElevenLabs "RESTRICTED" da tela de keys é só para LEITURA de
+   assinatura** — síntese TTS funciona normalmente. O status RESTRICTED na UI
+   não significa que o TTS quebrará.
+
 ### BK-17 — incremento 2 (mesmo turno): reconciliação no GET de status
 
 - **`reconcileProviderRequests` (lib):** lote que reconcilia todas as predições
@@ -496,11 +537,16 @@ commit por política).
 
 ### Pendências resultantes (atualizadas)
 
-1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva,
-   reconciliação no GET de status.
-2. **BK-18:** régua vocal (A/B/C cego) — vozes excêntricas dos pilotos são
-   requisito artístico do Felipe; fala literal no prompt acoplada a essa decisão.
-3. BK-06, BK-07..BK-10, BK-19..BK-22 conforme ordem registrada acima.
+1. **BK-18 — DECISÃO DO FELIPE (bloqueia o ritmo):** ouvir `review_frames/regua-vocal/index.html`
+   (14 amostras cegas) e escolher a rota vencedora; depois reproduzir a vencedora
+   em mais cenas e fixar a régua canônica. Set completo da rota A (6 clipes Kling)
+   custa ~US$3 adicionais se a leitura de 2 amostras não bastar.
+2. **BK-17 (restante):** worker durável com fila no banco (migração remota —
+   autorização), orçamento/reserva. Reconciliação no GET já feita.
+3. **BK-19 inc.2:** UI lendo do registry + voiceIds por pack (parado p/ aprovação
+   — muda a tela que o Felipe usa).
+4. BK-20..BK-22 conforme ordem registrada. Conferir burn-in de legendas no
+   próximo render real autorizado (BK-07/BK-06 residual).
 
 ## Auditoria e plano de evolução — 09/09/2026
 
