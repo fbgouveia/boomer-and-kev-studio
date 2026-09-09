@@ -5,7 +5,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import Replicate from 'replicate';
 import { z } from 'zod';
-import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
+import { STUDIO_SETTING, SHOT_TYPES, ANGLE_SPECS, voiceSettingsFor } from '@/data/characters';
+import { resolveCharacter } from '@/lib/cast-registry';
 import { fetchWithTimeout } from '@/lib/fetch-retry';
 import { querySupabase } from '@/lib/supabase';
 import { cleanupPipelineIntermediates, getSceneCheckpoint, validateSceneArtifacts, probeAudioDuration } from '@/lib/pipeline-storage';
@@ -208,7 +209,7 @@ async function assembleVideo(
 const SOLO_SHOTS_IN_VERTICAL = new Set(['WIDE', 'OTS_BOOMER', 'GOPRO_FISHEYE']);
 
 export const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16') => {
-  const char = CHARACTERS.find(c => c.id === line.characterId);
+  const char = resolveCharacter(line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
   if (!char) return "";
@@ -234,7 +235,10 @@ export const getDetailedPrompt = (line: any, directorIdea = "Trending News", dir
 
   const anthropomorphicDirective = `ANTHROPOMORPHIC ACTING: This character is an animal but acts, sits, and gesticulates EXACTLY like a human podcast host. Extremely human-like posture, human-like hand gestures, interacting with the environment like a human. They must look like a person wearing a hyper-realistic animal head.`;
 
-  const personalityLogic = line.characterId === 'boomer'
+  // BK-19: a direção de atuação vem do pack (actingStyle), não de id cravado.
+  // Boomer declara 'hyper', Kev declara 'deadpan' — comportamento idêntico ao
+  // anterior, mas um elenco novo declara o próprio tom sem editar engine.
+  const personalityLogic = (char.actingStyle ?? 'hyper') === 'hyper'
     ? "hyper-active muscle tension, leaning aggressively into the microphone, intense eye contact"
     : "deadpan low-energy, slow heavy blinking, relaxed posture, indifferent expression";
 
@@ -501,7 +505,7 @@ async function processPipeline(
         updateJob({ logs: [`⚠️ [Scene ${index}] Checkpoint áudio inválido (corrompido/vazio) — ressintetizando.`] });
       }
 
-      const character = CHARACTERS.find(c => c.id === line.characterId);
+      const character = resolveCharacter(line.characterId);
       if (!character) {
         throw new Error(`VOICE_GATE: personagem '${line.characterId}' desconhecido (cena ${index}).`);
       }
@@ -627,7 +631,7 @@ async function processPipeline(
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
           const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect);
-          const character = CHARACTERS.find(c => c.id === line.characterId);
+          const character = resolveCharacter(line.characterId);
           
           // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
           // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.

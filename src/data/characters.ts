@@ -30,6 +30,8 @@ export type Character = {
     // em pixels) para sobreviver a troca de arte em outra resolução — e para funcionar em
     // white-label, onde a âncora é de outro personagem. Ausente = 0.5 (centro).
     anchorFocusX?: number;
+    // BK-19: direção de atuação declarada pelo pack (o engine não deve cravar ids).
+    actingStyle?: 'hyper' | 'deadpan';
 };
 
 // Emoções "quentes" empurram a entrega (menos estável, mais estilo → mais expressivo/cômico);
@@ -86,7 +88,8 @@ export const CHARACTERS: Character[] = [
         // passou batido em 30/07 e ficou no default 0.5. Medido em 06/08 renderizando o recorte
         // real: em 0.5 a luva esquerda sai do quadro e o terco direito vira TV vazia; 0.40 corta
         // a luva direita; 0.44 e o unico com a cabeca centrada e as duas luvas inteiras.
-        anchorFocusX: 0.44
+        anchorFocusX: 0.44,
+        actingStyle: 'hyper'
     },
     {
         id: 'kev',
@@ -122,7 +125,8 @@ export const CHARACTERS: Character[] = [
         // Kev fica a DIREITA na arte: o recorte centrado (x=472) pegava metade de TV e cortava
         // a orelha dele. Medido em 30/07 comparando x=472/650/730/810 -> 730 e o unico com o
         // rosto centrado e as duas orelhas inteiras. (730+432/2)/1376 = 0.687
-        anchorFocusX: 0.687
+        anchorFocusX: 0.687,
+        actingStyle: 'deadpan'
     }
 ];
 

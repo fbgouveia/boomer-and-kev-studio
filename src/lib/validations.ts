@@ -1,6 +1,12 @@
 import { z } from 'zod';
+import { isRegisteredCharacter } from '@/lib/cast-registry';
 
-const characterIdSchema = z.enum(['boomer', 'kev']);
+// BK-19: personagem válido = pack registrado no cast registry (boomer/kev hoje,
+// novos elencos sem editar engine). O regex bloqueia lixo antes da consulta.
+const characterIdSchema = z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/)
+    .refine((id) => isRegisteredCharacter(id), { message: 'Unknown character pack.' });
 const shotTypeSchema = z.enum([
     'WIDE',
     'BOOMER_MCU',

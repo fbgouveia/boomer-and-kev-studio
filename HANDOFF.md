@@ -467,6 +467,33 @@ commit por política).
    atual é fixture local) — acoplar ao próximo render autorizado.
 4. BK-19..BK-22 conforme ordem registrada acima (BK-19 pode começar sem gasto).
 
+### BK-19 — incremento 1 (mesmo turno): elenco como dado, não código
+
+- **`src/lib/cast-registry.ts` (novo):** registry de `CharacterPack` (contrato do
+  personagem: identidade visual, atuação, voz, âncora, figurino) com
+  `registerCharacter`/`resolveCharacter`/`isRegisteredCharacter`. Elenco canônico
+  (boomer/kev) semeado dos MESMOS objetos de `CHARACTERS` — identidade de
+  referência preservada para quem importa `CHARACTERS` direto (page.tsx etc.).
+- **Schema validado pelo registry:** `characterIdSchema` deixou de ser
+  `z.enum(['boomer','kev'])` — agora aceita qualquer pack registrado (regex de id +
+  refine no registry). Vale para `runPipelineSchema`, `renderSchema` e
+  `voiceSchema`.
+- **`actingStyle` no pack:** o prompt engine não crava mais `boomer/kev` na
+  direção de atuação — boomer declara `hyper`, kev declara `deadpan` nos dados;
+  pack novo declara o próprio tom. Comportamento idêntico para o elenco atual.
+- **`route.ts`:** `CHARACTERS.find` substituído por `resolveCharacter` nos 3 pontos
+  (prompt, voice gate, launch).
+- **Aceite provado por teste:** um pack `roo_solo` (wombat, deadpan, figurino
+  próprio) registrado no teste passa por schema, gera prompt com o DNA/figurino/
+  atuação DELE (sem vazamento do Boomer) e é aceito no `voiceSchema` — sem editar
+  engine. `tests/cast-registry.test.ts` (4 casos).
+- **Verificação:** tsc OK; **121/121 unitários (2 skip)**; build OK; todos os
+  standalone verdes; lint na baseline (18 preexistentes no route.ts).
+- **BK-19 restante (incrementos seguintes):** UI (DNAPanel/seleção) lendo do
+  registry em vez de `CHARACTERS[0]/[1]`; `voiceIds` do schema aberto para ids de
+  pack; ShowProfile (estúdio/shot vocabulary por show); dois elencos adicionais
+  HOMOLOGADOS (arte nova — passa pelo Open Design/Gestor).
+
 ### Pendências resultantes (atualizadas)
 
 1. **BK-17 (restante):** worker durável com fila no banco, orçamento/reserva,
