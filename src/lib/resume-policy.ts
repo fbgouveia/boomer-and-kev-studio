@@ -28,6 +28,7 @@ export function immutablePipelineConfig(data: Omit<RunPipelineInput, 'approval' 
     return {
         engine: data.engine,
         aspect: data.aspect,
+        voiceMode: data.voiceMode,
         directorIdea: data.directorIdea ?? '',
         directorSnippet: data.directorSnippet ?? '',
         wardrobe: data.wardrobe ?? {},

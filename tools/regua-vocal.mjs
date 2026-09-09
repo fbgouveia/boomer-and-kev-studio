@@ -203,10 +203,14 @@ log('Julgamento: abrir index.html, ouvir, anotar preferências; CHAVE.json só d
 
 // Âncoras de referência: os segmentos de voz do PILOTO ORIGINAL (T5 EVO), normalizados
 // igual às amostras — o alvo artístico "como deveria ser" de cada personagem.
-const PILOTO_PDF = null; // fonte do piloto: /Volumes/T5 EVO/BOOMER AND KEV/Piloto/piloto.mp4
+// Veredito Felipe 09/09: âncora PILOTO-BOOMER (2,6–9,5s) está CERTA; a antiga
+// PILOTO-KEV (9,6–14,5s) está ERRADA — o close do Kev é tomada de REAÇÃO com a voz
+// do Boomer por cima. A fala real do Kev está no banter (17,3–22,9s): 3 candidatos.
 const REFERENCES = [
-  { name: 'PILOTO-BOOMER', file: 'PILOTO-BOOMER.mp3', note: 'Segmento 2,6–9,5s do piloto: hook em explosão, gritado, ritmo acelerado' },
-  { name: 'PILOTO-KEV', file: 'PILOTO-KEV.mp3', note: 'Segmento 9,6–14,5s do piloto: deadpan seco, nasal, lento, sem esforço' },
+  { name: 'PILOTO-BOOMER', file: 'PILOTO-BOOMER.mp3', note: '✅ CERTA — segmento 2,6–9,5s: hook em explosão, gritado, ritmo acelerado' },
+  { name: 'PILOTO-KEV-c1', file: 'PILOTO-KEV-c1.mp3', note: 'Banter 17,3–19,0s — candidato: início do two-shot' },
+  { name: 'PILOTO-KEV-c2', file: 'PILOTO-KEV-c2.mp3', note: 'Banter 19,0–20,9s — candidato: meio do two-shot (Kev no tablet)' },
+  { name: 'PILOTO-KEV-c3', file: 'PILOTO-KEV-c3.mp3', note: 'Banter 20,9–22,9s — candidato: final, antes do logo (provável punchline do Kev)' },
 ];
 
 function buildPlayer(manifest) {

@@ -208,7 +208,7 @@ async function assembleVideo(
 // o Kling INVENTAR o segundo personagem sem referência — infidelidade de personagem. Achado 30/07.
 const SOLO_SHOTS_IN_VERTICAL = new Set(['WIDE', 'OTS_BOOMER', 'GOPRO_FISHEYE']);
 
-export const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16') => {
+export const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16', voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native') => {
   const char = resolveCharacter(line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
@@ -244,6 +244,13 @@ export const getDetailedPrompt = (line: any, directorIdea = "Trending News", dir
 
   const actionBlock = `BEHAVIOR: ${line.action}. ${personalityLogic}. EMOTION: ${line.emotion}. Talking actively into the microphone, lips articulating words clearly and naturally.`;
 
+  // BK-18 (régua vocal): no modo nativo a fala vai LITERAL no prompt — é o Kling
+  // quem fala (veredito Felipe: S13/S14 venceram). No modo elevenlabs o áudio é
+  // sintetizado fora e sobreposto, então o prompt não carrega a fala.
+  const speechBlock = voiceMode === 'kling_native'
+    ? `SPEECH: The character SAYS OUT LOUD, with clear natural Australian accent and lip articulation, exactly this line: "${line.text}" No subtitles, no on-screen text.`
+    : '';
+
   // Em vertical, sobrescreve a regra do plano: o SHOT_TYPES fala em "shows both characters" /
   // "over Kev's shoulder at Boomer", e isso contradiz a âncora solo que o Kling recebe.
   const cameraRule = forceSolo
@@ -269,7 +276,7 @@ export const getDetailedPrompt = (line: any, directorIdea = "Trending News", dir
   const continuityDirective = `CONTINUITY: This is a segment of an ONGOING live podcast broadcast. The character is ALREADY mid-conversation when the shot begins — no settling in, no greeting gesture, no looking for position. The shot ENDS mid-energy, as if the camera simply cut away; never a wrap-up pose, never a fade-out feeling.`;
 
   // --ar seguia cravado em 9:16 mesmo com o formato 16:9 selecionado (achado 30/07).
-  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar ${aspect} --v 6.0`;
+  return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${speechBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar ${aspect} --v 6.0`;
 };
 
 // BK-06: o binário ffmpeg precisa de libass (filtro subtitles). O ffmpeg padrão do
@@ -360,6 +367,53 @@ async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16
 // WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
 
 // Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
+// BK-18 (modo nativo): clipe do Kling precisa ter fala audível — checa stream de
+// áudio E nível médio (áudio presente porém mudo/silencioso = falha do gate).
+function clipHasAudibleAudio(filePath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = spawn('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=index', '-of', 'csv=p=0', filePath], { stdio: ['ignore', 'pipe', 'ignore'] });
+    let streams = '';
+    probe.stdout.on('data', (d) => (streams += d));
+    probe.on('error', () => resolve(false));
+    probe.on('close', (code) => {
+      if (code !== 0 || !streams.trim()) return resolve(false);
+      const vol = spawn('ffmpeg', ['-hide_banner', '-nostats', '-i', filePath, '-af', 'volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] });
+      let err = '';
+      vol.stderr.on('data', (d) => (err += d));
+      vol.on('error', () => resolve(false));
+      vol.on('close', () => {
+        const m = err.match(/mean_volume:\s*(-?[\d.]+) dB/);
+        resolve(m ? parseFloat(m[1]) > -60 : false);
+      });
+    });
+  });
+}
+
+// Síntese TTS de uma cena (voice gate no modo elevenlabs + fallback do modo nativo).
+type ScriptLineLike = {
+  characterId: string;
+  text: string;
+  emotion?: string;
+};
+
+async function ttsForScene(line: ScriptLineLike, character: NonNullable<ReturnType<typeof resolveCharacter>>, voiceIds?: { boomer?: string, kev?: string }): Promise<Buffer> {
+  const voiceId = voiceIds?.[line.characterId as 'boomer' | 'kev'] || character.voiceId;
+  const response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'xi-api-key': process.env.ELEVENLABS_API_KEY || '', 'accept': 'audio/mpeg' } as Record<string, string>,
+    body: JSON.stringify({
+      text: line.text,
+      model_id: character.voice.modelId,
+      voice_settings: voiceSettingsFor(character, line.emotion),
+    }),
+  }, 60_000);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ElevenLabs HTTP ${response.status}: ${errorText.substring(0, 120)}`);
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
 function probeDuration(videoPath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const fp = spawn('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]);
@@ -395,7 +449,8 @@ async function processPipeline(
   directorSnippet: string,
   aspect: '9:16' | '16:9',
   wardrobe?: { boomer?: string, kev?: string, studio?: string },
-  voiceIds?: { boomer?: string, kev?: string }
+  voiceIds?: { boomer?: string, kev?: string },
+  voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native'
 ) {
   const target = aspectTarget(aspect);
   const tmpDir = path.resolve(process.cwd(), '.tmp');
@@ -445,43 +500,55 @@ async function processPipeline(
   let episodeRegistered = false;
 
   try {
-    // VOICE_GATE começa pelas precondições locais: não cria episódio fantasma
-    // quando a configuração já prova que nenhuma cena poderá ser sintetizada.
-    if (!elevenLabsKey) {
+    // VOICE_GATE (modo elevenlabs) começa pelas precondições locais: não cria
+    // episódio fantasma quando a configuração já prova que nenhuma cena poderá ser
+    // sintetizada. No modo kling_native (régua BK-18) o Kling fala — não há TTS.
+    if (voiceMode === 'elevenlabs' && !elevenLabsKey) {
       throw new Error("VOICE_GATE: ELEVENLABS_API_KEY ausente — run cancelado antes de persistir ou gastar render.");
+    }
+    if (voiceMode === 'kling_native') {
+      updateJob({ logs: ["🎙️ VOICE_MODE: kling_native (régua BK-18) — o Kling fala a fala literal; TTS só como fallback de degradação."] });
     }
 
     // Write to Supabase if configured
-    try {
-      await querySupabase('episodes', {
-        method: 'POST',
-        useServiceRole: true,
-        body: JSON.stringify({
-          id: jobId,
-          topic: directorIdea || "Trending News",
-          director_idea: directorIdea,
-          director_snippet: directorSnippet,
-          status: 'draft',
-          script_json: script
-        })
-      });
-      episodeRegistered = true;
-      updateJob({ logs: ["[Supabase] Episode successfully queued in cloud database."] });
-    } catch (e: any) {
-      updateJob({ logs: [`[Supabase] DB registration bypassed: ${e.message}`] });
+    // BK-18: sem service role a chamada degrada para anon e o RLS rejeita (erro
+    // garantido e fútil) — pula com aviso em vez de fazer a chamada inútil.
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      updateJob({ logs: ["[Supabase] Sem SUPABASE_SERVICE_ROLE_KEY — registro do episódio pulado (modo local/teste)."] });
+    } else {
+      try {
+        await querySupabase('episodes', {
+          method: 'POST',
+          useServiceRole: true,
+          body: JSON.stringify({
+            id: jobId,
+            topic: directorIdea || "Trending News",
+            director_idea: directorIdea,
+            director_snippet: directorSnippet,
+            status: 'draft',
+            script_json: script
+          })
+        });
+        episodeRegistered = true;
+        updateJob({ logs: ["[Supabase] Episode successfully queued in cloud database."] });
+      } catch (e: any) {
+        updateJob({ logs: [`[Supabase] DB registration bypassed: ${e.message}`] });
+      }
     }
 
     updateJob({ progress: 10, logs: ["🧬 INJECTING_CHARACTER_DNA_PROMPTS..."] });
 
-    // Step 1a: VOICE GATE — TODAS as vozes sintetizadas ANTES de qualquer render.
-    // Decisão Felipe 19/07 (doutrina Deriva: degradar calado, nunca): voz falhou →
-    // o run FALHA aqui, com US$0 gastos em Kling, em vez de gerar vídeo mudo "com sucesso".
+    // Step 1a: VOICE GATE (só no modo elevenlabs) — TODAS as vozes sintetizadas
+    // ANTES de qualquer render. Decisão Felipe 19/07 (doutrina Deriva: degradar
+    // calado, nunca): voz falhou → o run FALHA aqui, com US$0 gastos em Kling, em
+    // vez de gerar vídeo mudo "com sucesso". No modo kling_native o Kling fala.
     currentStage = 'voice_gate';
     const audioByScene = new Map<string, string>();
     // BK-16 (fala inteira): duração real do áudio por cena — dimensiona o clipe
     // do Kling em vez de confiar na estimativa do roteiro.
     const audioDurations = new Map<string, number>();
 
+    if (voiceMode === 'elevenlabs') {
     for (let i = 0; i < script.length; i++) {
       const line = script[i];
       const index = i + 1;
@@ -516,32 +583,14 @@ async function processPipeline(
       }
 
       updateJob({ logs: [`🔊 [Scene ${index}] Requesting ElevenLabs audio (voice: ${voiceId === character.voiceId ? 'canônica' : 'override da interface'})...`] });
-      let response: Response;
+      let buffer: Buffer;
       try {
-        response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'xi-api-key': elevenLabsKey,
-            'accept': 'audio/mpeg',
-          },
-          body: JSON.stringify({
-            text: line.text,
-            model_id: character.voice.modelId,
-            voice_settings: voiceSettingsFor(character, line.emotion),
-          }),
-        }, 60_000);
+        buffer = await ttsForScene(line, character, voiceIds);
       } catch (e: any) {
-        throw new Error(`VOICE_GATE: ElevenLabs inacessível na cena ${index} (${e.message}) — run cancelado antes de gastar render.`);
+        throw new Error(`VOICE_GATE: ElevenLabs falhou na cena ${index} (${e.message}) — run cancelado antes de gastar render.`);
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`VOICE_GATE: ElevenLabs HTTP ${response.status} na cena ${index}: ${errorText.substring(0, 120)} — run cancelado antes de gastar render.`);
-      }
-
-      const buffer = await response.arrayBuffer();
-      audioByScene.set(line.id, `data:audio/mpeg;base64,${Buffer.from(buffer).toString('base64')}`);
+      audioByScene.set(line.id, `data:audio/mpeg;base64,${buffer.toString('base64')}`);
       const sceneAudioPath = path.resolve(tmpDir, `audio_${jobId}_${line.id}.mp3`);
       writeFileSync(sceneAudioPath, Buffer.from(buffer));
       const measured = await probeAudioDuration(sceneAudioPath);
@@ -550,7 +599,10 @@ async function processPipeline(
       updateJob({ logs: [`✅ [Scene ${index}] Voice synthesized successfully.`] });
     }
 
-    updateJob({ progress: 25, logs: ["✅ VOICE_GATE_PASSED: todas as vozes prontas. Liberando renders."] });
+    } // fim do gate de voz (modo elevenlabs)
+    updateJob({ progress: 25, logs: voiceMode === 'elevenlabs'
+      ? ["✅ VOICE_GATE_PASSED: todas as vozes prontas. Liberando renders."]
+      : ["✅ VOICE_MODE_NATIVE: sem TTS prévio — o Kling fala em cada cena."] });
 
     // Step 1b: Kling Launch — só executa com o gate de voz 100% verde
     currentStage = 'video_generation';
@@ -622,7 +674,7 @@ async function processPipeline(
         scenesToProcess.push({
           sceneId, index, predictionId: null as string | null, audioDataUri, status: "CHAINED",
           chainFrom,
-          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect), duration: klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10) }
+          launch: { prompt: getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect, voiceMode), duration: klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10) }
         });
         continue;
       }
@@ -630,7 +682,7 @@ async function processPipeline(
       if (replicate) {
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
-          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect);
+          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect, voiceMode);
           const character = resolveCharacter(line.characterId);
           
           // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
@@ -664,7 +716,7 @@ async function processPipeline(
             aspect_ratio: aspect,
             start_image: startImage,
             negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
-            generate_audio: false
+            generate_audio: voiceMode === 'kling_native'
           });
 
           // Persiste a predição paga ANTES do polling: queda após cobrança deixa
@@ -727,7 +779,7 @@ async function processPipeline(
             aspect_ratio: aspect,
             start_image: frameUri,
             negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
-            generate_audio: false
+            generate_audio: voiceMode === 'kling_native'
           });
           scene.predictionId = prediction.id;
           providerRequests[scene.sceneId] = {
@@ -770,7 +822,28 @@ async function processPipeline(
         const finalScenePath = path.resolve(tmpDir, `sync_${jobId}_${scene.sceneId}.mp4`);
         const audioPath = path.resolve(tmpDir, `audio_${jobId}_${scene.sceneId}.mp3`);
 
-        // Sem lipsync: sempre multiplexa o áudio TTS por cima do clipe do Kling.
+        // BK-18 QC (modo nativo): o clipe do Kling TEM que ter fala audível — clip
+        // mudo em modo nativo é degradação COM AVISO (TTS fallback se houver chave),
+        // nunca entrega calada.
+        if (voiceMode === 'kling_native' && !existsSync(audioPath)) {
+          const audible = await clipHasAudibleAudio(scenePath);
+          if (!audible && elevenLabsKey) {
+            const character = resolveCharacter(script[scene.index - 1].characterId);
+            if (character?.voiceId) {
+              updateJob({ logs: [`⚠️ [Scene ${scene.index}] Kling não gerou fala audível — FALLBACK TTS (degradação com aviso, régua BK-18).`] });
+              const buffer = await ttsForScene(script[scene.index - 1], character, voiceIds);
+              writeFileSync(audioPath, buffer);
+              const measured = await probeAudioDuration(audioPath);
+              if (measured !== null) audioDurations.set(scene.sceneId, measured);
+            }
+          } else if (!audible) {
+            throw new Error(`VOICE_MISSING_NATIVE: clipe do Kling sem áudio falado (cena ${scene.index}) e sem ELEVENLABS_API_KEY para fallback. Resume re-renderiza a cena.`);
+          }
+        }
+
+        // Multiplexação: com áudio TTS (modo elevenlabs ou fallback) sobrepõe; no
+        // nativo SEM fallback o áudio do próprio Kling é preservado com -c copy —
+        // o anullsrc antigo trocaria a fala do Kling por silêncio.
         currentStage = 'mux';
         updateJob({ logs: [`🎵 [Scene ${scene.index}] Multiplexing audio and video locally...`] });
         await new Promise((resolve, reject) => {
@@ -778,6 +851,8 @@ async function processPipeline(
 
             if (existsSync(audioPath)) {
               args.push('-i', audioPath, '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
+            } else if (voiceMode === 'kling_native') {
+              args.push('-map', '0:v:0', '-map', '0:a:0?', '-c', 'copy');
             } else {
               args.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0?', '-map', '1:a:0', '-shortest');
             }
@@ -1135,7 +1210,7 @@ export async function POST(req: Request) {
 
     // Fire background task
     activeRuns.add(jobId);
-    processPipeline(jobId, script, directorIdea, directorSnippet, aspect, wardrobe, validation.data.voiceIds).catch(err => {
+    processPipeline(jobId, script, directorIdea, directorSnippet, aspect, wardrobe, validation.data.voiceIds, validation.data.voiceMode).catch(err => {
       console.error(`Uncaught background task error for job ${jobId}:`, err);
     });
 

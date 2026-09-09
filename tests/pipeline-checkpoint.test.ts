@@ -33,6 +33,15 @@ describe('runPipelineSchema — Formato e Checkpoint (BK-04 & BK-05)', () => {
         assert.equal(result.resumeJobId, undefined);
     });
 
+    it('voiceMode: kling_native é o padrão (régua BK-18) e elevenlabs é aceito', () => {
+        const native = runPipelineSchema.parse({ script: [...validScript] });
+        assert.equal(native.voiceMode, 'kling_native');
+        const legacy = runPipelineSchema.parse({ script: [...validScript], voiceMode: 'elevenlabs' });
+        assert.equal(legacy.voiceMode, 'elevenlabs');
+        const invalid = runPipelineSchema.safeParse({ script: [...validScript], voiceMode: 'parrot' });
+        assert.equal(invalid.success, false);
+    });
+
     it('aceita aspecto 16:9 explicitamente', () => {
         const result = runPipelineSchema.parse({
             script: [...validScript],

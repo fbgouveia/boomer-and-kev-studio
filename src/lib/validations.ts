@@ -100,6 +100,10 @@ export const runPipelineSchema = z.object({
     directorSnippet: z.string().max(20_000).optional(),
     engine: z.literal('kling').optional().default('kling'),
     aspect: z.enum(['9:16', '16:9']).optional().default('9:16'),
+    // BK-18 (régua vocal, veredito Felipe 09/09): áudio NATIVO do Kling venceu
+    // (S13/S14) — fala literal no prompt, sem sobreposição de TTS. 'elevenlabs'
+    // preserva a rota antiga para comparação/regressão.
+    voiceMode: z.enum(['kling_native', 'elevenlabs']).optional().default('kling_native'),
     resumeJobId: z.string().uuid().optional(),
     wardrobe: z.object({
         boomer: z.string().max(5_000).optional(),

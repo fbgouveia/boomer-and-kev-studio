@@ -436,6 +436,47 @@ AND KEV/Piloto/`) — energia e timbre dos personagens "como deveria ser".
    assinatura** — síntese TTS funciona normalmente. O status RESTRICTED na UI
    não significa que o TTS quebrará.
 
+### BK-18 — VEREDITO DO FELIPE e mudança de rota de voz (inc. 2)
+
+**Julgamento às cegas recebido:** Boomer = **S13**, Kev = **S14** — ambos da
+**rota A (áudio NATIVO do Kling)**. Âncora verde do Boomer "certa"; âncora do
+Kev "errada" (o close 9,6–14,5s do piloto é tomada de REAÇÃO com voz do Boomer
+por cima — a fala real do Kev está no banter).
+
+1. **Régua resolvida: a voz canônica da dupla é o áudio nativo do Kling.** As
+   vozes excêntricas que o Felipe sentia falta vêm da atuação nativa do modelo,
+   não do TTS.
+2. **Âncora do Kev corrigida:** substituída por 3 candidatos do banter
+   (`PILOTO-KEV-c1/c2/c3` = 17,3–19,0 / 19,0–20,9 / 20,9–22,9s) no player — o
+   Felipe confirma qual contém a voz certa (30 segundos de escuta).
+3. **Pipeline implementado (`voiceMode`):**
+   - `runPipelineSchema`: `voiceMode: 'kling_native' | 'elevenlabs'`, **default
+     `kling_native`** (veredito da régua). Entra no `configHash` (resume com modo
+     diferente = conflito explícito; jobs legados conflitam por design).
+   - Modo nativo: fala LITERAL no prompt (`SPEECH: ... exactly this line`),
+     `generate_audio: true` nos dois lançamentos, VOICE_GATE de TTS não roda
+     (US$0 de ElevenLabs), mux preserva o áudio do Kling com `-c copy` (o
+     `anullsrc` antigo trocaria a fala por silêncio).
+   - **QC de fala audível:** após download, ffprobe+volumedetect exigem áudio
+     com mean > -60dB. Clipe mudo = degradação COM AVISO: fallback TTS se
+     houver chave; sem chave → `VOICE_MISSING_NATIVE` (fail explícito, resume
+     re-renderiza a cena). Nunca entrega muda "com sucesso".
+   - `ttsForScene` extrai a síntese (gate + fallback compartilham o mesmo
+     contrato); `voiceIds` da UI continuam válidos no modo elevenlabs/fallback.
+4. **Correções colaterais provadas pelos testes:**
+   - Sem `SUPABASE_SERVICE_ROLE_KEY` o registro do episódio é PULADO com aviso
+     (antes: chamada fútil degrada para anon e o RLS rejeita — audit finding 9
+     eliminado no caminho do pipeline).
+   - Guarda do teste standalone agora mira assinaturas de chamada
+     (`api.replicate.com` etc.), não prosa de mensagens de erro.
+5. **Verificação:** tsc OK; **122/122 unitários**; build OK; idempotency/
+   security/deploy/verify standalone todos verdes; lint na baseline.
+
+**Pendências BK-18:** Felipe confirma qual `PILOTO-KEV-c*` tem a voz certa →
+régua canônica fixada nos packs. Primeiro render REAL em modo nativo valida a
+fala integral dentro dos clipes (a régua teve 2/2 sucesso, mas consistência em
+lote precisa do render autorizado).
+
 ### BK-17 — incremento 2 (mesmo turno): reconciliação no GET de status
 
 - **`reconcileProviderRequests` (lib):** lote que reconcilia todas as predições

@@ -65,7 +65,9 @@ try {
     await new Promise(resolve => setTimeout(resolve, 50));
   }
   assert.equal(jobState?.status, 'FAILED');
-  assert.match(jobState.logs.at(-1), /ELEVENLABS_API_KEY ausente/);
+  // BK-18: voiceMode padrão é kling_native — sem ELEVENLABS o run segue até o
+  // lançamento; no sandbox sem provedor nem piloto, falha explícita e acionável.
+  assert.match(jobState.logs.at(-1), /Kling não gerou e não há piloto de fallback/);
 
   const orphanedJobId = crypto.randomUUID();
   const orphanedJobState = {
@@ -139,7 +141,10 @@ try {
   assert.equal(validResume.status, 200);
   assert.equal((await validResume.json()).status, 'RESUMING');
 
-  assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|Replicate/i);
+  // Guarda de honestidade: nenhum chamada real a provedores pagos no ambiente de
+  // teste. Citações em mensagens de erro (ex.: "causa provável: Replicate") não
+  // são chamadas — por isso a regex mira assinaturas de chamada, não prosa.
+  assert.doesNotMatch(serverOutput, /Supabase Error|Requesting ElevenLabs|api\.replicate\.com|api\.elevenlabs\.io|Launching Kling/i);
   assert.ok((await readdir(runtimeTmp)).every(name => !name.endsWith('.tmp')));
   console.log(`Recuperação válida: job órfão ${orphanedJobId} reconciliado como WORKER_RESTARTED com checkpoint PRESERVADO; retomada idêntica aceita e conflito de conteúdo 409.`);
 } finally {
