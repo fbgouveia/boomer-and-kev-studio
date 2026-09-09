@@ -436,7 +436,30 @@ AND KEV/Piloto/`) — energia e timbre dos personagens "como deveria ser".
    assinatura** — síntese TTS funciona normalmente. O status RESTRICTED na UI
    não significa que o TTS quebrará.
 
-### BK-18 — VEREDITO DO FELIPE e mudança de rota de voz (inc. 2)
+### BK-18 — RÉGUA CANÔNICA FIXADA e provada em render real (09/09)
+
+**Felipe confirmou (2ª resposta): S14 É a voz do Kev — os candidatos c1/c2/c3
+ficam supérfluos.** Régua canônica da dupla = **áudio nativo do Kling**
+(S13 Boomer + S14 Kev), agora padrão do pipeline (`voiceMode: 'kling_native'`).
+
+**Render real de validação (autorizado, ~US$0,70):** job
+`babbc15d-afdf-445b-bc29-bed547807852`, 2 cenas 9:16, modo nativo.
+- **QC independente aprovado:** fala do Kling audível nas duas cenas (mean
+  -18,8 dB / max -1,9 dB), **-15,3 LUFS** integrado (faixa de plataforma),
+  9,73s, **legendas burn-in visíveis em todos os frames** (5 cues, spec
+  canônica, quebra em 2 linhas correta), entrega **cloud** confirmada,
+  `sceneStates` VIDEO_READY nas duas cenas, sem `failureStage`.
+- Artefato: `review_frames/regua_native_final.mp4` (9 MB) para revisão do
+  Felipe.
+- **Achados de qualidade (conhecidos, BK-16/19):** drift de figurino — texto da
+  regata do Boomer saiu ilegível ("IMPALS") e o enquadramento do Kev abriu no
+  fim da cena (KEV_CU → wide). Mitigação já documentada: referência canônica por
+  tomada + explicitar figurino (ControlNet não disponível no Kling).
+- **Status BK-18: FECHADO** — régua canônica fixada (nativo do Kling) e provada
+  ponta-a-ponta. A pergunta dos candidatos c1/c2/c3 ficou superada pela resposta
+  de Felipe; os arquivos continuam no player como referência inofensiva.
+
+### BK-18 — veredito às cegas e mudança de rota de voz (registro da decisão)
 
 **Julgamento às cegas recebido:** Boomer = **S13**, Kev = **S14** — ambos da
 **rota A (áudio NATIVO do Kling)**. Âncora verde do Boomer "certa"; âncora do
