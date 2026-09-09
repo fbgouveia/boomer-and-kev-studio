@@ -110,12 +110,12 @@ export const runPipelineSchema = z.object({
         kev: z.string().max(5_000).optional(),
         studio: z.string().max(5_000).optional(),
     }).optional(),
-    // BK-16: voiceIds editados na Engine DNA entram no payload e na execução
-    // (antes: descartados, o run usava CHARACTERS estático).
-    voiceIds: z.object({
-        boomer: voiceIdSchema,
-        kev: voiceIdSchema,
-    }).optional(),
+    // BK-19 inc.2: voiceIds por pack do registry (chave = id de pack, forma de
+    // registro aberta — a UI envia o registro completo da Engine DNA).
+    voiceIds: z.record(
+        z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+        voiceIdSchema,
+    ).optional(),
     approval: z.object({
         confirmed: z.literal(true),
         source: z.enum(['studio_ui', 'n8n_manual']),

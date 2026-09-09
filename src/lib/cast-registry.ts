@@ -44,3 +44,9 @@ export function isRegisteredCharacter(id: string): boolean {
 export function registeredCharacterIds(): string[] {
     return [...registry.keys()].sort();
 }
+
+// BK-19 inc.2: lista para a UI — ordem de registro (boomer/kev primeiro, packs
+// novos na sequência). Chame uma vez na inicialização do módulo consumidor.
+export function castList(): CharacterPack[] {
+    return [...registry.values()];
+}

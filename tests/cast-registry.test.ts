@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+    castList,
     isRegisteredCharacter,
     registerCharacter,
     registeredCharacterIds,
@@ -83,4 +84,31 @@ describe('cast-registry — elenco como dado, não código (BK-19 inc. 1)', () =
         assert.equal(result.success, false);
         assert.ok(isRegisteredCharacter('boomer'));
     });
+
+    it('castList(): boomer/kev na ordem de registro e pack novo entra no fim', () => {
+        const rooSolo: CharacterPack = { ...CHARACTERS[0], id: 'roo_list' };
+        registerCharacter(rooSolo);
+        const list = castList();
+        assert.deepEqual(list.slice(0, 2), [CHARACTERS[0], CHARACTERS[1]]);
+        assert.equal(list.at(-1)?.id, 'roo_list');
+    });
+
+    it('voiceIds aceita override por pack registrado (BK-19 inc.2)', () => {
+        const parsed = runPipelineSchema.parse({
+            script: [{ ...baseScriptLine, characterId: 'roo_list' }],
+            voiceIds: { boomer: 'voice-a', roo_list: 'voice-b' },
+        });
+        assert.equal(parsed.voiceIds?.roo_list, 'voice-b');
+        assert.equal(parsed.voiceIds?.boomer, 'voice-a');
+    });
 });
+
+const baseScriptLine = {
+    id: 'scene-1',
+    characterId: 'boomer',
+    text: 'x',
+    shotType: 'KEV_CU' as const,
+    action: 'x',
+    emotion: 'Calm',
+    durationEst: 5,
+};

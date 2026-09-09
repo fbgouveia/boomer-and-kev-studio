@@ -597,6 +597,36 @@ commit por política).
    atual é fixture local) — acoplar ao próximo render autorizado.
 4. BK-19..BK-22 conforme ordem registrada acima (BK-19 pode começar sem gasto).
 
+### BK-19 inc.2 — UI lendo do registry + voz por pack (mesmo turno)
+
+- **`CAST = castList()`** substitui o import estático `CHARACTERS` em `page.tsx`
+  (15 pontos) e `DNAPanel.tsx` (2 pontos) — pack novo registrado aparece em TODA
+  a interface (Engine DNA, seletores de personagem, fallbacks de referência)
+  sem editar o Studio. Ordem de registro preservada (boomer/kev primeiro).
+- **`voiceIds` por pack:** init da UI deriva do registry (localStorage
+  `BK_VOICE_<ID>`; boomer/kev mantêm as chaves existentes), payload envia o
+  registro completo, schema aceita `z.record` por pack, `ttsForScene` resolve a
+  voz do pack dinamicamente (sem cast de duo).
+- **Testes:** 124/124 (castList ordenado, voiceIds por pack no schema).
+- **Verificação:** tsc OK; build OK; idempotency/security/verify standalone
+  verdes.
+- **Regressão a observar no próximo uso:** Engine DNA em 1440px com >2 packs
+  (layout de duas colunas pode precisar de wrap — não testado visualmente com
+  3+ packs; fixture de teste cobre lógica, não layout).
+
+### BK-17 — contrato durável pronto (aguardando autorização de banco remoto)
+
+- **`supabase/migrations/20260909000001_durable_jobs.sql`:** render_jobs +
+  scene_jobs (fila transacional no Postgres existente, decisão da auditoria:
+  medir antes de adicionar Redis/n8n). Lease com prazo espelhando o lease local,
+  provider_request_id persistido antes do polling, índices por status.
+  **RLS sem políticas públicas** (service role só — isolamento por tenant é
+  BK-21 e ampliará as políticas).
+- **NÃO APLICADO** — migração no banco remoto exige autorização explícita do
+  Felipe. Aplicável com: `supabase db execute` (ou via MCP com confirmação).
+  O worker durável só entra em código após a tabela existir (contrato antes de
+  código).
+
 ### BK-19 — incremento 1 (mesmo turno): elenco como dado, não código
 
 - **`src/lib/cast-registry.ts` (novo):** registry de `CharacterPack` (contrato do

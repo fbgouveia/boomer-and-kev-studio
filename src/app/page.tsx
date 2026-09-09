@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { CHARACTERS, STUDIO_SETTING, SHOT_TYPES, GUIDE_IMAGES, ANGLE_SPECS, DEFAULT_STUDIO_REFERENCE, DEFAULT_DNA_FOLDER_URL } from '@/data/characters';
+import { STUDIO_SETTING, SHOT_TYPES, GUIDE_IMAGES, ANGLE_SPECS, DEFAULT_STUDIO_REFERENCE, DEFAULT_DNA_FOLDER_URL } from '@/data/characters';
+import { castList, resolveCharacter } from '@/lib/cast-registry';
+
+// BK-19 inc.2: a UI lê do CAST REGISTRY, não do array estático — packs novos
+// registrados aparecem em toda a interface sem editar o Studio.
+const CAST = castList();
 import { ScriptEngine, DirectorialIntelligence } from '@/lib/script-engine';
 import {
   Camera,
@@ -97,7 +102,7 @@ export default function Home() {
         try {
           const parsed = JSON.parse(saved);
           // Migrate old Google Drive references to stable local paths
-          CHARACTERS.forEach(char => {
+          CAST.forEach(char => {
             if (parsed[char.id] && (!parsed[char.id].main || parsed[char.id].main.includes('drive.google.com'))) {
               parsed[char.id].main = char.referenceImage || '';
             }
@@ -107,7 +112,7 @@ export default function Home() {
       }
     }
     const refs: Record<string, { main: string, wide: string, side: string, close: string, profile: string, detail: string }> = {};
-    CHARACTERS.forEach(char => {
+    CAST.forEach(char => {
       refs[char.id] = {
         main: char.referenceImage || '',
         wide: '', side: '', close: '', profile: '', detail: ''
@@ -133,7 +138,7 @@ export default function Home() {
       }
     }
     const config: Record<string, { personality: string, lightingKey: string, behaviors: { action: string, emotion: string }[] }> = {};
-    CHARACTERS.forEach(char => {
+    CAST.forEach(char => {
       config[char.id] = {
         personality: char.personality,
         lightingKey: char.lightingKey,
@@ -149,9 +154,15 @@ export default function Home() {
     }
   }, [characterConfig, isLoaded]);
 
-  const [voiceIds, setVoiceIds] = useState<Record<string, string>>({
-    boomer: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_BOOMER') || CHARACTERS[0].voiceId : CHARACTERS[0].voiceId,
-    kev: typeof window !== 'undefined' ? localStorage.getItem('BK_VOICE_KEV') || CHARACTERS[1].voiceId : CHARACTERS[1].voiceId
+  // BK-19 inc.2: vozes por pack do registry (BK_VOICE_<ID> no localStorage) —
+  // sem índices [0]/[1] cravados; pack novo entra com a voz canônica do pack.
+  const [voiceIds, setVoiceIds] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const c of CAST) {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(`BK_VOICE_${c.id.toUpperCase()}`) : null;
+      initial[c.id] = stored || c.voiceId;
+    }
+    return initial;
   });
   const [studioReference, setStudioReference] = useState(DEFAULT_STUDIO_REFERENCE);
   const [dnaFolderUrl, setDnaFolderUrl] = useState(DEFAULT_DNA_FOLDER_URL);
@@ -336,7 +347,7 @@ export default function Home() {
     const nextLine = {
       ...nextLineRaw,
       technicalPrompt: getDetailedPrompt(nextLineRaw, mainSubject, directorSnippet),
-      characterReference: charReferences[nextLineRaw.characterId]?.main || CHARACTERS.find(c => c.id === nextLineRaw.characterId)?.referenceImage,
+      characterReference: charReferences[nextLineRaw.characterId]?.main || CAST.find(c => c.id === nextLineRaw.characterId)?.referenceImage,
       studioReference: GUIDE_IMAGES[nextLineRaw.shotType]
     };
 
@@ -357,7 +368,7 @@ export default function Home() {
       }
 
       if (field === 'durationEst') {
-        const baseChar = CHARACTERS.find(c => c.id === line.characterId);
+        const baseChar = CAST.find(c => c.id === line.characterId);
         const charConfig = characterConfig[line.characterId];
         const behaviors = charConfig?.behaviors || baseChar?.motionBehaviors || [];
 
@@ -397,7 +408,7 @@ export default function Home() {
   const totalCost = (totalDuration * 0.14).toFixed(2);
 
   const getDetailedPrompt = (line: ScriptLine, topicContext?: string, snippetContext?: string) => {
-    const baseChar = CHARACTERS.find(c => c.id === line.characterId);
+    const baseChar = CAST.find(c => c.id === line.characterId);
     const charConfig = characterConfig[line.characterId];
 
     const char = baseChar ? {
@@ -439,7 +450,7 @@ export default function Home() {
   };
 
   const downloadPromptPDF = (characterId: string, angle: string) => {
-    const char = CHARACTERS.find(c => c.id === characterId);
+    const char = CAST.find(c => c.id === characterId);
     if (!char) return;
 
     const angleSpec = ANGLE_SPECS[angle as keyof typeof ANGLE_SPECS];
@@ -520,7 +531,7 @@ export default function Home() {
   };
 
   const downloadScenePromptPDF = (line: ScriptLine, index: number) => {
-    const char = CHARACTERS.find(c => c.id === line.characterId);
+    const char = CAST.find(c => c.id === line.characterId);
     if (!char) return;
 
     const doc = new jsPDF();
@@ -719,7 +730,7 @@ export default function Home() {
     y += 35;
 
     script.forEach((line, index) => {
-      const char = CHARACTERS.find(c => c.id === line.characterId);
+      const char = CAST.find(c => c.id === line.characterId);
       const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
       // Pre-calculate heights
@@ -951,12 +962,11 @@ export default function Home() {
       engine: renderEngine,
       aspect: renderAspect,
       resumeJobId: failedJobId || undefined,
-      // BK-16: vozes editadas na Engine DNA entram na execução (antes: descartadas,
-      // o run usava a voz estática de CHARACTERS).
-      voiceIds: {
-        boomer: voiceIds.boomer || undefined,
-        kev: voiceIds.kev || undefined,
-      },
+      // BK-16/BK-19 inc.2: vozes editadas na Engine DNA entram na execução —
+      // registro completo por pack (campos vazios viram undefined).
+      voiceIds: Object.fromEntries(
+        Object.entries(voiceIds).map(([packId, voiceId]) => [packId, voiceId || undefined])
+      ),
       wardrobe: wardrobeConfig,
       approval: renderApproval.current
     };
@@ -1337,7 +1347,7 @@ export default function Home() {
                             className={cn("px-4 py-1 text-sm font-black uppercase tracking-widest border-none outline-none cursor-pointer appearance-none transition-all",
                               line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white hover:bg-white hover:text-[#FF5F1F]" : "bg-white text-black hover:bg-[#FF5F1F] hover:text-white")}
                           >
-                            {CHARACTERS.map(c => (
+                            {CAST.map(c => (
                               <option key={c.id} value={c.id} className="bg-[#0d0d0d] text-white">{c.name.toUpperCase()}</option>
                             ))}
                           </select>
@@ -1384,7 +1394,7 @@ export default function Home() {
                             <select
                               value={line.action}
                               onChange={(e) => {
-                                const selectedChar = CHARACTERS.find(c => c.id === line.characterId);
+                                const selectedChar = CAST.find(c => c.id === line.characterId);
                                 const behavior = selectedChar?.motionBehaviors.find(b => b.action === e.target.value);
                                 updateLine(line.id, 'action', e.target.value);
                                 if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
@@ -1392,7 +1402,7 @@ export default function Home() {
                               className="w-full bg-[#111111] border-b border-white/10 py-2 px-1 text-sm font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 appearance-none cursor-pointer group-hover:bg-[#1a1a1a] transition-all"
                             >
                               <option value={line.action} className="bg-[#0d0d0d]">{line.action || "-- SELECIONE UMA AÇÃO --"}</option>
-                              {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
+                              {CAST.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
                                 <option key={i} value={mb.action} className="bg-[#0d0d0d] text-white">
                                   {mb.emotion.toUpperCase()}: {mb.action}
                                 </option>
@@ -1402,7 +1412,7 @@ export default function Home() {
                           <div className="space-y-2">
                             <span className="text-xs font-black uppercase tracking-widest text-white/60">Lógica de Iluminação</span>
                             <p className="text-sm font-bold text-white/60 italic">
-                              {CHARACTERS.find(c => c.id === line.characterId)?.lightingKey}
+                              {CAST.find(c => c.id === line.characterId)?.lightingKey}
                             </p>
                           </div>
                         </div>
@@ -1687,7 +1697,7 @@ export default function Home() {
                                   <select
                                     value={line.action}
                                     onChange={(e) => {
-                                      const selectedChar = CHARACTERS.find(c => c.id === line.characterId);
+                                      const selectedChar = CAST.find(c => c.id === line.characterId);
                                       const behavior = selectedChar?.motionBehaviors.find(b => b.action === e.target.value);
                                       updateLine(line.id, 'action', e.target.value);
                                       if (behavior) updateLine(line.id, 'emotion', behavior.emotion);
@@ -1695,7 +1705,7 @@ export default function Home() {
                                     className="w-full bg-[#111111] border border-white/10 p-1 text-xs font-bold uppercase tracking-wider outline-none focus:border-[#FF5F1F] text-white/80 cursor-pointer"
                                   >
                                     <option value={line.action}>{line.action || "-- SELECIONE --"}</option>
-                                    {CHARACTERS.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
+                                    {CAST.find(c => c.id === line.characterId)?.motionBehaviors.map((mb, i) => (
                                       <option key={i} value={mb.action}>{mb.emotion.toUpperCase()}: {mb.action}</option>
                                     ))}
                                   </select>
@@ -1712,7 +1722,7 @@ export default function Home() {
                                   className={cn("px-2 py-0.5 text-xs font-black uppercase tracking-widest border-none outline-none cursor-pointer",
                                     line.characterId === 'boomer' ? "bg-[#FF5F1F] text-white" : "bg-white text-black")}
                                 >
-                                  {CHARACTERS.map(c => (
+                                  {CAST.map(c => (
                                     <option key={c.id} value={c.id} className="bg-[#0d0d0d] text-white">{c.name.toUpperCase()}</option>
                                   ))}
                                 </select>
@@ -1871,7 +1881,7 @@ export default function Home() {
                     onClick={() => {
                       const line = script.find(l => l.id === sharingLineId);
                       if (line) {
-                        const char = CHARACTERS.find(c => c.id === line.characterId);
+                        const char = CAST.find(c => c.id === line.characterId);
                         const doc = new jsPDF();
                         doc.setFontSize(16);
                         doc.text(`${char?.name.toUpperCase()} - Beat Script`, 20, 20);
@@ -1902,7 +1912,7 @@ export default function Home() {
               ...line,
               id: `scene-${Date.now()}-${idx}`,
               technicalPrompt: getDetailedPrompt(line as ScriptLine, directorIdea, directorSnippet),
-              characterReference: charReferences[line.characterId]?.main || CHARACTERS.find(c => c.id === line.characterId)?.referenceImage,
+              characterReference: charReferences[line.characterId]?.main || CAST.find(c => c.id === line.characterId)?.referenceImage,
               studioReference: GUIDE_IMAGES[line.shotType]
             }));
             setScript(hydratedScript as ScriptLine[]);
@@ -2139,7 +2149,7 @@ export default function Home() {
                       <div className="flex gap-12">
                         <div>
                           <span className="text-xs font-black text-white/50 uppercase block">Character</span>
-                          <span className="text-xs font-black text-white">{CHARACTERS.find(c => c.id === script.find(l => l.id === cinemaLineId)?.characterId)?.name.toUpperCase()}</span>
+                          <span className="text-xs font-black text-white">{CAST.find(c => c.id === script.find(l => l.id === cinemaLineId)?.characterId)?.name.toUpperCase()}</span>
                         </div>
                         <div>
                           <span className="text-xs font-black text-white/50 uppercase block">Motion</span>

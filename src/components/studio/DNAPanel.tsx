@@ -13,7 +13,12 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CHARACTERS, STUDIO_SETTING, GUIDE_IMAGES, ANGLE_SPECS } from '@/data/characters';
+import { STUDIO_SETTING, GUIDE_IMAGES, ANGLE_SPECS } from '@/data/characters';
+import { castList } from '@/lib/cast-registry';
+
+// BK-19 inc.2: painel lê do CAST REGISTRY — pack novo aparece no Engine DNA
+// sem editar o componente (ordem de registro: boomer/kev primeiro).
+const CAST = castList();
 import { toast } from '@/components/ui/Toast';
 
 interface DNAPanelProps {
@@ -54,7 +59,7 @@ export function DNAPanel({
   }>>({});
 
   const generateWithBanana = async (charId: string, angle: string) => {
-    const char = CHARACTERS.find(c => c.id === charId);
+    const char = CAST.find(c => c.id === charId);
     if (!char) return;
 
     const key = `${charId}-${angle}`;
@@ -180,7 +185,7 @@ export function DNAPanel({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[2px] bg-white/5 border-b border-white/5 mb-16 px-2 pb-16 stagger-item">
-        {CHARACTERS.map((char, idx) => (
+        {CAST.map((char, idx) => (
           <div
             key={char.id}
             style={{ animationDelay: `${idx * 200}ms` }}

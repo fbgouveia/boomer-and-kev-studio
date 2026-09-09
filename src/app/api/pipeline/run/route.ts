@@ -396,8 +396,8 @@ type ScriptLineLike = {
   emotion?: string;
 };
 
-async function ttsForScene(line: ScriptLineLike, character: NonNullable<ReturnType<typeof resolveCharacter>>, voiceIds?: { boomer?: string, kev?: string }): Promise<Buffer> {
-  const voiceId = voiceIds?.[line.characterId as 'boomer' | 'kev'] || character.voiceId;
+async function ttsForScene(line: ScriptLineLike, character: NonNullable<ReturnType<typeof resolveCharacter>>, voiceIds?: Record<string, string | undefined>): Promise<Buffer> {
+  const voiceId = voiceIds?.[line.characterId] || character.voiceId;
   const response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'xi-api-key': process.env.ELEVENLABS_API_KEY || '', 'accept': 'audio/mpeg' } as Record<string, string>,
@@ -449,7 +449,7 @@ async function processPipeline(
   directorSnippet: string,
   aspect: '9:16' | '16:9',
   wardrobe?: { boomer?: string, kev?: string, studio?: string },
-  voiceIds?: { boomer?: string, kev?: string },
+  voiceIds?: Record<string, string | undefined>,
   voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native'
 ) {
   const target = aspectTarget(aspect);
@@ -577,7 +577,7 @@ async function processPipeline(
         throw new Error(`VOICE_GATE: personagem '${line.characterId}' desconhecido (cena ${index}).`);
       }
       // BK-16: voiceId editado na Engine DNA (interface) é efetivo na execução.
-      const voiceId = voiceIds?.[line.characterId as 'boomer' | 'kev'] || character.voiceId;
+      const voiceId = voiceIds?.[line.characterId] || character.voiceId;
       if (!voiceId) {
         throw new Error(`VOICE_GATE: personagem '${line.characterId}' sem voiceId (cena ${index}) — run cancelado antes de gastar render.`);
       }
