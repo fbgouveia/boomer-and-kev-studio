@@ -17,6 +17,7 @@ import type { RunPipelineInput } from '@/lib/validations';
 const basePayload = {
     engine: 'kling',
     aspect: '9:16',
+    voiceMode: 'kling_native',
     directorIdea: '',
     directorSnippet: '',
     wardrobe: {},
