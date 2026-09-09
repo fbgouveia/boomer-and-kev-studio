@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "check:connections": "node tools/check-connections.mjs",
     "build": "next build",
     "test:deploy": "node tools/test-deploy-script.mjs",
     "test:unit": "tsx --test tests/*.test.ts",
