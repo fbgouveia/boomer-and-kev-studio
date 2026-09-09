@@ -196,11 +196,18 @@ const chave = {
   mapa: manifest.map((m, i) => ({ sample: m.sample, ...shuffled[i] })),
 };
 fs.writeFileSync(path.join(OUT_DIR, 'CHAVE.json'), JSON.stringify(chave, null, 2));
-fs.writeFileSync(path.join(OUT_DIR, 'index.html'), buildPlayer(manifest));
 
 log(`CONCLUÍDO: ${manifest.length} amostras cegas em ${OUT_DIR}`);
 log(`Gasto: ${spend.kling} clipe(s) Kling + ${spend.tts} chars TTS (dentro do teto autorizado).`);
 log('Julgamento: abrir index.html, ouvir, anotar preferências; CHAVE.json só depois.');
+
+// Âncoras de referência: os segmentos de voz do PILOTO ORIGINAL (T5 EVO), normalizados
+// igual às amostras — o alvo artístico "como deveria ser" de cada personagem.
+const PILOTO_PDF = null; // fonte do piloto: /Volumes/T5 EVO/BOOMER AND KEV/Piloto/piloto.mp4
+const REFERENCES = [
+  { name: 'PILOTO-BOOMER', file: 'PILOTO-BOOMER.mp3', note: 'Segmento 2,6–9,5s do piloto: hook em explosão, gritado, ritmo acelerado' },
+  { name: 'PILOTO-KEV', file: 'PILOTO-KEV.mp3', note: 'Segmento 9,6–14,5s do piloto: deadpan seco, nasal, lento, sem esforço' },
+];
 
 function buildPlayer(manifest) {
   const items = manifest.map(m => `
@@ -209,10 +216,23 @@ function buildPlayer(manifest) {
     <audio controls preload="none" src="${m.file}"></audio>
     <p class="note">Julgue: identidade do personagem · excentricidade · humor · inteligibilidade · timing</p>
   </div>`).join('\n');
+  const refs = REFERENCES.map(r => `
+  <div class="card ref">
+    <h2>⭐ ${r.name} — REFERÊNCIA (o piloto, como deveria ser)</h2>
+    <audio controls preload="none" src="${r.file}"></audio>
+    <p class="note">${r.note}</p>
+  </div>`).join('\n');
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Régua Vocal — Julgamento Cego</title>
 <style>body{background:#09090b;color:#fff;font-family:system-ui,sans-serif;max-width:760px;margin:0 auto;padding:32px}
 h1{color:#FF5F1F}.card{background:#111;border:2px solid #FF5F1F;padding:16px;margin:16px 0;border-radius:4px}
+.card.ref{border-color:#4ade80}.card.ref h2{color:#4ade80}
 audio{width:100%}.note{color:#999;font-size:13px}</style></head><body>
 <h1>🎬 RÉGUA VOCAL — JULGAMENTO CEGO</h1>
-<p>Ouça cada amostra SEM saber quem é quem. Anote: melhor para Boomer, melhor para Kev, e quais rejeitaria. A chave está em CHAVE.json (abra só depois).</p>${items}</body></html>`;
+<p>Ouça cada amostra SEM saber quem é quem. Anote: melhor para Boomer, melhor para Kev, e quais rejeitaria. A chave está em CHAVE.json (abra só depois).</p>
+${items}
+<h1 style="margin-top:48px">⭐ ANCORAS DE REFERÊNCIA — O PILOTO</h1>
+<p>Estes dois são os segmentos do PILOTO ORIGINAL (energia e timbre "como deveria ser"). Compare cada amostra cega contra a âncora do personagem correspondente.</p>
+${refs}</body></html>`;
 }
+fs.writeFileSync(path.join(OUT_DIR, 'index.html'), buildPlayer(manifest));
+log('Âncoras PILOTO-BOOMER / PILOTO-KEV incluídas no player.');

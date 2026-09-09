@@ -370,6 +370,31 @@ pacote — revisão separada desses diffs continua registrada como BK-14.
 - **Continua em BK-17:** reconciliação na GET de status (hoje só no resume),
   worker durável com fila no banco, orçamento/reserva.
 
+### BK-18 — referência artística do PILOTO integrada à régua (pedido do Felipe)
+
+**Pedido:** revisar os pilotos originais no HD externo (`/Volumes/T5 EVO/BOOMER
+AND KEV/Piloto/`) — energia e timbre dos personagens "como deveria ser".
+
+- **Fonte localizada:** `piloto.mp4` (26,4s) + cenas 1–4 (cenas soltas) + projeto
+  Premiere. Estrutura mapeada frame a frame: intro → **Boomer solo 2,5–9,5s**
+  (gritado, ritmo acelerado, apontando pra câmera, glitch FX) → **Kev solo
+  9,5–14,5s** (close estático, deadpan nasal, olhos semicerrados) → two-shot
+  banter (Boomer domina, Kev intercala) → logo.
+- **Âncoras de referência no player:** `review_frames/regua-vocal/PILOTO-BOOMER.mp3`
+  (2,6–9,5s) e `PILOTO-KEV.mp3` (9,6–14,5s), normalizadas -16 LUFS igual às
+  amostras cegas, agora em seção própria (verde) no fim do `index.html` para
+  comparação direta A/B de ouvido.
+- **Perfil objetivo (mix, não voz isolada):** Boomer -34,7 LUFS/LRA 1,7 vs Kev
+  -37,3 LUFS/LRA 1,3 no mesmo mix — Boomer ~2,6 dB acima, dinâmica apertada nos
+  dois (entrega constante). Limite declarado: piloto NÃO tem pista de voz isolada
+  (só `.PRV` do Premiere); timbre piloto-vs-TTS é julgamento de OUVIDO — não
+  inventar métrica que a análise não isola.
+- **Documento:** `review_frames/regua-vocal/PILOTO_REFERENCIA.md` — perfil de
+  energia/timbre por personagem, lei do contraste (Boomer 11/10 vs Kev 2/10) e o
+  caminho de fechamento da régua.
+- **Ferramenta atualizada:** `regua-vocal.mjs` agora inclui as âncoras do piloto
+  no player gerado (seção `REFERENCES`).
+
 ### BK-18 — incremento 1 (AUTORIZADO por Felipe, teto US$1–3): amostras da régua geradas
 
 - **Ferramenta:** `tools/regua-vocal.mjs` — gera as amostras da régua de forma
