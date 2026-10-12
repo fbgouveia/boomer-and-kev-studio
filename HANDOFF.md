@@ -42,7 +42,6 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-07 | Escolher roteiro (`STUDIO/04_Delivery/script_ab`) e autorizar render pago | Validar vídeo, voz nativa, figurino, enquadramento, 9:16 e 16:9. |
 | BK-10 | Confirmar contas do Down Under Discourse e autorizar 1ª publicação | Sem publicação não há métrica de retenção. |
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
-| BK-29 | `deriva_runs` também tem `SELECT USING(true)` para `public` (visto em `pg_policies` 12/10) | Decidir se a leitura anônima do histórico de sondas é intencional; se não, `drop policy "Allow anonymous read access on deriva_runs"` (conferir antes quem lê essa tabela). |
 | BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
 | BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
@@ -88,6 +87,11 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
   `schema.sql`). Verificado depois: anon lê **0** episódios (antes 15) e 0 script_lines;
   Library em produção continua com **11**. Rollback: recriar as 2 policies (ver migração).
   Token do Supabase CLI segue expirado (`supabase login` não roda em sessão não-TTY).
+- **BK-29 FECHADO — `deriva_runs` sem leitura anônima** (pedido do Felipe). O hook
+  SessionStart da raiz (`.claude/deriva-status.sh`, fora do git) lia com a anon key
+  embutida no script; agora lê com a service role do `.env.local` do Studio. Verificado:
+  anon → 0 linhas, hook segue exibindo o status. Migração `20261012000002_*` (aplicada).
+  Hoje só `trends` mantém SELECT público (manchetes RSS).
 - **Decisões do Felipe (12/10):** manter `docs/archive/` (não apagar); **não** aplicar
   a fila durável BK-17 agora (publicar e medir primeiro).
 - **BK-06:** fechado — legendas burn-in confirmadas no render real nativo (QC 09/09).
