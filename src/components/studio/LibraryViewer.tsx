@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { querySupabase } from '@/lib/supabase';
 import { Play, Download, Calendar, Loader2, RefreshCw, Trash2, Search, X, Code2, Film, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScriptLine } from '@/types';
@@ -31,7 +30,8 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
   const fetchEpisodes = async () => {
     setIsLoading(true);
     try {
-      const data = await querySupabase('episodes?status=eq.assembled&order=created_at.desc');
+      const res = await fetch('/api/episodes', { cache: 'no-store' });
+      const data = res.ok ? await res.json() : null;
       if (data && Array.isArray(data)) {
         setEpisodes(data || []);
       }

@@ -10,8 +10,12 @@
 --
 -- RLS: nenhuma política pública — apenas service role acessa (padrão
 -- seguro-por-padrão). Isolamento por tenant é BK-21 e ampliará estas políticas.
+--
+-- Nome `pipeline_jobs` (não `render_jobs`): o banco remoto JÁ tem a `render_jobs`
+-- legada do schema.sql (verificado 12/10/2026). Com `if not exists` a criação seria
+-- pulada em silêncio e o índice/FK cairiam na tabela errada.
 
-create table if not exists render_jobs (
+create table if not exists pipeline_jobs (
   id uuid primary key,                    -- = jobId local (uuid v4)
   status text not null check (status in (
     'DRAFT','REVIEW_REQUIRED','APPROVED','QUEUED','RUNNING','QC_PENDING',
@@ -36,7 +40,7 @@ create table if not exists render_jobs (
 
 create table if not exists scene_jobs (
   id uuid primary key default gen_random_uuid(),
-  job_id uuid not null references render_jobs(id) on delete cascade,
+  job_id uuid not null references pipeline_jobs(id) on delete cascade,
   scene_id text not null,                 -- id do roteiro (único por job, BK-16)
   status text not null default 'PENDING' check (status in (
     'PENDING','AUDIO_READY','VIDEO_READY','FAILED','SKIPPED'
@@ -53,11 +57,11 @@ create table if not exists scene_jobs (
 );
 
 create index if not exists scene_jobs_job_idx on scene_jobs(job_id);
-create index if not exists render_jobs_status_idx on render_jobs(status, updated_at);
+create index if not exists pipeline_jobs_status_idx on pipeline_jobs(status, updated_at);
 
 -- Lock com prazo: o worker que quiser executar um job RUNNING com lease vencido
 -- pode assumi-lo atomicamente (update ... where lease_until < now()).
 
-alter table render_jobs enable row level security;
+alter table pipeline_jobs enable row level security;
 alter table scene_jobs  enable row level security;
 -- Deliberadamente SEM políticas públicas: service role só.
