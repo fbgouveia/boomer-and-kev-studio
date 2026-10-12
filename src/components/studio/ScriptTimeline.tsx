@@ -8,7 +8,7 @@ interface ScriptTimelineProps {
   script: ScriptLine[];
   exportToPDF: () => void;
   addLine: () => void;
-  updateLine: (id: string, field: string, value: any) => void;
+  updateLine: (id: string, field: keyof ScriptLine, value: string | number) => void;
   removeLine: (id: string) => void;
   downloadScenePromptPDF: (line: ScriptLine, index: number) => void;
   setSharingLineId: (id: string | null) => void;

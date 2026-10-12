@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Target, Activity, Zap, Search, ArrowUpRight, Users, Sparkles, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, Activity, Zap, ArrowUpRight, Users, Sparkles, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import benchmarkData from '@/data/radar.json';
 
@@ -16,12 +16,8 @@ interface Benchmark {
 
 export function IntelligenceRadar() {
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
-  const [benchmarks, setBenchmarks] = useState<Benchmark[]>([]);
-
-  useEffect(() => {
-    // Load from json. We can also fetch live updates here in the future
-    setBenchmarks(benchmarkData as Benchmark[]);
-  }, []);
+  // Lista curada versionada no repo (src/data/radar.json); o endpoint de escrita foi arquivado.
+  const benchmarks = benchmarkData as Benchmark[];
 
   const categories = ['ALL', ...Array.from(new Set(benchmarks.map(b => b.category)))];
 

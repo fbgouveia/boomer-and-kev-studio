@@ -3,21 +3,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { STUDIO_SETTING, SHOT_TYPES, GUIDE_IMAGES, ANGLE_SPECS, DEFAULT_STUDIO_REFERENCE, DEFAULT_DNA_FOLDER_URL } from '@/data/characters';
-import { castList, resolveCharacter } from '@/lib/cast-registry';
+import { castList } from '@/lib/cast-registry';
 
 // BK-19 inc.2: a UI lê do CAST REGISTRY, não do array estático — packs novos
 // registrados aparecem em toda a interface sem editar o Studio.
 const CAST = castList();
 import { ScriptEngine, DirectorialIntelligence } from '@/lib/script-engine';
 import {
-  Camera,
   Clapperboard,
   Download,
   Trash2,
   Plus,
   Copy,
   Sparkles,
-  Settings2,
   Share2,
   Layers,
   BrainCircuit,
@@ -30,13 +28,11 @@ import {
   BookOpen,
   MessageSquare,
   Info,
-  Upload,
   X,
   FileText,
   Dna
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TrendsFeed } from '@/components/Director/TrendsFeed';
 import { jsPDF } from 'jspdf';
 import { DraftingTable } from '@/components/Director/DraftingTable';
 import { ScriptLine } from '@/types';
@@ -46,8 +42,7 @@ import { RenderTerminal } from '@/components/studio/RenderTerminal';
 import { DNAPanel } from '@/components/studio/DNAPanel';
 import { IntelligenceRadar } from '@/components/studio/IntelligenceRadar';
 import { CommercialGallery } from '@/components/studio/CommercialGallery';
-import LabsPanel from '@/components/studio/LabsPanel';
-import { FlaskConical, Tv, Target, Briefcase } from 'lucide-react';
+import { Tv, Target, Briefcase } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
 
@@ -58,7 +53,6 @@ const TABS = [
   { id: 'script', label: 'PRODUCTION', icon: Clapperboard },
   { id: 'library', label: 'LIBRARY', icon: Tv },
   { id: 'dna', label: 'ENGINE DNA', icon: Dna },
-  { id: 'labs', label: 'STUDIO LABS', icon: FlaskConical },
   { id: 'radar', label: 'RADAR', icon: Target },
   { id: 'commercial', label: 'COMMERCIAL', icon: Briefcase },
 ] as const;
@@ -88,7 +82,7 @@ export default function Home() {
   const renderInFlight = useRef(false);
   const renderIdempotencyKey = useRef<string | null>(null);
   const renderApproval = useRef<{ confirmed: true; source: 'studio_ui'; approvedAt: string } | null>(null);
-  const [renderEngine, setRenderEngine] = useState<'kling' | 'higgsfield'>('kling');
+  const [renderEngine, setRenderEngine] = useState<'kling'>('kling');
   const [renderAspect, setRenderAspect] = useState<'9:16' | '16:9'>('9:16');
   const [failedJobId, setFailedJobId] = useState<string | null>(null);
   const [renderProgress, setRenderProgress] = useState(0);
@@ -203,7 +197,6 @@ export default function Home() {
     elevenlabs?: { status: string, balance: string, percent?: number | null }
   } | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
-  const [renderMode, setRenderMode] = useState<'REAL' | 'SANDBOX' | null>(null);
 
   // Instructor Bot States
   const [isInterviewing, setIsInterviewing] = useState(false);
@@ -262,8 +255,6 @@ export default function Home() {
     setIsGenerating(true);
     console.log("🚀 [Neural_Link] Initiating Production Sequence...");
 
-    await new Promise(r => setTimeout(r, 300));
-
     let finalTitle = contextOverride?.title || directorIdea;
     let finalSnippet = contextOverride?.snippet || directorSnippet;
 
@@ -302,11 +293,11 @@ export default function Home() {
         body: JSON.stringify({ topic: directorIdea.split('\n')[0], apiKey: apiKeys.gemini })
       });
       const data = await res.json();
-      if (data.questions) {
-        setInterviewQuestions(data.questions);
-      }
+      if (!res.ok || !data.questions) throw new Error(data.error || 'Instructor returned no questions');
+      setInterviewQuestions(data.questions);
     } catch (e) {
       console.error("INSTRUCTOR_FAIL", e);
+      toast.error(`Directorial instructor failed: ${e instanceof Error ? e.message : 'unknown error'}`);
       setIsInterviewing(false);
     } finally {
       setIsGeneratingQuestions(false);
@@ -326,14 +317,14 @@ export default function Home() {
         })
       });
       const data = await res.json();
-      if (data.blueprint) {
-        setDirectorSnippet(data.blueprint);
-        setIsInterviewing(false);
-        setInterviewQuestions([]);
-        setCurrentAnswers(["", "", ""]);
-      }
+      if (!res.ok || !data.blueprint) throw new Error(data.error || 'Instructor returned no blueprint');
+      setDirectorSnippet(data.blueprint);
+      setIsInterviewing(false);
+      setInterviewQuestions([]);
+      setCurrentAnswers(["", "", ""]);
     } catch (e) {
       console.error("BLUEPRINT_FAIL", e);
+      toast.error(`Blueprint synthesis failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     } finally {
       setIsRefiningBlueprint(false);
     }
@@ -927,7 +918,7 @@ export default function Home() {
     setAssembledVideoUrl(null);
     setRenderLogs([
       "🚀 INITIALIZING_PRODUCTION_PIPELINE...",
-      renderEngine === 'higgsfield' ? "CONNECTING_TO_HIGGSFIELD_CORE..." : "CONNECTING_TO_REPLICATE_CORE...",
+      "CONNECTING_TO_REPLICATE_CORE...",
       "VALIDATING_NEUROMARKETIC_PAYLOAD..."
     ]);
 
@@ -972,9 +963,7 @@ export default function Home() {
     };
 
     try {
-      setRenderLogs(prev => ["ENCRYPTING_NEUROMORPHIC_PAYLOAD...", ...prev]);
       setRenderProgress(10);
-      await new Promise(r => setTimeout(r, 800));
 
       console.log("TRIGGERING_PIPELINE_RUN...");
       const runRes = await fetch('/api/pipeline/run', {
@@ -1063,7 +1052,7 @@ export default function Home() {
               setIsRenderingProject(false);
             }, 4000);
           }
-        } catch (pollErr: any) {
+        } catch (pollErr) {
           consecutiveErrors++;
           console.error(`Error in status polling (${consecutiveErrors}/4):`, pollErr);
           if (consecutiveErrors >= 4) {
@@ -1080,10 +1069,10 @@ export default function Home() {
         }
       }, 4000);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("RENDER_PROJECT_ERROR:", error);
       renderInFlight.current = false;
-      setRenderLogs(prev => [`CRITICAL_PIPELINE_FAILURE: ${error.message || 'Unknown Error'}`, ...prev]);
+      setRenderLogs(prev => [`CRITICAL_PIPELINE_FAILURE: ${error instanceof Error ? error.message : 'Unknown Error'}`, ...prev]);
       setRenderProgress(0);
       setTimeout(() => setIsRenderingProject(false), 3000);
     }
@@ -1195,9 +1184,9 @@ export default function Home() {
 
           </nav>
 
-          {/* MAIN CONTENT AREA */}
-          {/* MAIN CONTENT AREA */}
+          {/* MAIN CONTENT AREA — boundary por aba: uma aba que quebra não derruba a navegação */}
           <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0 bg-[#050505] max-w-full">
+            <ErrorBoundary key={activeTab}>
             {activeTab === 'director' && (
               <DirectorTerminal
                 directorIdea={directorIdea}
@@ -1817,10 +1806,6 @@ export default function Home() {
               />
             )}
 
-            {activeTab === 'labs' && (
-              <LabsPanel />
-            )}
-
             {activeTab === 'radar' && (
               <IntelligenceRadar />
             )}
@@ -1828,6 +1813,7 @@ export default function Home() {
             {activeTab === 'commercial' && (
               <CommercialGallery />
             )}
+            </ErrorBoundary>
           </div>
         </div>
 
@@ -1970,12 +1956,11 @@ export default function Home() {
 
           <select
             value={renderEngine}
-            onChange={(e) => setRenderEngine(e.target.value as 'kling' | 'higgsfield')}
+            onChange={(e) => setRenderEngine(e.target.value as 'kling')}
             disabled={isRenderingProject}
             className="bg-black/80 border-2 border-white/20 text-sm font-black text-white px-3 py-2 uppercase outline-none focus:border-[#FF5F1F] h-10 cursor-pointer tracking-wider"
           >
             <option value="kling">Kling (Replicate)</option>
-            <option value="higgsfield" disabled>Higgsfield.ai (not wired to full pipeline)</option>
           </select>
 
           {failedJobId && (
@@ -2068,7 +2053,6 @@ export default function Home() {
         isRenderingProject && (
           <RenderTerminal
             renderProgress={renderProgress}
-            renderMode={renderMode}
             renderLogs={renderLogs}
           />
         )
@@ -2589,7 +2573,7 @@ export default function Home() {
                           <div className="p-12 border border-white/5 bg-white/[0.01] text-center space-y-4 animate-pulse">
                             <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                             <p className="text-sm font-black text-white uppercase tracking-widest">Risk Agent Communicating with Attorney Agent...</p>
-                            <p className="text-sm text-white/60 font-mono uppercase">Negotiating fine print & drafting platform strike bypasses</p>
+                            <p className="text-sm text-white/60 font-mono uppercase">Rewriting flagged lines to reduce legal risk</p>
                           </div>
                         )}
 
@@ -2611,7 +2595,7 @@ export default function Home() {
 
                             {/* Platform Strike Risk Meters */}
                             <div className="space-y-4">
-                              <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Estudo de Risco por Plataforma (Strikes)</span>
+                              <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Risco por Plataforma — estimativa da IA, não medição</span>
                               <div className="grid grid-cols-3 gap-6">
                                 {[
                                   { label: 'TikTok', risk: mitigationReport.platformStrikeRisk.tiktok, color: '#00f2fe' },
@@ -2655,7 +2639,7 @@ export default function Home() {
                             <div className="space-y-4 pt-4 border-t border-white/10">
                               <span className="text-sm font-black text-white/60 tracking-widest uppercase block">Surgical Script Bypass Changes</span>
                               <div className="space-y-2">
-                                {mitigationReport.modifiedScript.map((line, idx) => {
+                                {mitigationReport.modifiedScript.map((line) => {
                                   const originalText = script.find(ol => ol.id === line.id)?.text || '';
                                   const isChanged = originalText !== line.text;
                                   return (

@@ -1,3 +1,4 @@
+import type { DirectorialIntelligence } from '@/lib/script-engine';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   BrainCircuit, 
@@ -10,11 +11,7 @@ import {
   Zap, 
   TrendingUp, 
   Calendar as CalendarIcon, 
-  Clock, 
-  BarChart3, 
-  Newspaper,
-  ChevronRight,
-  ArrowUpRight
+  Newspaper
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AUSSIE_CALENDAR } from '@/data/calendar';
@@ -43,7 +40,7 @@ interface DirectorTerminalProps {
   isGenerating: boolean;
   isInterviewing: boolean;
   setIsInterviewing: (val: boolean) => void;
-  generateAIScript: (trend?: { title: string, snippet: string, intelligence: any }) => void;
+  generateAIScript: (trend?: { title: string, snippet: string, intelligence?: DirectorialIntelligence }) => void;
   isGeneratingQuestions: boolean;
   interviewQuestions: string[];
   currentAnswers: string[];
@@ -119,6 +116,7 @@ export function DirectorTerminal({
   }, [geo]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- busca de rede ao montar/mudar a dependência: o loading síncrono é intencional (sincroniza com sistema externo)
     fetchTrends();
     return () => trendsRequest.current?.abort();
   }, [fetchTrends]);
@@ -504,7 +502,7 @@ export function DirectorTerminal({
                     {/* Badge details */}
                     <div className="flex justify-between items-center text-xs font-mono text-white/60 uppercase tracking-widest">
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-white/70">{event.category}</span>
-                      <span className="text-[#FF5F1F] font-bold">{event.date} // 2026</span>
+                      <span className="text-[#FF5F1F] font-bold">{`${event.date} // 2026`}</span>
                     </div>
 
                     <h4 className="text-xl font-black italic tracking-tighter uppercase text-white/90 leading-tight">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Download, Calendar, Loader2, RefreshCw, Trash2, Search, X, Code2, Film, RefreshCcw } from 'lucide-react';
+import { Download, Calendar, Loader2, RefreshCw, Trash2, Search, X, Code2, Film, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScriptLine } from '@/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -64,6 +64,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- busca de rede ao montar/mudar a dependência: o loading síncrono é intencional (sincroniza com sistema externo)
     fetchEpisodes();
   }, []);
 
@@ -211,12 +212,12 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                 <div>
                   <div className="flex items-center gap-2 text-[#FF5F1F] mb-3">
                     <Film size={16} />
-                    <h4 className="font-black text-xs uppercase tracking-widest">Director's Concept</h4>
+                    <h4 className="font-black text-xs uppercase tracking-widest">Director&apos;s Concept</h4>
                   </div>
                   <div className="bg-white/5 border border-white/10 p-4 font-mono text-xs text-white/70">
                     <p><span className="text-white/60">Topic:</span> {selectedEpisode.director_idea || selectedEpisode.topic}</p>
                     {selectedEpisode.director_snippet && (
-                      <p className="mt-2 text-white/90">"{selectedEpisode.director_snippet}"</p>
+                      <p className="mt-2 text-white/90">&quot;{selectedEpisode.director_snippet}&quot;</p>
                     )}
                   </div>
                 </div>
@@ -237,7 +238,7 @@ export function LibraryViewer({ onRemix }: LibraryViewerProps) {
                             )}>{line.characterId}</span>
                             <span className="text-sm font-mono text-white/60">[{line.shotType}]</span>
                           </div>
-                          <p className="text-sm font-medium text-white mb-2 leading-relaxed">"{line.text}"</p>
+                          <p className="text-sm font-medium text-white mb-2 leading-relaxed">&quot;{line.text}&quot;</p>
                           {line.action && (
                             <p className="text-xs text-white/50 italic flex gap-1">
                               <span>*</span>

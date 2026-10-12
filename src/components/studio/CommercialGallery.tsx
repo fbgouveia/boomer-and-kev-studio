@@ -107,8 +107,6 @@ export function CommercialGallery() {
                 className="w-full overflow-hidden bg-black/40 border-b border-white/10 p-3"
                 style={{ aspectRatio: PREVIEW_RATIO }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- asset estático servido
-                    de public/, sem otimização remota; next/image aqui só somaria configuração. */}
                 <img
                   src={asset.file}
                   alt={`${asset.type} em formato ${asset.format} da coleção Commercial Creatives`}

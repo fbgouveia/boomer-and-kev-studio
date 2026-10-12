@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { existsSync, createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -21,8 +22,8 @@ export async function GET(req: Request) {
     }
 
     // ponytail: stream raw file using native Response
-    const fileStream = createReadStream(filePath);
-    return new Response(fileStream as any, {
+    const fileStream = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>;
+    return new Response(fileStream, {
       headers: {
         'Content-Type': 'video/mp4',
         'Content-Disposition': `attachment; filename="boomer_and_kev_episode_${idValidation.data}.mp4"`

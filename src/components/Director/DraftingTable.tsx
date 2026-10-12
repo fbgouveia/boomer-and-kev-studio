@@ -3,18 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Zap,
-    Lock,
     RefreshCcw,
-    CheckCircle2,
     TrendingUp,
     BarChart3,
     Sparkles,
     Terminal,
     ChevronRight,
-    Search,
     Youtube,
     Instagram,
-    Eye,
     Brain,
     X,
     Layers,
@@ -148,6 +144,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
     }, [retryCountdown]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- busca de rede ao montar/mudar a dependência: o loading síncrono é intencional (sincroniza com sistema externo)
         if (topic) fetchBrainstorm();
     }, [topic, fetchBrainstorm]);
 
@@ -271,7 +268,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 </div>
                 <div className="flex items-center gap-2 bg-black/40 px-3 py-1 border border-white/5">
                     <BarChart3 size={12} className="text-[#FF5F1F]" />
-                    <span className="text-sm font-black text-[#FF5F1F] tracking-tighter uppercase">{option.retentionScore}% Momentum</span>
+                    <span className="text-sm font-black text-[#FF5F1F] tracking-tighter uppercase">AI est. {option.retentionScore}/100</span>
                 </div>
             </div>
 
