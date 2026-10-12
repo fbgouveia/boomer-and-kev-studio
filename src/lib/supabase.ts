@@ -10,17 +10,22 @@ interface SupabaseOptions extends RequestInit {
   useServiceRole?: boolean;
 }
 
-export async function querySupabase<T = any>(
+export async function querySupabase<T = unknown>(
   path: string,
   options: SupabaseOptions = {}
 ): Promise<T | null> {
+  // Falha explícita: antes, sem config devolvia null e chamadores (ex.: delete)
+  // respondiam sucesso sem ter tocado no banco; e service role ausente caía em
+  // silêncio para a anon key, que o RLS rejeita.
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("[Supabase] Credentials not configured. DB query skipped.");
-    return null;
+    throw new Error('Supabase not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).');
   }
 
   const { useServiceRole = false, ...fetchOptions } = options;
-  const key = useServiceRole && supabaseServiceRole ? supabaseServiceRole : supabaseAnonKey;
+  if (useServiceRole && !supabaseServiceRole) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured.');
+  }
+  const key = useServiceRole ? supabaseServiceRole! : supabaseAnonKey;
 
   const headers = {
     'Content-Type': 'application/json',

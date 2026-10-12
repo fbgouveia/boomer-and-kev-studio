@@ -66,8 +66,8 @@ try {
   }
   assert.equal(jobState?.status, 'FAILED');
   // BK-18: voiceMode padrão é kling_native — sem ELEVENLABS o run segue até o
-  // lançamento; no sandbox sem provedor nem piloto, falha explícita e acionável.
-  assert.match(jobState.logs.at(-1), /Kling não gerou e não há piloto de fallback/);
+  // lançamento; sem provedor (e sem STUDIO_SANDBOX=1), falha explícita e acionável.
+  assert.match(jobState.logs.at(-1), /REPLICATE_API_TOKEN não configurado/);
 
   const orphanedJobId = crypto.randomUUID();
   const orphanedJobState = {

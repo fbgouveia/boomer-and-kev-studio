@@ -79,18 +79,19 @@ export async function POST(req: Request) {
     const { prompt, aspectRatio, clientApiKey, anchorAsset } = validation.data;
     const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      const responseBody = { error: 'Missing Gemini API Key' };
-      completePaidOperation(paidReservation, { status: 400, body: responseBody });
-      return NextResponse.json(responseBody, { status: 400 });
+      const responseBody = { error: 'Missing Gemini API Key (GEMINI_API_KEY)' };
+      completePaidOperation(paidReservation, { status: 503, body: responseBody });
+      return NextResponse.json(responseBody, { status: 503 });
     }
 
     const anchor = await anchorPart(anchorAsset);
 
     const { response } = await fetchWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Chave no header, não na URL (URL acaba em log de proxy).
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{
             // A âncora vem ANTES do texto: o modelo trata a imagem como referência do

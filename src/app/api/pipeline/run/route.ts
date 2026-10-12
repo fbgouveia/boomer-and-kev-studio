@@ -21,7 +21,12 @@ import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests
 import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
 import { buildAssSubtitles, type CaptionCue } from '@/lib/captions';
 
-import { runPipelineSchema } from '@/lib/validations';
+import { runPipelineSchema, type RunPipelineInput } from '@/lib/validations';
+import type { Prediction } from 'replicate';
+
+const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
+type PromptLine = { characterId: string; shotType: string; text: string; action?: string; emotion?: string };
+type JobUpdate = Record<string, unknown> & { logs?: string[] };
 
 const idempotencyKeySchema = z.string().min(16).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 const jobIdSchema = z.string().uuid();
@@ -208,7 +213,7 @@ async function assembleVideo(
 // o Kling INVENTAR o segundo personagem sem referência — infidelidade de personagem. Achado 30/07.
 const SOLO_SHOTS_IN_VERTICAL = new Set(['WIDE', 'OTS_BOOMER', 'GOPRO_FISHEYE']);
 
-export const getDetailedPrompt = (line: any, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16', voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native') => {
+export const getDetailedPrompt = (line: PromptLine, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16', voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native') => {
   const char = resolveCharacter(line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
 
@@ -305,7 +310,8 @@ function ffmpegWithSubtitles(): string | null {
 }
 
 // Replicate polling helper
-async function pollPrediction(replicate: Replicate, predictionId: string, maxAttempts = 60): Promise<any> {  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+async function pollPrediction(replicate: Replicate, predictionId: string, maxAttempts = 60): Promise<Prediction['output']> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const prediction = await replicate.predictions.get(predictionId);
     if (prediction.status === 'succeeded') {
       return prediction.output;
@@ -321,12 +327,12 @@ async function pollPrediction(replicate: Replicate, predictionId: string, maxAtt
 // Kling create com retry no 429. Com < $5 de crédito o Replicate cai p/ 6/min
 // (burst 1); como os creates já são sequenciais, honrar retry_after pauta os
 // lançamentos na cadência permitida em vez de estourar. N tentativas → propaga.
-async function createKlingPrediction(replicate: Replicate, input: any, maxRetries = 6): Promise<any> {
+async function createKlingPrediction(replicate: Replicate, input: Record<string, unknown>, maxRetries = 6): Promise<Prediction> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await replicate.predictions.create({ model: "kwaivgi/kling-v2.6", input });
-    } catch (e: any) {
-      const msg = String(e?.message || '');
+    } catch (e) {
+      const msg = errorMessage(e);
       const is429 = msg.includes('429') || msg.toLowerCase().includes('throttled');
       if (!is429 || attempt >= maxRetries) throw e;
       const m = msg.match(/retry_after"?\s*[:=]\s*(\d+)/);
@@ -422,7 +428,8 @@ function probeDuration(videoPath: string): Promise<number> {
     fp.on('error', reject);
     fp.on('close', (code) => {
       const dur = parseFloat(out.trim());
-      code === 0 && dur > 0 ? resolve(dur) : reject(new Error(`ffprobe falhou p/ ${videoPath}`));
+      if (code === 0 && dur > 0) resolve(dur);
+      else reject(new Error(`ffprobe falhou p/ ${videoPath}`));
     });
   });
 }
@@ -444,7 +451,7 @@ function extractLastFrameDataUri(videoPath: string, tmpDir: string, tag: string)
 // Background Job Worker
 async function processPipeline(
   jobId: string,
-  script: any[],
+  script: RunPipelineInput['script'],
   directorIdea: string,
   directorSnippet: string,
   aspect: '9:16' | '16:9',
@@ -476,7 +483,7 @@ async function processPipeline(
     updateJob({ sceneStates });
   };
 
-  const updateJob = (updates: any) => {
+  const updateJob = (updates: JobUpdate) => {
     try {
       const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
       const newData = {
@@ -531,8 +538,8 @@ async function processPipeline(
         });
         episodeRegistered = true;
         updateJob({ logs: ["[Supabase] Episode successfully queued in cloud database."] });
-      } catch (e: any) {
-        updateJob({ logs: [`[Supabase] DB registration bypassed: ${e.message}`] });
+      } catch (e) {
+        updateJob({ logs: [`[Supabase] DB registration bypassed: ${errorMessage(e)}`] });
       }
     }
 
@@ -586,8 +593,8 @@ async function processPipeline(
       let buffer: Buffer;
       try {
         buffer = await ttsForScene(line, character, voiceIds);
-      } catch (e: any) {
-        throw new Error(`VOICE_GATE: ElevenLabs falhou na cena ${index} (${e.message}) — run cancelado antes de gastar render.`);
+      } catch (e) {
+        throw new Error(`VOICE_GATE: ElevenLabs falhou na cena ${index} (${errorMessage(e)}) — run cancelado antes de gastar render.`);
       }
 
       audioByScene.set(line.id, `data:audio/mpeg;base64,${buffer.toString('base64')}`);
@@ -629,7 +636,6 @@ async function processPipeline(
       }
 
       // 1b. Video Generation (Kling)
-      let videoUrl = "";
       const isSandbox = !replicate;
 
       // BK-17: reconciliação de predições incertas ANTES de repetir cobrança.
@@ -736,16 +742,20 @@ async function processPipeline(
             audioDataUri,
             status: "PROCESSING"
           });
-        } catch (e: any) {
+        } catch (e) {
           // BK-16: com Replicate configurado, falha de launch é falha real —
           // sem piloto silencioso. Estado identifica a etapa; intermediários
           // preservados no finally para retomada.
-          throw new Error(`[Scene ${index}] Kling launch failed (${currentStage}): ${e.message}`);
+          throw new Error(`[Scene ${index}] Kling launch failed (${currentStage}): ${errorMessage(e)}`);
         }
       }
 
       if (isSandbox) {
-        // Fallback: Copy pilot video
+        // Sem Replicate não há render real. Vídeo piloto só com opt-in explícito
+        // de desenvolvimento — nunca entregar clipe de outro episódio como se fosse este.
+        if (process.env.STUDIO_SANDBOX !== '1') {
+          throw new Error(`[Scene ${index}] REPLICATE_API_TOKEN não configurado: render real impossível. Para testar localmente com os vídeos piloto, defina STUDIO_SANDBOX=1.`);
+        }
         const pilotPath = path.resolve(process.cwd(), '../00_Legacy_Archives/Piloto', `cena${(i % 4) + 1}.mp4`);
         const targetPath = path.resolve(tmpDir, `sync_${jobId}_${sceneId}.mp4`);
         if (existsSync(pilotPath)) {
@@ -868,11 +878,11 @@ async function processPipeline(
         finalClipPaths.push(finalScenePath);
         markScene(scene.sceneId, 'VIDEO_READY');
         updateJob({ logs: [`✅ [Scene ${scene.index}] Scene completed & saved.`] });
-      } catch (err: any) {
+      } catch (err) {
         // BK-16: falha real com provedor configurado — estado identifica a etapa
         // e a causa; sem substituição silenciosa por piloto. Intermediários e
         // checkpoints ficam preservados no finally para retomada.
-        updateJob({ logs: [`❌ [Scene ${scene.index}] Falha real em ${currentStage}: ${err.message}. Job interrompido; checkpoints preservados para retomada.`] });
+        updateJob({ logs: [`❌ [Scene ${scene.index}] Falha real em ${currentStage}: ${errorMessage(err)}. Job interrompido; checkpoints preservados para retomada.`] });
         throw err;
       }
     }
@@ -980,8 +990,8 @@ async function processPipeline(
           updateJob({ logs: [`⚠️ UPLOAD_FAILED: ${errText}. Entrega LOCAL explícita (não é entrega cloud): ${finalVideoUrl}`] });
         }
       }
-    } catch (e: any) {
-      updateJob({ logs: [`⚠️ UPLOAD_ERROR: ${e.message}. Entrega LOCAL explícita (não é entrega cloud): ${finalVideoUrl}`] });
+    } catch (e) {
+      updateJob({ logs: [`⚠️ UPLOAD_ERROR: ${errorMessage(e)}. Entrega LOCAL explícita (não é entrega cloud): ${finalVideoUrl}`] });
     }
 
     // Update Supabase episode state
@@ -995,8 +1005,8 @@ async function processPipeline(
         })
       });
       updateJob({ logs: ["[Supabase] Episode row updated to 'assembled' state."] });
-    } catch (e: any) {
-      console.warn("[Supabase] Failed to update episode row:", e.message);
+    } catch (e) {
+      console.warn("[Supabase] Failed to update episode row:", errorMessage(e));
     }
 
     // Done! BK-16: a entrega real (cloud vs local) fica explícita no estado.
@@ -1008,7 +1018,7 @@ async function processPipeline(
       finalVideoUrl
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("MAESTRO_PIPELINE_CRASH:", error);
 
     if (episodeRegistered) {
@@ -1020,8 +1030,8 @@ async function processPipeline(
             status: 'failed'
           })
         });
-      } catch (e: any) {
-        console.warn("[Supabase] Failed to mark episode as failed in DB:", e.message);
+      } catch (e) {
+        console.warn("[Supabase] Failed to mark episode as failed in DB:", errorMessage(e));
       }
     }
 
@@ -1032,7 +1042,7 @@ async function processPipeline(
       progress: 0,
       failureStage: currentStage,
       logs: [
-        `🔴 CRITICAL_PIPELINE_ERROR em ${currentStage}: ${error.message}`,
+        `🔴 CRITICAL_PIPELINE_ERROR em ${currentStage}: ${errorMessage(error)}`,
         ...(uncertainPredictions.length
           ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
           : [])
