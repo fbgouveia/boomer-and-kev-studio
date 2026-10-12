@@ -5,6 +5,22 @@ Atualizado em **12/10/2026**. Este bloco é a única fonte operacional de pendê
 atualizações e descobertas. Meta de tamanho: **≤ ~150 linhas** (BK-23). Ao salvar,
 mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só o estado.
 
+## ▶ Comece aqui (próxima sessão — salvo 12/10/2026, fim do dia)
+
+Produção está **verde** (11/11 rotas, sentinela GREEN). O app está pronto para produzir;
+o gargalo é decisão, não código. Ordem de ataque:
+
+1. **Felipe responde as 10 perguntas ⭐ que restam da entrevista** (eram 11; na conversa saiu "12" por erro de contagem) (objetivo 90 dias, receita,
+   horas/semana, público, plataformas, contas, origem dos temas, roteiro do ep. 1,
+   teto de gasto, dono legal). Com isso o Orquestrador monta o plano em 3 fases
+   (No ar → Ritmo → Escala). As 50 perguntas estão na conversa de 12/10; as ⭐ são
+   as nº 1, 2, 4, 9, 15, 16, 23, 26, 37 (✅ resolvida: BK-30), 44, 47.
+2. **BK-31** — autorizar o conserto do alerta Telegram no n8n (sem isso, a próxima
+   quebra também passa calada). Ou Felipe troca `parse_mode` para HTML nos 2 nós.
+3. **BK-07** — escolher roteiro + autorizar o 1º render pago (episódio 1).
+4. **BK-10** — confirmar contas e autorizar a 1ª publicação.
+5. Só depois: BK-17 (Felipe decidiu adiar em 12/10), BK-20 GLM, BK-21 SaaS.
+
 ## Como retomar
 
 - Raiz do workspace: `Developer/PROJETO Boomer and Kev/` (**com espaço**). O
@@ -45,7 +61,7 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-07 | Escolher roteiro (`STUDIO/04_Delivery/script_ab`) e autorizar render pago | Validar vídeo, voz nativa, figurino, enquadramento, 9:16 e 16:9. |
 | BK-10 | Confirmar contas do Down Under Discourse e autorizar 1ª publicação | Sem publicação não há métrica de retenção. |
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
-| BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
+| BK-17 | Migração `20260909000001_durable_jobs.sql` no Supabase remoto | **Adiada por decisão do Felipe (12/10)** até haver volume. Tabela renomeada para `pipeline_jobs` (descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
 | BK-31 | **Autorizar correção do alerta Telegram no n8n** (workflow `CmHQvdzX5Sk23n7y`, guard bloqueou alteração de recurso compartilhado) | Ver descoberta 13. Patch: `parse_mode` HTML + texto escapado nos 2 nós de alerta. |
 | BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
