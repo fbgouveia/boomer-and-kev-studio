@@ -30,10 +30,13 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 - **Recomendação do Orquestrador (decisão do Felipe):** BK-07 → BK-10 (render
   autorizado + 1ª publicação) ANTES de BK-17 durável, BK-20 GLM e BK-21 SaaS.
   Fábrica antes de demanda medida é o maior risco do projeto.
-- **Verificação 12/10 (executada):** tsc OK · **124/124** unitários · build OK ·
-  verify/security/idempotency/deploy standalone OK · smoke em servidor de produção
-  local: `/api/episodes` 401 sem auth e 11 episódios com auth; `/api/cron/agent` 501.
-  Lint: 36 erros preexistentes (22 `no-explicit-any`), nenhum novo.
+- **Verificação 12/10 (executada, após a revisão técnica):** tsc OK · **124/124**
+  unitários · **lint 0 erros/0 avisos** · build OK · verify/security/idempotency/deploy
+  standalone OK · smoke E2E contra provedores reais: **todas as 13 rotas vivas OK**
+  em servidor local (sentinela GREEN nas 4 sondas). Em produção: 10/11 OK; o
+  roteirista responde **503 explícito** até a chave entrar (BK-30). Rotas arquivadas → 404.
+- **Sem produção automática:** o workflow n8n "Boomer & Kev Production Orchestrator"
+  está **inativo desde 19/07**. Produção real = Studio (`/api/pipeline/run`), manual.
 
 ## Pendências — decisões do Felipe (bloqueiam o ritmo)
 
@@ -44,24 +47,22 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
 | BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
-| BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
+| BK-30 | **Colocar `ANTHROPIC_API_KEY` no `.env` da VPS** (guard do Claude Code bloqueou a escrita de segredo) | Comando pronto na seção BK-30 abaixo; depois `/api/sentinel` deve dar GREEN. |
+| BK-31 | **Autorizar correção do alerta Telegram no n8n** (workflow `CmHQvdzX5Sk23n7y`, guard bloqueou alteração de recurso compartilhado) | Ver descoberta 13. Patch: `parse_mode` HTML + texto escapado nos 2 nós de alerta. |
 | BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
 
-### 🔴 DERIVA ATIVA desde 05/09/2026 — roteirista fora do ar em produção (BK-30)
+### 🔴 BK-30 — roteirista fora do ar em produção desde 05/09/2026
 
-- **Evidência:** `deriva_runs` RED diário de 05/09 a 11/10 (`gemini_roteirista: HTTP 400`);
-  reproduzido 12/10 em produção: `POST /api/ai/script` → `{"error":"Missing Anthropic API Key"}`.
-- **Causa raiz:** a rota migrou de Gemini para Claude em 07/08 (`dc6b183`) e passou a exigir
-  `ANTHROPIC_API_KEY`; o deploy de 04/09 levou essa rota para a VPS, mas o `.env` de
-  produção nunca recebeu a chave (tem só ELEVENLABS/GEMINI/REPLICATE/SUPABASE/STUDIO_AUTH).
-- **Impacto:** geração de roteiro em produção quebrada e pré-voo cancelando o cron
-  seg/qua/sex 08h há 37 dias. Ninguém viu: o alerta só aparece ao abrir sessão na raiz.
-- **Patch proposto (faixa vermelha: credencial, exige OK do Felipe):** acrescentar
-  `ANTHROPIC_API_KEY` (mesma do `.env.local`) e `SCRIPT_MODEL=claude-sonnet-5` ao `.env`
-  da VPS → `pm2 restart boomer-engine --update-env` → validar com a sonda existente
-  (`/api/sentinel`) e o roteiro de Bondi. Rollback: remover as 2 linhas e reiniciar.
-- **Notas:** id da sonda `gemini_roteirista` ficou com nome antigo (é Claude); ElevenLabs
-  deu `payment_issue` 19–23/09 e voltou sozinho. Por que o Telegram não alertou: não verificado.
+- **Causa raiz:** rota migrou para Claude em 07/08 (`dc6b183`); o deploy de 04/09 levou-a à
+  VPS sem `ANTHROPIC_API_KEY` no `.env`. Sentinela RED diária de 05/09 a 11/10.
+- **Por que ninguém viu (descoberta 13):** o nó "Alertar Deriva" do n8n falhou TODO dia
+  com `can't parse entities` — o `_` de `gemini_roteirista` quebra o Markdown do Telegram.
+- **Patch (Felipe executa — o guard bloqueou a escrita de segredo pelo agente):** na sessão,
+  dentro do STUDIO, rode (lê a chave do `.env.local` sem exibi-la; faz backup do `.env`):
+  ```
+  ! K=$(grep -E '^ANTHROPIC_API_KEY=' .env.local | cut -d= -f2- | tr -d '"'); printf 'ANTHROPIC_API_KEY=%s\nSCRIPT_MODEL=claude-sonnet-5\n' "$K" | ssh root@2.25.182.106 'F=/var/www/boomerandkev.fgss.io/.env; cp -p $F $F.bak-20261012; cat >> $F; cd /var/www/boomerandkev.fgss.io && npx pm2 restart boomer-engine --update-env'
+  ```
+  Verificar: `/api/sentinel` GREEN. Rollback: restaurar `.env.bak-20261012` e reiniciar.
 
 ## Pendências técnicas (sem gasto, executáveis)
 
@@ -71,7 +72,7 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-19 | ShowProfile por show; 2 elencos adicionais homologados (arte via Open Design/Gestor) | Pack novo roda sem editar engine; Engine DNA com 3+ packs conferido em 1440px. |
 | BK-21 | SaaS/white label: identidade, tenants, RLS por dono, quotas, cobrança | Depois de validação de audiência. |
 | BK-22 | Lote de aceitação: custo por vídeo aprovado, falhas, latência, retenção real | Depende de BK-10 e BK-17. |
-| BK-26b | `/api/cron/agent` implementar de verdade (trends → `/api/ai/script` → rascunho) | Hoje responde 501 honesto (antes mentia "roteiros gerados"). |
+| BK-26b | Agente automático de pautas→roteiro (rota arquivada) | Só quando Felipe definir cadência e onde revisar rascunhos (perguntas 23–25 da entrevista). |
 | BK-11/12/13 | Backlog produto, marca/interface, operação | Preservado no histórico; sem execução automática. |
 | Offer Radar | Coletor nº 4 da fila do Arquiteto (`IDEIAS/coletor-proposito-extracao/BRIEF.md`) | Último da fila; estado `em_pesquisa`. |
 
@@ -112,6 +113,16 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
   a fila durável BK-17 agora (publicar e medir primeiro).
 - **BK-06:** fechado — legendas burn-in confirmadas no render real nativo (QC 09/09).
 
+- **Revisão técnica completa (pedido "todas as funções funcionando"):** 22 rotas
+  inventariadas → 13 vivas e testadas contra provedores reais; 9 arquivadas em
+  `docs/archive/api/` (sem chamador vivo, várias fingiam sucesso: sandbox, vídeo de
+  exemplo "succeeded", tendências inventadas). Studio Labs (100% simulado) e `TrendsFeed`
+  (morto) arquivados. Rotas Gemini num cliente único com JSON validado; roteirista com
+  juiz estruturado, travas testadas (`script-gates`) e até 3 rascunhos antes de 422;
+  Supabase falha explícito sem config; piloto só com `STUDIO_SANDBOX=1`; ErrorBoundary
+  por aba; métricas inventadas rotuladas "estimativa da IA"; deploy não apaga mais
+  `public/assets/generated`. Commits `071524a`…`59f5cd9`, deploy feito.
+
 ## Descobertas duráveis (não escritas em outro lugar)
 
 1. **Banco remoto já tem `render_jobs` legada** (`schema.sql`: episode_id, voice_status…).
@@ -134,6 +145,16 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 10. `--amend` após commit encadeado que falhou engole o commit anterior; reparo
     `git reset --soft origin/<branch>` e recommitar.
 11. `volumedetect` mean > -60dB é QC confiável de fala audível em clipes Kling.
+12. **Não há produção automática:** orquestrador n8n `n6qm9qMxEFvvkU8C` inativo desde 19/07;
+    o gerador `tools/n8n_boomer_kev_orchestrator.ts` (arquivado) mandava payloads que as
+    rotas rejeitam e sem auth. O texto "produção das 08h cancelada" dos alertas era falso.
+13. **Telegram + `parse_mode` vazio no n8n = Markdown:** qualquer `_` (ex.: `gemini_roteirista`,
+    `clara_escalations`) derruba o envio com `can't parse entities`. Usar HTML + escape.
+14. **Guard do Claude Code** bloqueia: `git rm`, escrita de segredo em servidor e alteração de
+    workflow n8n compartilhado — mesmo com "execute tudo". Deploy, SQL via dashboard e
+    `git mv` passam. Planejar esses passos como ação do Felipe.
+15. `deploy_studio.sh` com `rsync --delete public/` apagava imagens geradas em produção
+    (corrigido com `--exclude assets/generated/`).
 
 <!-- CONTINUIDADE_ATUAL_FIM -->
 
