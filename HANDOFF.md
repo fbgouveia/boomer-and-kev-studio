@@ -1,13 +1,124 @@
 <!-- CONTINUIDADE_ATUAL_INICIO -->
 # Boomer & Kev — continuidade única
 
+Atualizado em **12/10/2026**. Este bloco é a única fonte operacional de pendências,
+atualizações e descobertas. Meta de tamanho: **≤ ~150 linhas** (BK-23). Ao salvar,
+mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só o estado.
+
+## Como retomar
+
+- Raiz do workspace: `Developer/PROJETO Boomer and Kev/` (**com espaço**). O
+  `HANDOFF.md` da raiz é link para `BOOMER AND KEV/boomer-and-kev-studio/HANDOFF.md`
+  (aqui chamado **STUDIO**). Código e Git vivem em STUDIO; mídias em `BOOMER AND KEV/0x_*`.
+- Git: remote `fbgouveia/boomer-and-kev-studio`, branch de trabalho `restore-engine`.
+- Leis: `CÉREBRO/LEIS_FGSS.md` + roteador `CÉREBRO/FGSS brain/tools/route_task.py`.
+- Histórico (sessões até 09/09 e auditoria completa): abaixo de `CONTINUIDADE_ATUAL_FIM`.
+  Planos antigos em `docs/archive/`. Checkbox antigo não é tarefa atual.
+- Verificação padrão: `npx tsc --noEmit` · `npm run test:unit` · `npm run build` ·
+  `npm run verify:standalone` · `test:security:standalone` · `test:idempotency:standalone` ·
+  `test:deploy`. Diagnóstico sem gasto: `npm run check:connections`.
+
+## Estado em 12/10/2026
+
+- **Engenharia sólida, produto não validado.** Pipeline com retomada sem perder
+  cenas pagas, reconciliação de predições (sem cobrança dupla), lease de executor
+  único, voz nativa do Kling como padrão (régua BK-18 fechada), legendas burn-in,
+  elenco como dado (cast registry). Render real de validação aprovado no QC
+  (`review_frames/regua_native_final.mp4`, 9,7s, 9:16, legendas visíveis).
+- **Produto:** 6–7 vídeos de validação, **0 publicados, 0 dado de audiência.**
+  Último commit de código antes desta revisão: 09/09 (`32ef3dd`).
+- **Recomendação do Orquestrador (decisão do Felipe):** BK-07 → BK-10 (render
+  autorizado + 1ª publicação) ANTES de BK-17 durável, BK-20 GLM e BK-21 SaaS.
+  Fábrica antes de demanda medida é o maior risco do projeto.
+- **Verificação 12/10 (executada):** tsc OK · **124/124** unitários · build OK ·
+  verify/security/idempotency/deploy standalone OK · smoke em servidor de produção
+  local: `/api/episodes` 401 sem auth e 11 episódios com auth; `/api/cron/agent` 501.
+  Lint: 36 erros preexistentes (22 `no-explicit-any`), nenhum novo.
+
+## Pendências — decisões do Felipe (bloqueiam o ritmo)
+
+| ID | Decisão | Observação |
+|---|---|---|
+| BK-07 | Escolher roteiro (`STUDIO/04_Delivery/script_ab`) e autorizar render pago | Validar vídeo, voz nativa, figurino, enquadramento, 9:16 e 16:9. |
+| BK-10 | Confirmar contas do Down Under Discourse e autorizar 1ª publicação | Sem publicação não há métrica de retenção. |
+| — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
+| BK-27 | Aplicar `supabase/migrations/20261012000001_close_anon_read.sql` | **Ordem:** publicar o Studio com `GET /api/episodes` primeiro; aplicar depois. Hoje a anon key lê os 15 episódios inteiros. Nomes das policies conferidos só no `schema.sql` local. |
+| BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
+| BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
+| BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
+| BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
+| BK-25b | Apagar de vez `docs/archive/` (scripts mortos, planos, backup) | Arquivado em 12/10; exclusão definitiva foi bloqueada pelo guard de ações irreversíveis e fica com o Felipe. |
+
+## Pendências técnicas (sem gasto, executáveis)
+
+| ID | Pendência | Aceite |
+|---|---|---|
+| BK-17 | Worker durável sobre `pipeline_jobs`/`scene_jobs`; orçamento/reserva | Só após a migração existir no remoto. |
+| BK-19 | ShowProfile por show; 2 elencos adicionais homologados (arte via Open Design/Gestor) | Pack novo roda sem editar engine; Engine DNA com 3+ packs conferido em 1440px. |
+| BK-21 | SaaS/white label: identidade, tenants, RLS por dono, quotas, cobrança | Depois de validação de audiência. |
+| BK-22 | Lote de aceitação: custo por vídeo aprovado, falhas, latência, retenção real | Depende de BK-10 e BK-17. |
+| BK-26b | `/api/cron/agent` implementar de verdade (trends → `/api/ai/script` → rascunho) | Hoje responde 501 honesto (antes mentia "roteiros gerados"). |
+| BK-11/12/13 | Backlog produto, marca/interface, operação | Preservado no histórico; sem execução automática. |
+| Offer Radar | Coletor nº 4 da fila do Arquiteto (`IDEIAS/coletor-proposito-extracao/BRIEF.md`) | Último da fila; estado `em_pesquisa`. |
+
+## Atualizações — revisão de 12/10/2026
+
+- **Workspace:** pastas vazias `Developer/PROJETOBoomer and Kev` e `Developer/Boomer and Kev`
+  removidas; README/AGENTS/HANDOFF apontam para `PROJETO Boomer and Kev` (com espaço).
+  Nota de 14/09 "pasta não é repo git" corrigida (era falsa).
+- **BK-23:** este bloco reescrito (era ~1.270 linhas); o bloco anterior foi
+  preservado integralmente no histórico, primeira seção abaixo do marcador.
+- **BK-24:** `.agent/` removido do índice git (arquivos seguem no disco) e ignorado.
+  Arquivos rastreados: 1.703 → 212.
+- **BK-25:** scripts mortos (`check-model`, `list-models`, `test-*`, `check_*`),
+  `page_legacy_2024.tsx_backup` e planos antigos (`HANDOFF_AMANHA`, `HANDOFF_VLAEG`,
+  `PLAN`, `audit-plan`) movidos para `docs/archive/`. `find-model.js` fica na raiz
+  (citado pelo `/api/sentinel`). eslint/deriva.yml/README atualizados.
+- **BK-26:** `/api/cron/agent` → 501 `not_implemented`.
+- **BK-27:** nova `GET /api/episodes` (servidor, service role, atrás do Basic Auth);
+  Library lê por ela. Migração de fechamento do RLS criada, **não aplicada**.
+- **BK-28:** cópia `FELIPE RESUME/GITHUB_POLISH/boomer-and-kev-studio` avançada
+  (fast-forward) de `8c05050` para `32ef3dd` em `restore-engine`; nada perdido.
+- **BK-06:** fechado — legendas burn-in confirmadas no render real nativo (QC 09/09).
+
+## Descobertas duráveis (não escritas em outro lugar)
+
+1. **Banco remoto já tem `render_jobs` legada** (`schema.sql`: episode_id, voice_status…).
+   A migração BK-17 usava `create table if not exists render_jobs` → seria pulada
+   em silêncio e o índice/FK cairiam na tabela errada. Renomeada para `pipeline_jobs`.
+2. **Anon key lê `episodes` inteiro** (script_json, rascunhos, video_url) — 15 linhas
+   em 12/10. `script_lines` e `trends` vazias. A anon key vai no bundle público.
+3. **Pasta-casca causa erro de agente:** abrir `PROJETOBoomer and Kev` (sem espaço)
+   levou um agente a concluir "não é repo git". Sempre abrir a pasta com espaço.
+4. **Guard de ações irreversíveis do Claude Code** bloqueia `git rm`/`rm` de arquivos
+   versionados mesmo com "execute tudo"; `git mv` para arquivo e `git rm --cached`
+   passam. Exclusão definitiva precisa de permissão explícita do Felipe.
+5. CRLF em `characters.ts`: editar preservando `\r\n`.
+6. `brew install ffmpeg-full` quebra o ffmpeg padrão (libx265); reparo `brew upgrade ffmpeg`.
+   ffmpeg padrão não tem libass — burn-in depende do ffmpeg-full (detecção automática).
+7. API REST do Replicate exige `version` (422 com `model`); usar o SDK.
+8. ElevenLabs "RESTRICTED" na tela de keys = sem permissão de leitura de assinatura; TTS funciona.
+9. Turbopack embute `NEXT_PUBLIC_*` no standalone; testes standalone não são herméticos para essas vars.
+10. `--amend` após commit encadeado que falhou engole o commit anterior; reparo
+    `git reset --soft origin/<branch>` e recommitar.
+11. `volumedetect` mean > -60dB é QC confiável de fala audível em clipes Kling.
+
+<!-- CONTINUIDADE_ATUAL_FIM -->
+
+## Histórico — bloco de continuidade até 12/10/2026 (arquivado na BK-23)
+
+<details>
+<summary>Bloco "atual" anterior, preservado integralmente (sessões 05–09/09, auditoria e plano)</summary>
+
+### (arquivado) Boomer & Kev — continuidade única
+
 Atualizado em **09/09/2026, AEST**. Este bloco é a fonte operacional de pendências,
 atualizações e descobertas de todo o projeto. Leia até `CONTINUIDADE_ATUAL_FIM`;
 o histórico abaixo só precisa ser consultado para investigar uma decisão específica.
 
 ## Um projeto, um ponto de retomada
 
-- Abra sempre `PROJETOBoomer and Kev/`. O `HANDOFF.md` dessa raiz é um link para
+- Abra sempre `PROJETO Boomer and Kev/` (com espaço). O `HANDOFF.md` dessa raiz é um link para
   este mesmo arquivo, versionado em `BOOMER AND KEV/boomer-and-kev-studio/HANDOFF.md`.
   Há **um único conteúdo**, acessível pelos dois caminhos.
 - Neste documento, **STUDIO** significa `BOOMER AND KEV/boomer-and-kev-studio`,
@@ -50,6 +161,32 @@ retomada abaixo é a entrada para esse trabalho.
   seletor de formato 9:16 / 16:9 ajusta proporção e orçamento dinamicamente.
 - **Validação:** 76 testes unitários passando, testes de idempotência e conexão
   executando com sucesso, build de produção compilando 25 rotas limpas.
+
+## Revisão geral de 12/10/2026 (somente leitura + correções documentais)
+
+**Verificado agora:** `tsc --noEmit` OK · **124/124 unitários** · lint 36 erros
+(22 `no-explicit-any`, 16 no `route.ts`; nenhum bloqueante). Build e testes
+standalone NÃO foram rodados nesta revisão. Último commit de código: 09/09
+(`32ef3dd`), 33 dias parado; tudo pushado em `restore-engine`.
+
+**Feito nesta revisão:** (1) pastas vazias `Developer/PROJETOBoomer and Kev` e
+`Developer/Boomer and Kev` removidas; README/AGENTS/HANDOFF agora apontam para
+`PROJETO Boomer and Kev` (com espaço); (2) nota de 14/09 "pasta não é repo git"
+marcada como falsa (foi escrita a partir da pasta vazia). Sem mudança de código.
+
+**Leitura de negócio (contra-caso):** a engenharia (fila durável, multi-tenant,
+cast registry, GLM) avançou muito à frente do produto: 6–7 vídeos de validação,
+0 publicados, 0 dado de audiência. Recomendação: BK-07 → BK-10 (render
+autorizado + 1ª publicação) ANTES de BK-17 durável, BK-20 e BK-21. Decisão do Felipe.
+
+| ID | Pendência | Critério de conclusão |
+|---|---|---|
+| BK-23 | **Enxugar este HANDOFF** — bloco atual tem ~1.250 linhas (arquivo 213 KB); inviável p/ GLM-Flash | Bloco atual ≤ ~150 linhas (estado, pendências, descobertas); seções de sessões 08–09/09 movidas p/ histórico abaixo do marcador. |
+| BK-24 | **`.agent/skills` versionado no app** — 1.491 de 1.703 arquivos rastreados (88%), skills alheias ao Studio | Felipe decide: remover do git (manter local/global) ou justificar. |
+| BK-25 | **Lixo na raiz do Studio** — `check-model.js`, `find-model.js`, `list-models.js`, `test-*.js`, `check_*.js`, 7 planos/handoffs históricos, `src/app/page_legacy_2024.tsx_backup` | Felipe autoriza remoção/arquivamento; nada apagado sem aprovação. |
+| BK-26 | **Endpoints simulados** — `/api/cron/agent` responde "roteiros gerados" sem gerar nada (Studio Labs idem, BK-08) | Implementar de verdade ou retornar 501/rotular como simulação. |
+| BK-27 | **RLS `SELECT USING(true)`** em `episodes`/`script_lines`/`trends` no `schema.sql` | Conferir políticas no banco REMOTO e decidir se leitura anônima é intencional (entra em BK-21). |
+| BK-28 | **Cópia antiga do repo** em `Developer/FELIPE RESUME/GITHUB_POLISH/boomer-and-kev-studio` (HEAD `8c05050`, desatualizada) | Felipe decide: apagar, ou atualizar com `git pull` se for vitrine de portfólio. |
 
 ## Pendências abertas
 
@@ -1245,7 +1382,8 @@ origem externa. Em STUDIO, `HANDOFF_AMANHA.md` (19/07), `HANDOFF_VLAEG.md` e
 `task_plan.md` (março), `progress.md`, `findings.md` e `PLAN.md` permanecem disponíveis
 para consultas pontuais. Nada disso precisa ser lido inteiro para retomar o projeto.
 
-<!-- CONTINUIDADE_ATUAL_FIM -->
+
+</details>
 
 ## Histórico preservado — não é a lista atual de tarefas
 
@@ -2848,3 +2986,29 @@ Este registro estava na raiz por engano. Preservado para rastreabilidade; não �
 - **Controle de Submódulos Ativos:** Configurar `ignore = dirty` no arquivo `.gitmodules` é o padrão ideal para gerenciar submódulos que contêm arquivos dinamicamente alterados por scripts de sincronização de limites em tempo de execução (como `sync_runtime_config.py` modificando `.env.example` no `code-graph-rag`).
 
 </details>
+
+---
+
+## 14/09/2026 — Handoff: "Offer Radar" registrado como coletor nº 4 deste projeto
+
+### Pendências abertas
+- Ideia matriculada no Registry (Arquiteto/IDEIAS
+  `coletor-proposito-extracao/BRIEF.md`): coletor **Offer Radar** — varredura
+  de ofertas/preços/ângulos de concorrentes para alimentar o competitivo.
+  Estado `em_pesquisa`; é o ÚLTIMO da fila (Prospector CMS → DARKCHANNELS →
+  UGC → este).
+- ~~**Atenção:** esta pasta NÃO é repo git — o hand-off vive só local.
+  Criar repo é decisão do CEO (pendência registrada no CÉREBRO/HANDOFF).~~
+  **Correção 12/10/2026:** afirmação falsa. O projeto É repo git
+  (`boomer-and-kev-studio`, remote `fbgouveia/boomer-and-kev-studio`, branch
+  `restore-engine`). A nota foi escrita a partir da pasta vazia
+  `PROJETOBoomer and Kev` (sem espaço), removida em 12/10. Nenhum repo novo é
+  necessário; a pendência "criar repo" não se aplica.
+
+### Instruções
+- Payload: oferta, preço, ângulo, promessa, fonte, data — para o
+  `gest-intel` (Inteligência Competitiva).
+- Coletor determinístico (Camada 3 VLAEG); alvos públicos, sem login,
+  robots.txt respeitado.
+- Leis vigentes (CÉREBRO, 14/09): executor GLM 5.3 Flash, verifier Gemini
+  3.8 Flash (linhagens cruzadas); dependências novas passam por SkillSpector.
