@@ -51,24 +51,21 @@ const unauthorized = () => new NextResponse('Authentication required.', {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // n8n-only endpoints keep their own Bearer authentication because Basic Auth
-  // would replace the Authorization header they already validate.
-  const hasRouteSpecificAuth = pathname === '/api/radar' || pathname === '/api/cron/trend-hunter';
-  if (!hasRouteSpecificAuth) {
-    const user = process.env.STUDIO_AUTH_USER;
-    const password = process.env.STUDIO_AUTH_PASSWORD;
+  // Toda rota exige Basic Auth (as exceções Bearer de /api/radar e
+  // /api/cron/trend-hunter saíram com as rotas, arquivadas em 12/10/2026).
+  const user = process.env.STUDIO_AUTH_USER;
+  const password = process.env.STUDIO_AUTH_PASSWORD;
 
-    if (!user || !password) {
-      if (process.env.NODE_ENV === 'production') {
-        return new NextResponse('Studio authentication is not configured.', {
-          status: 503,
-          headers: { 'Cache-Control': 'no-store' },
-        });
-      }
-    } else {
-      const expected = `Basic ${btoa(`${user}:${password}`)}`;
-      if (request.headers.get('authorization') !== expected) return unauthorized();
+  if (!user || !password) {
+    if (process.env.NODE_ENV === 'production') {
+      return new NextResponse('Studio authentication is not configured.', {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      });
     }
+  } else {
+    const expected = `Basic ${btoa(`${user}:${password}`)}`;
+    if (request.headers.get('authorization') !== expected) return unauthorized();
   }
 
   // Protect API routes

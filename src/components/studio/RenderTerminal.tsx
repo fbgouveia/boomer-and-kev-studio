@@ -1,16 +1,13 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Zap } from 'lucide-react';
 
 interface RenderTerminalProps {
   renderProgress: number;
-  renderMode: 'REAL' | 'SANDBOX' | null;
   renderLogs: string[];
 }
 
 export function RenderTerminal({
   renderProgress,
-  renderMode,
   renderLogs
 }: RenderTerminalProps) {
   return (
@@ -29,7 +26,7 @@ export function RenderTerminal({
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-6xl font-black italic tracking-tighter text-white">{Math.floor(renderProgress)}%</span>
             <span className="text-sm font-black text-[#FF5F1F] tracking-[0.4em] uppercase mt-2">
-              {renderMode === 'SANDBOX' ? "SIMULATION_ACTIVE" : "Processing"}
+              Processing
             </span>
           </div>
         </div>
@@ -39,12 +36,8 @@ export function RenderTerminal({
             <div>
               <h2 className="text-3xl font-black tracking-tighter uppercase italic">
                 Engine_Production_Terminal
-                {renderMode === 'SANDBOX' && <span className="text-[#FF5F1F] text-xs ml-4">[PREVIEW_MODE]</span>}
               </h2>
               <p className="text-sm text-white/60 font-bold uppercase tracking-widest mt-1">Status: High_Velocity_Render_Active</p>
-            </div>
-            <div className="text-right">
-              <span className="text-sm font-black text-[#FF5F1F] tracking-widest">FPS: 60.0</span>
             </div>
           </div>
 
@@ -57,7 +50,6 @@ export function RenderTerminal({
                   i === 0 ? "text-white opacity-100" : "text-white/50 opacity-50"
                 )}
               >
-                <span className="text-[#FF5F1F] font-black">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
                 <span className="tracking-tight uppercase">{log}</span>
                 {i === 0 && <span className="w-2 h-4 bg-[#FF5F1F] animate-pulse" />}
               </div>

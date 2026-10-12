@@ -9,7 +9,7 @@ import {
     type CharacterPack,
 } from '../src/lib/cast-registry';
 import { CHARACTERS } from '../src/data/characters';
-import { runPipelineSchema, voiceSchema } from '../src/lib/validations';
+import { runPipelineSchema } from '../src/lib/validations';
 import { getDetailedPrompt } from '../src/app/api/pipeline/run/route';
 
 describe('cast-registry — elenco como dado, não código (BK-19 inc. 1)', () => {
@@ -64,9 +64,6 @@ describe('cast-registry — elenco como dado, não código (BK-19 inc. 1)', () =
         assert.doesNotMatch(prompt, /BOOMER written on the chest/);     // nada do Boomer vaza
         assert.doesNotMatch(prompt, /hyper-active muscle tension/);     // atuação não é a do id antigo
 
-        // voiceSchema também aceita:
-        const voice = voiceSchema.parse({ text: 'oi', characterId: 'roo_solo' });
-        assert.equal(voice.characterId, 'roo_solo');
     });
 
     it('personagem não registrado é rejeitado pelo schema', () => {

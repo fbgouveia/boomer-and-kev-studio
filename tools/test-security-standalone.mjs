@@ -112,10 +112,13 @@ try {
     approvedAt: new Date().toISOString(),
   };
   const paidKey = `security-${crypto.randomUUID()}`;
+  // Contrato de operação paga testado em /api/ai/image (as rotas por etapa
+  // video/generate, render, ai/sync e ai/voice foram arquivadas em 12/10/2026).
+  // Sem GEMINI_API_KEY o servidor responde 503 explícito — nada de modo SANDBOX
+  // fingindo sucesso — e a idempotência guarda e repete essa resposta.
   const paidPayload = {
-    prompt: 'Local sandbox contract test',
-    engine: 'kling',
-    aspect_ratio: '16:9',
+    prompt: 'Local paid-operation contract test',
+    aspectRatio: '1:1',
     approval,
   };
   const postPaid = (pathname, body, idempotencyKey) => fetch(`${baseUrl}${pathname}`, {
@@ -129,70 +132,40 @@ try {
     body: JSON.stringify(body),
   });
 
-  const missingPaidKey = await postPaid('/api/video/generate', paidPayload);
+  const missingPaidKey = await postPaid('/api/ai/image', paidPayload);
   assert.equal(missingPaidKey.status, 400);
   assert.equal((await missingPaidKey.json()).error, 'IDEMPOTENCY_KEY_REQUIRED');
 
   const missingPaidApproval = await postPaid(
-    '/api/video/generate',
+    '/api/ai/image',
     { ...paidPayload, approval: undefined },
     `security-${crypto.randomUUID()}`,
   );
   assert.equal(missingPaidApproval.status, 403);
   assert.equal((await missingPaidApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
 
-  const firstPaid = await postPaid('/api/video/generate', paidPayload, paidKey);
+  const firstPaid = await postPaid('/api/ai/image', paidPayload, paidKey);
   const firstPaidBody = await firstPaid.json();
-  assert.equal(firstPaid.status, 200);
-  assert.equal(firstPaidBody.mode, 'SANDBOX');
+  assert.equal(firstPaid.status, 503, 'provedor não configurado deve ser 503 explícito');
+  assert.match(firstPaidBody.error, /GEMINI_API_KEY/);
 
-  const replayedPaid = await postPaid('/api/video/generate', paidPayload, paidKey);
-  assert.equal(replayedPaid.status, 200);
+  const replayedPaid = await postPaid('/api/ai/image', paidPayload, paidKey);
+  assert.equal(replayedPaid.status, 503);
   assert.equal(replayedPaid.headers.get('idempotent-replay'), 'true');
   assert.deepEqual(await replayedPaid.json(), firstPaidBody);
 
   const paidConflict = await postPaid(
-    '/api/video/generate',
+    '/api/ai/image',
     { ...paidPayload, prompt: 'Different paid payload' },
     paidKey,
   );
   assert.equal(paidConflict.status, 409);
   assert.equal((await paidConflict.json()).error, 'IDEMPOTENCY_CONFLICT');
 
-  const renderWithoutApproval = await postPaid('/api/render', {
-    script: [{
-      id: 'scene-1',
-      characterId: 'boomer',
-      text: 'No provider should be called.',
-      shotType: 'BOOMER_MCU',
-      durationEst: 5,
-      technicalPrompt: 'Local contract test',
-    }],
-  }, `security-${crypto.randomUUID()}`);
-  assert.equal(renderWithoutApproval.status, 403);
-  assert.equal((await renderWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
-
-  const syncWithoutApproval = await postPaid('/api/ai/sync', {
-    videoUrl: 'https://example.com/video.mp4',
-    audioUrl: 'https://example.com/audio.mp3',
-    sceneId: 'scene-1',
-  }, `security-${crypto.randomUUID()}`);
-  assert.equal(syncWithoutApproval.status, 403);
-  assert.equal((await syncWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
-
-  const voiceWithoutApproval = await postPaid('/api/ai/voice', {
-    text: 'This must not reach ElevenLabs.',
-    characterId: 'boomer',
-  }, `security-${crypto.randomUUID()}`);
-  assert.equal(voiceWithoutApproval.status, 403);
-  assert.equal((await voiceWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
-
-  const imageWithoutApproval = await postPaid('/api/ai/image', {
-    prompt: 'This must not reach Gemini image generation.',
-    aspectRatio: '1:1',
-  }, `security-${crypto.randomUUID()}`);
-  assert.equal(imageWithoutApproval.status, 403);
-  assert.equal((await imageWithoutApproval.json()).error, 'PAID_OPERATION_APPROVAL_REQUIRED');
+  for (const archived of ['/api/render', '/api/ai/sync', '/api/ai/voice', '/api/video/generate']) {
+    const gone = await postPaid(archived, {}, `security-${crypto.randomUUID()}`);
+    assert.equal(gone.status, 404, `${archived} foi arquivada e não pode responder`);
+  }
 
   const missingBalances = await fetch(`${baseUrl}/api/keys/balance`, {
     method: 'POST',
