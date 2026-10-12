@@ -47,6 +47,22 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
 | BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
 
+### 🔴 DERIVA ATIVA desde 05/09/2026 — roteirista fora do ar em produção (BK-30)
+
+- **Evidência:** `deriva_runs` RED diário de 05/09 a 11/10 (`gemini_roteirista: HTTP 400`);
+  reproduzido 12/10 em produção: `POST /api/ai/script` → `{"error":"Missing Anthropic API Key"}`.
+- **Causa raiz:** a rota migrou de Gemini para Claude em 07/08 (`dc6b183`) e passou a exigir
+  `ANTHROPIC_API_KEY`; o deploy de 04/09 levou essa rota para a VPS, mas o `.env` de
+  produção nunca recebeu a chave (tem só ELEVENLABS/GEMINI/REPLICATE/SUPABASE/STUDIO_AUTH).
+- **Impacto:** geração de roteiro em produção quebrada e pré-voo cancelando o cron
+  seg/qua/sex 08h há 37 dias. Ninguém viu: o alerta só aparece ao abrir sessão na raiz.
+- **Patch proposto (faixa vermelha: credencial, exige OK do Felipe):** acrescentar
+  `ANTHROPIC_API_KEY` (mesma do `.env.local`) e `SCRIPT_MODEL=claude-sonnet-5` ao `.env`
+  da VPS → `pm2 restart boomer-engine --update-env` → validar com a sonda existente
+  (`/api/sentinel`) e o roteiro de Bondi. Rollback: remover as 2 linhas e reiniciar.
+- **Notas:** id da sonda `gemini_roteirista` ficou com nome antigo (é Claude); ElevenLabs
+  deu `payment_issue` 19–23/09 e voltou sozinho. Por que o Telegram não alertou: não verificado.
+
 ## Pendências técnicas (sem gasto, executáveis)
 
 | ID | Pendência | Aceite |
