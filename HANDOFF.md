@@ -42,12 +42,11 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-07 | Escolher roteiro (`STUDIO/04_Delivery/script_ab`) e autorizar render pago | Validar vídeo, voz nativa, figurino, enquadramento, 9:16 e 16:9. |
 | BK-10 | Confirmar contas do Down Under Discourse e autorizar 1ª publicação | Sem publicação não há métrica de retenção. |
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
-| BK-27 | Aplicar `supabase/migrations/20261012000001_close_anon_read.sql` | **Ordem:** publicar o Studio com `GET /api/episodes` primeiro; aplicar depois. Hoje a anon key lê os 15 episódios inteiros. Nomes das policies conferidos só no `schema.sql` local. |
+| BK-27 | Aplicar `supabase/migrations/20261012000001_close_anon_read.sql` (**autorizado** 12/10) | Deploy já feito (passo 1 ✅). Falta: `supabase login` do Felipe (token do CLI expirado) ou colar o SQL no SQL Editor do dashboard. Depois: anon → 0 linhas e Library em produção → 11. Nomes das policies conferidos só no `schema.sql`. |
 | BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
 | BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
 | BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
-| BK-25b | Apagar de vez `docs/archive/` (scripts mortos, planos, backup) | Arquivado em 12/10; exclusão definitiva foi bloqueada pelo guard de ações irreversíveis e fica com o Felipe. |
 
 ## Pendências técnicas (sem gasto, executáveis)
 
@@ -79,6 +78,13 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
   Library lê por ela. Migração de fechamento do RLS criada, **não aplicada**.
 - **BK-28:** cópia `FELIPE RESUME/GITHUB_POLISH/boomer-and-kev-studio` avançada
   (fast-forward) de `8c05050` para `32ef3dd` em `restore-engine`; nada perdido.
+- **Deploy em produção (autorizado):** `deploy_studio.sh` → VPS Hostinger, `boomerandkev.fgss.io`
+  (porta 3001, PM2 `boomer-engine`). Produção estava no build de **04/09**: o deploy levou
+  também o trabalho de 09/09 (voz nativa Kling, legendas, retomada). Rollback em
+  `/var/www/boomerandkev.fgss.io.rollback`. Verificado: home 401 sem auth/200 com auth,
+  `/api/episodes` 401 sem auth e 11 com auth, `/api/cron/agent` 501, `watch.html` 200.
+- **Decisões do Felipe (12/10):** manter `docs/archive/` (não apagar); **não** aplicar
+  a fila durável BK-17 agora (publicar e medir primeiro).
 - **BK-06:** fechado — legendas burn-in confirmadas no render real nativo (QC 09/09).
 
 ## Descobertas duráveis (não escritas em outro lugar)
