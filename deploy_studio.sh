@@ -49,7 +49,9 @@ echo "🌐 3. Fazendo upload dos arquivos via Rsync..."
 rsync -avz --delete --exclude='.tmp/' --exclude='.env' .next/standalone/ "$VPS_USER@$VPS_IP:$DEST_DIR/"
 # Copiamos os assets estáticos (necessário para o standalone)
 rsync -avz --delete .next/static/ "$VPS_USER@$VPS_IP:$DEST_DIR/.next/static/"
-rsync -avz --delete public/ "$VPS_USER@$VPS_IP:$DEST_DIR/public/"
+# --exclude assets/generated: /api/ai/image grava as imagens geradas EM PRODUCAO ali;
+# com --delete, cada deploy apagava o que nao existia no Mac.
+rsync -avz --delete --exclude='assets/generated/' public/ "$VPS_USER@$VPS_IP:$DEST_DIR/public/"
 
 if [ -n "$DEPLOY_ENV_FILE" ]; then
   echo "🔐 Sincronizando ambiente explicitamente informado..."
