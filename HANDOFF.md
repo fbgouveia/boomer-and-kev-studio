@@ -33,8 +33,8 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 - **Verificação 12/10 (executada, após a revisão técnica):** tsc OK · **124/124**
   unitários · **lint 0 erros/0 avisos** · build OK · verify/security/idempotency/deploy
   standalone OK · smoke E2E contra provedores reais: **todas as 13 rotas vivas OK**
-  em servidor local (sentinela GREEN nas 4 sondas). Em produção: 10/11 OK; o
-  roteirista responde **503 explícito** até a chave entrar (BK-30). Rotas arquivadas → 404.
+  em servidor local e **em produção, 11/11 OK com sentinela GREEN nas 4 sondas**
+  (após BK-30, 12/10). Rotas arquivadas → 404.
 - **Sem produção automática:** o workflow n8n "Boomer & Kev Production Orchestrator"
   está **inativo desde 19/07**. Produção real = Studio (`/api/pipeline/run`), manual.
 
@@ -47,11 +47,10 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
 | BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
-| BK-30 | **Colocar `ANTHROPIC_API_KEY` no `.env` da VPS** (guard do Claude Code bloqueou a escrita de segredo) | Comando pronto na seção BK-30 abaixo; depois `/api/sentinel` deve dar GREEN. |
 | BK-31 | **Autorizar correção do alerta Telegram no n8n** (workflow `CmHQvdzX5Sk23n7y`, guard bloqueou alteração de recurso compartilhado) | Ver descoberta 13. Patch: `parse_mode` HTML + texto escapado nos 2 nós de alerta. |
 | BK-09 | Lipsync animal: POC opcional | Só com autorização específica. |
 
-### 🔴 BK-30 — roteirista fora do ar em produção desde 05/09/2026
+### ✅ BK-30 FECHADO (12/10) — roteirista ficou fora do ar em produção de 05/09 a 12/10
 
 - **Causa raiz:** rota migrou para Claude em 07/08 (`dc6b183`); o deploy de 04/09 levou-a à
   VPS sem `ANTHROPIC_API_KEY` no `.env`. Sentinela RED diária de 05/09 a 11/10.
@@ -62,7 +61,8 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
   ```
   ! K=$(grep -E '^ANTHROPIC_API_KEY=' .env.local | cut -d= -f2- | tr -d '"'); printf 'ANTHROPIC_API_KEY=%s\nSCRIPT_MODEL=claude-sonnet-5\n' "$K" | ssh root@2.25.182.106 'F=/var/www/boomerandkev.fgss.io/.env; cp -p $F $F.bak-20261012; cat >> $F; cd /var/www/boomerandkev.fgss.io && npx pm2 restart boomer-engine --update-env'
   ```
-  Verificar: `/api/sentinel` GREEN. Rollback: restaurar `.env.bak-20261012` e reiniciar.
+  **Executado pelo Felipe em 12/10.** Verificado: chave presente uma vez, sentinela GREEN
+  nas 4 sondas, roteiro real em produção (9 cenas, 47s). Rollback: `.env.bak-20261012`.
 
 ## Pendências técnicas (sem gasto, executáveis)
 
