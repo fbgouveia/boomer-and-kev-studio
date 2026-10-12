@@ -42,7 +42,7 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 | BK-07 | Escolher roteiro (`STUDIO/04_Delivery/script_ab`) e autorizar render pago | Validar vídeo, voz nativa, figurino, enquadramento, 9:16 e 16:9. |
 | BK-10 | Confirmar contas do Down Under Discourse e autorizar 1ª publicação | Sem publicação não há métrica de retenção. |
 | — | Assistir `review_frames/regua_native_final.mp4` | Julgamento visual do render nativo. |
-| BK-27 | Aplicar `supabase/migrations/20261012000001_close_anon_read.sql` (**autorizado** 12/10) | Deploy já feito (passo 1 ✅). Falta: `supabase login` do Felipe (token do CLI expirado) ou colar o SQL no SQL Editor do dashboard. Depois: anon → 0 linhas e Library em produção → 11. Nomes das policies conferidos só no `schema.sql`. |
+| BK-29 | `deriva_runs` também tem `SELECT USING(true)` para `public` (visto em `pg_policies` 12/10) | Decidir se a leitura anônima do histórico de sondas é intencional; se não, `drop policy "Allow anonymous read access on deriva_runs"` (conferir antes quem lê essa tabela). |
 | BK-17 | Autorizar migração `20260909000001_durable_jobs.sql` no Supabase remoto | Tabela renomeada para `pipeline_jobs` (ver descoberta 1). |
 | BK-20 | Credenciais/endpoint/quotas do GLM-5.3-Flash | Adaptador e benchmark só com isso. |
 | BK-08 | Studio Labs: remover a aba ou implementar | Hoje é simulação. |
@@ -83,6 +83,11 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
   também o trabalho de 09/09 (voz nativa Kling, legendas, retomada). Rollback em
   `/var/www/boomerandkev.fgss.io.rollback`. Verificado: home 401 sem auth/200 com auth,
   `/api/episodes` 401 sem auth e 11 com auth, `/api/cron/agent` 501, `watch.html` 200.
+- **BK-27 FECHADO — migração aplicada no Supabase remoto** (`boomer-kev-sydney`, via SQL
+  Editor do dashboard, depois do deploy). `pg_policies` conferido antes (nomes idênticos ao
+  `schema.sql`). Verificado depois: anon lê **0** episódios (antes 15) e 0 script_lines;
+  Library em produção continua com **11**. Rollback: recriar as 2 policies (ver migração).
+  Token do Supabase CLI segue expirado (`supabase login` não roda em sessão não-TTY).
 - **Decisões do Felipe (12/10):** manter `docs/archive/` (não apagar); **não** aplicar
   a fila durável BK-17 agora (publicar e medir primeiro).
 - **BK-06:** fechado — legendas burn-in confirmadas no render real nativo (QC 09/09).
@@ -92,8 +97,9 @@ mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só 
 1. **Banco remoto já tem `render_jobs` legada** (`schema.sql`: episode_id, voice_status…).
    A migração BK-17 usava `create table if not exists render_jobs` → seria pulada
    em silêncio e o índice/FK cairiam na tabela errada. Renomeada para `pipeline_jobs`.
-2. **Anon key lê `episodes` inteiro** (script_json, rascunhos, video_url) — 15 linhas
-   em 12/10. `script_lines` e `trends` vazias. A anon key vai no bundle público.
+2. **Anon key lia `episodes` inteiro** (script_json, rascunhos, video_url; 15 linhas) até
+   12/10 — fechado (BK-27). A anon key vai no bundle público: nunca dar SELECT público a
+   tabela com dado próprio. O SQL Editor do dashboard pede confirmação extra para DDL destrutivo.
 3. **Pasta-casca causa erro de agente:** abrir `PROJETOBoomer and Kev` (sem espaço)
    levou um agente a concluir "não é repo git". Sempre abrir a pasta com espaço.
 4. **Guard de ações irreversíveis do Claude Code** bloqueia `git rm`/`rm` de arquivos
