@@ -61,5 +61,5 @@ autonomia:
 canal_de_aprovacao: telegram 6431944169 (bot FGSS Sentinela, cred n8n xMM0nVZz16NfA8M8)
 
 nao_confiar_em:
-  - HANDOFF_AMANHA.md e progress.md como prova de estado (ja mentiram; reverificar no sistema vivo)
+  - docs/archive/HANDOFF_AMANHA.md e progress.md como prova de estado (ja mentiram; reverificar no sistema vivo)
   - status HTTP 200 como prova de saude (ver deriva do gemini_roteirista acima)
