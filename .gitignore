@@ -40,9 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# agent
-.agent/preview.log
-.agent/preview.pid
+# agent (skills locais do workspace, alheias ao app — fora do git desde 12/10/2026, BK-24)
+/.agent/
 page_lint.json
 
 # bancada temporária VLAEG (intermediários efêmeros)
