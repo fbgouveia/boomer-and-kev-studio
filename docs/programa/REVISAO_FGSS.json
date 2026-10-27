@@ -1,0 +1,94 @@
+{
+  "submission": {
+    "submissionId": "bk_bible_design_20261027_v01",
+    "projectRef": "boomer-and-kev-studio",
+    "agentRef": "codex-project-review",
+    "capability": "design_review",
+    "targetGate": "design_review",
+    "submittedAt": "2026-10-27T07:23:56.486182+00:00",
+    "implementationRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md",
+    "claims": [
+      {
+        "claimId": "bk_editorial_contract",
+        "statement": "A bíblia candidata documenta identidade, variações por ocasião, continuidade e storyboard nas duas proporções; sem aprovação final de figurino ou voz.",
+        "classification": "empirical_result",
+        "sourceUrl": null,
+        "accessedAt": null,
+        "artifactRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md"
+      },
+      {
+        "claimId": "bk_native_voice_repeatability",
+        "statement": "Uma referência de áudio selecionada não comprova repetibilidade vocal entre episódios; essa avaliação permanece pendente e fora deste gate documental.",
+        "classification": "inference",
+        "sourceUrl": null,
+        "accessedAt": null,
+        "artifactRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md"
+      }
+    ],
+    "gates": {
+      "contractsDefined": true,
+      "scopeDefined": true,
+      "provenanceRecorded": true,
+      "dryRunDefault": null,
+      "idempotencyDesigned": null,
+      "retryClassified": null,
+      "reconciliationDesigned": null,
+      "telemetrySanitized": null,
+      "realE2EProven": false
+    },
+    "evidence": [
+      {
+        "evidenceId": "bk_bible_contract_20261027",
+        "gate": "contractsDefined",
+        "kind": "contract",
+        "artifactRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md",
+        "executorRef": "codex-project-review",
+        "environment": "local",
+        "recordedAt": "2026-10-27T07:23:56.486182+00:00",
+        "sha256": "773009fe25a8f8cc731f02950ffe4e9ca3a6c5e8820cb14b76151525bc484992",
+        "sanitized": true
+      },
+      {
+        "evidenceId": "bk_bible_scope_20261027",
+        "gate": "scopeDefined",
+        "kind": "scope",
+        "artifactRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md",
+        "executorRef": "codex-project-review",
+        "environment": "local",
+        "recordedAt": "2026-10-27T07:23:56.486182+00:00",
+        "sha256": "773009fe25a8f8cc731f02950ffe4e9ca3a6c5e8820cb14b76151525bc484992",
+        "sanitized": true
+      },
+      {
+        "evidenceId": "bk_bible_provenance_20261027",
+        "gate": "provenanceRecorded",
+        "kind": "provenance",
+        "artifactRef": "project://boomer-and-kev-studio/docs/programa/BIBLIA_AUDIOVISUAL.md",
+        "executorRef": "codex-project-review",
+        "environment": "local",
+        "recordedAt": "2026-10-27T07:23:56.486182+00:00",
+        "sha256": "773009fe25a8f8cc731f02950ffe4e9ca3a6c5e8820cb14b76151525bc484992",
+        "sanitized": true
+      }
+    ]
+  },
+  "decision": {
+    "decisionId": "motion_decision_c6d6528ac33a",
+    "submissionId": "bk_bible_design_20261027_v01",
+    "decidedAt": "2026-10-27T07:23:56.487628+00:00",
+    "verdict": "approved_for_next_gate",
+    "riskLevel": "low",
+    "approvedGate": "design_review",
+    "findings": [],
+    "submissionHash": "c6d6528ac33a2836b35cfbfa9b79f546dce63fe515ca682b04a86fc2d19174f2",
+    "evidenceHash": "95d82a1e8d6fc389ae3fedb423e4e51a53129b7611eebef0fe08d5303159f570",
+    "policyVersion": "2026.2",
+    "reviewerVersion": "2.0.0",
+    "knowledgeSnapshotHash": "8c8e675a900d8dff8986b02e6d2e1865fd43fa0e097440430d54e88e0a2178a2",
+    "decisionHash": "a37624cc273e809102690642586bb1cec41ef92d30453a3186faa42499afc3d7"
+  },
+  "interpretation": "Revisão determinística de contrato e procedência. Não é julgamento estético do painel nem homologação das vozes. Não aprova render, publicação ou produção.",
+  "artisticApproval": "pending_felipe",
+  "voiceRepeatability": "not_measured",
+  "newPaidGeneration": "not_executed"
+}

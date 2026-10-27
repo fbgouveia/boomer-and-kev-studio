@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#03070a">
+  <meta name="color-scheme" content="dark">
+  <title>Down Under Discourse | Bíblia audiovisual</title>
+  <style>
+    :root {
+      --bg: oklch(0.1238 0.0125 232.68);
+      --surface: oklch(0.2033 0.0093 208.76);
+      --fg: oklch(0.8876 0.0293 77.53);
+      --muted: oklch(0.7094 0.0662 64.08);
+      --border: oklch(0.3396 0.0051 106.67);
+      --accent: oklch(0.8028 0.1211 75.17);
+      --danger: oklch(0.664 0.184 34.2);
+      --success: oklch(0.72 0.12 148);
+      --display: Haettenschweiler, Impact, "Franklin Gothic Condensed", sans-serif;
+      --body: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --ease-out: cubic-bezier(.23,1,.32,1);
+      --pad: clamp(1rem, 2.4vw, 2.5rem);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+    body { margin: 0; color: var(--fg); background: var(--bg); font: 400 1rem/1.6 var(--body); overflow-wrap: anywhere; }
+    img, video { display: block; max-width: 100%; }
+    img { height: auto; }
+    figure { margin: 0; }
+    audio { width: 100%; }
+    a { color: inherit; text-underline-offset: .22em; }
+    button, select, textarea { font: inherit; color: inherit; }
+    button, a, select { touch-action: manipulation; }
+    button, [role="tab"] { min-height: 44px; user-select: none; -webkit-user-select: none; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    ::selection { color: var(--bg); background: var(--accent); }
+
+    .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 99; background: var(--accent); color: var(--bg); padding: .75rem 1rem; }
+    .skip-link:focus { top: 1rem; }
+    .eyebrow, .kicker, .meta, .nav-link, .status, .tag, label, dt, .micro, .scene-no { font-family: var(--mono); font-size: .76rem; line-height: 1.35; letter-spacing: .08em; text-transform: uppercase; }
+    .eyebrow, .kicker, .meta, .micro { color: var(--muted); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; line-height: .98; }
+    h1 { max-width: 10ch; margin-bottom: 1.25rem; font-size: clamp(3.4rem, 8.5vw, 8.8rem); }
+    h2 { margin-bottom: 1rem; font-size: clamp(2.25rem, 5vw, 4.8rem); }
+    h3 { margin-bottom: .7rem; font-size: clamp(1.45rem, 2.6vw, 2.15rem); }
+    p { max-width: 68ch; }
+    .lede { font-size: clamp(1.1rem, 1.55vw, 1.35rem); line-height: 1.55; }
+
+    .topbar { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: auto 1fr auto; align-items: center; min-height: 58px; padding: 0 var(--pad); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .brand-lockup { display: flex; align-items: baseline; gap: .65rem; white-space: nowrap; }
+    .brand-lockup strong { font-family: var(--display); font-size: 1.2rem; letter-spacing: .01em; }
+    .brand-lockup span { color: var(--muted); font-family: var(--mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
+    .nav { display: flex; justify-content: center; gap: clamp(.55rem, 1.4vw, 1.5rem); }
+    .nav-link { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; border-bottom: 2px solid transparent; }
+    .mobile-jump { display: none; min-height: 44px; border: 1px solid var(--border); background: var(--surface); padding: 0 2.4rem 0 .75rem; }
+    .revision { color: var(--muted); font-family: var(--mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+
+    main { width: min(1600px, 100%); margin: 0 auto; border-inline: 1px solid var(--border); }
+    section { scroll-margin-top: 72px; border-bottom: 1px solid var(--border); }
+    .section-inner { padding: clamp(3.5rem, 7vw, 7.5rem) var(--pad); }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, .72fr); gap: 2rem; align-items: end; margin-bottom: 2.5rem; }
+    .section-head p { color: var(--muted); margin-bottom: .4rem; }
+
+    .hero { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); min-height: min(860px, calc(100svh - 58px)); }
+    .hero-copy { display: flex; flex-direction: column; justify-content: space-between; padding: clamp(2rem, 5vw, 5rem) var(--pad); border-right: 1px solid var(--border); }
+    .hero-copy .lede { max-width: 37ch; }
+    .status { display: inline-flex; width: fit-content; align-items: center; min-height: 32px; margin-bottom: 1.5rem; padding: .25rem .55rem; color: var(--bg); background: var(--accent); }
+    .hierarchy { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); }
+    .hierarchy div { padding: 1rem; }
+    .hierarchy div + div { border-left: 1px solid var(--border); }
+    .hierarchy strong { display: block; margin-top: .25rem; font-size: 1.08rem; }
+    .hero-media { align-self: center; padding: var(--pad); }
+    .image-shell { border: 1px solid var(--border); background: var(--surface); }
+    .image-shell img { width: 100%; aspect-ratio: 43 / 24; object-fit: contain; }
+    .image-caption { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem .75rem; border-top: 1px solid var(--border); color: var(--muted); font: .72rem/1.4 var(--mono); letter-spacing: .04em; }
+
+    .brief-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); background: var(--border); gap: 1px; }
+    .brief-item { min-height: 190px; padding: 1.35rem; background: var(--surface); }
+    .brief-item .scene-no { color: var(--muted); }
+    .brief-item strong { display: block; margin: 2rem 0 .55rem; font-size: 1.15rem; }
+
+    .character-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); background: var(--border); gap: 1px; }
+    .character { min-width: 0; background: var(--surface); }
+    .character .image-shell { border: 0; border-bottom: 1px solid var(--border); }
+    .character-body { padding: var(--pad); }
+    .character-title { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .character-title .tag { color: var(--muted); }
+    dl { display: grid; grid-template-columns: 9rem 1fr; margin: 1.35rem 0 0; border-top: 1px solid var(--border); }
+    dt, dd { margin: 0; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+    dt { color: var(--muted); padding-right: 1rem; }
+    .conflict { display: grid; grid-template-columns: auto 1fr; gap: 1rem; margin-top: 1rem; padding: 1rem; border: 1px solid var(--danger); background: var(--bg); }
+    .conflict strong { font-family: var(--mono); color: var(--danger); font-size: .77rem; letter-spacing: .07em; text-transform: uppercase; }
+    .conflict p { margin: 0; }
+
+    .tabs, .format-switch { display: flex; flex-wrap: wrap; gap: 1px; width: fit-content; margin-bottom: 1.5rem; padding: 1px; background: var(--border); }
+    .tab, .format-button { border: 0; min-width: 7.5rem; padding: .65rem 1rem; background: var(--bg); cursor: pointer; font: .78rem var(--mono); letter-spacing: .06em; text-transform: uppercase; transition: transform 120ms var(--ease-out); }
+    .tab[aria-selected="true"], .format-button[aria-pressed="true"] { color: var(--bg); background: var(--accent); }
+    .tab:active, .format-button:active, .button:active { transform: scale(.97); }
+    .occasion-panel { display: none; }
+    .occasion-panel[data-active="true"] { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(18rem, .85fr); border: 1px solid var(--border); }
+    .occasion-copy { padding: var(--pad); }
+    .occasion-copy .tag { display: inline-block; margin-bottom: 1.5rem; color: var(--accent); }
+    .occasion-visual { min-height: 390px; border-left: 1px solid var(--border); background: var(--surface); }
+    .occasion-visual img { width: 100%; height: 100%; object-fit: contain; }
+    .set-map { display: grid; grid-template-columns: 1fr 1.4fr 1fr; grid-template-rows: 1fr 1.35fr .65fr; width: 100%; min-height: 390px; padding: 1rem; gap: 1px; background: var(--border); }
+    .set-zone { display: grid; place-items: center; padding: .6rem; background: var(--bg); text-align: center; font: .68rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .set-zone.screen { color: var(--accent); }
+    .set-zone.desk { grid-column: 1 / -1; }
+    .limits { margin: 1.5rem 0 0; padding-left: 1.15rem; }
+
+    .voice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--border); background: var(--border); gap: 1px; }
+    .voice-card { min-width: 0; padding: var(--pad); background: var(--surface); }
+    .voice-card > header { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 1rem; }
+    .voice-card video, .voice-card audio { width: 100%; }
+    .voice-card video { aspect-ratio: 1928 / 1072; background: var(--bg); object-fit: contain; }
+    .voice-pair { grid-column: 1 / -1; display: grid; grid-template-columns: 11rem 1fr 1fr; background: var(--border); gap: 1px; }
+    .voice-name, .voice-slot { padding: 1.25rem; background: var(--surface); }
+    .voice-name { font-family: var(--display); font-size: 1.8rem; }
+    .unavailable { min-height: 70px; display: flex; align-items: center; border: 1px dashed var(--danger); padding: .75rem; color: var(--danger); font-family: var(--mono); font-size: .75rem; }
+    .test-list { counter-reset: test; display: grid; grid-template-columns: repeat(2, 1fr); margin-top: 1px; padding: 0; list-style: none; background: var(--border); gap: 1px; }
+    .test-list li { counter-increment: test; min-height: 130px; padding: 1.1rem; background: var(--surface); }
+    .test-list li::before { content: "0" counter(test); display: block; margin-bottom: .7rem; color: var(--muted); font: .72rem var(--mono); }
+
+    .storyboard-toolbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1.5rem; }
+    .storyboard-toolbar p { margin-bottom: 1.5rem; color: var(--muted); }
+    .storyboard { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+    .scene { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, .78fr); min-width: 0; background: var(--surface); }
+    .scene-visual { padding: 1rem; border-right: 1px solid var(--border); background: var(--bg); }
+    .story-frame { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--border); background: var(--bg); }
+    .story-frame img { width: 100%; height: 100%; }
+    .frame-16 { aspect-ratio: 16 / 9; }
+    .frame-9 { display: none; width: min(58%, 350px); aspect-ratio: 9 / 16; margin: 0 auto; }
+    .frame-9 img { object-fit: cover; }
+    .crop-boomer img { object-position: 28% center; }
+    .crop-kev img { object-position: 76% center; }
+    .crop-split { display: grid; grid-template-rows: 1fr 1fr; }
+    .crop-split img { min-height: 0; object-fit: cover; }
+    .crop-split img:first-child { object-position: 28% center; border-bottom: 1px solid var(--accent); }
+    .crop-split img:last-child { object-position: 76% center; }
+    .frame-label { position: absolute; top: .55rem; left: .55rem; max-width: calc(100% - 1.1rem); padding: .3rem .45rem; color: var(--fg); background: var(--bg); border: 1px solid var(--border); font: .62rem/1.35 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    .safe-guide { position: absolute; inset: 12% 9%; border: 1px dashed var(--accent); pointer-events: none; }
+    .safe-guide::after { content: "guia de atenção, validar por rede"; position: absolute; left: 0; bottom: 0; padding: .2rem .35rem; color: var(--bg); background: var(--accent); font: .55rem var(--mono); }
+    .scene-copy { padding: var(--pad); }
+    .scene-top { display: flex; justify-content: space-between; gap: 1rem; }
+    .scene-no { color: var(--accent); }
+    .duration { color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+    .line { margin: 1.4rem 0; font: 500 clamp(1.15rem, 2vw, 1.55rem)/1.45 Georgia, "Times New Roman", serif; }
+    .scene-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 0; background: var(--border); border: 1px solid var(--border); }
+    .scene-facts div { padding: .75rem; background: var(--bg); }
+    .scene-facts dt, .scene-facts dd { border: 0; padding: 0; }
+    .scene-facts dd { margin-top: .3rem; font-size: .9rem; }
+    .storyboard[data-format="vertical"] .frame-16 { display: none; }
+    .storyboard[data-format="vertical"] .frame-9 { display: block; }
+
+    .sponsor-layout { display: grid; grid-template-columns: .75fr 1.25fr; border: 1px solid var(--border); }
+    .sponsor-copy { padding: var(--pad); border-right: 1px solid var(--border); }
+    .tv-studies { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; padding: 1px; background: var(--border); }
+    .tv { display: grid; min-height: 280px; place-items: center; padding: 1rem; background: var(--bg); text-align: center; }
+    .tv strong { display: block; font: 600 clamp(1.4rem, 3vw, 2.8rem)/1 var(--display); letter-spacing: -.01em; }
+    .tv span { display: block; margin-top: .65rem; color: var(--muted); font: .7rem var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+
+    .distribution { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; border: 1px solid var(--border); background: var(--border); gap: 1px; }
+    .dist-row { display: contents; }
+    .dist-cell { min-width: 0; padding: 1rem; background: var(--surface); }
+    .dist-head .dist-cell { color: var(--muted); background: var(--bg); font: .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .sources { margin-top: 2rem; }
+    .sources li + li { margin-top: .45rem; }
+
+    .approval-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+    .local-note { padding: 1rem; border: 1px solid var(--border); background: var(--surface); }
+    .local-note strong { color: var(--accent); font-family: var(--mono); font-size: .77rem; letter-spacing: .06em; text-transform: uppercase; }
+    .approval-list { border: 1px solid var(--border); }
+    .approval-row { display: grid; grid-template-columns: minmax(11rem, .55fr) minmax(12rem, .45fr) minmax(16rem, 1fr); gap: 1px; background: var(--border); }
+    .approval-row + .approval-row { border-top: 1px solid var(--border); }
+    .approval-cell { padding: 1rem; background: var(--surface); }
+    .approval-cell select, .approval-cell textarea { width: 100%; min-height: 48px; border: 1px solid var(--border); background: var(--bg); padding: .7rem; }
+    .approval-cell textarea { min-height: 84px; resize: vertical; }
+    .approval-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: center; margin-top: 1.25rem; }
+    .button { min-height: 48px; border: 1px solid var(--border); padding: .75rem 1rem; background: var(--surface); cursor: pointer; font-family: var(--mono); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; transition: transform 120ms var(--ease-out); }
+    .button.primary { border-color: var(--accent); color: var(--bg); background: var(--accent); }
+    output { color: var(--muted); font: .75rem var(--mono); }
+
+    footer { padding: 2rem var(--pad) calc(2rem + env(safe-area-inset-bottom, 0px)); color: var(--muted); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-link:hover { border-bottom-color: var(--accent); }
+      .tab:hover, .format-button:hover, .button:hover { background: oklch(from var(--surface) calc(l + .07) c h); }
+      .tab[aria-selected="true"]:hover, .format-button[aria-pressed="true"]:hover, .button.primary:hover { color: var(--bg); background: oklch(from var(--accent) calc(l - .08) c h); }
+    }
+
+    @media (max-width: 900px) {
+      .nav, .revision { display: none; }
+      .topbar { grid-template-columns: 1fr auto; }
+      .mobile-jump { display: block; }
+      .hero, .section-head, .occasion-panel[data-active="true"], .sponsor-layout, .approval-intro { grid-template-columns: 1fr; }
+      .hero-copy { min-height: 620px; border-right: 0; border-bottom: 1px solid var(--border); }
+      .brief-grid, .character-grid { grid-template-columns: 1fr; }
+      .occasion-visual, .sponsor-copy { border-left: 0; border-right: 0; border-top: 1px solid var(--border); }
+      .scene { grid-template-columns: 1fr; }
+      .scene-visual { border-right: 0; border-bottom: 1px solid var(--border); }
+      .approval-row { grid-template-columns: 1fr 1fr; }
+      .approval-row .approval-cell:last-child { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+    }
+
+    @media (max-width: 620px) {
+      .brand-lockup span { display: none; }
+      .section-inner { padding-block: 3.75rem; }
+      .hero-copy { min-height: 540px; }
+      h1 { font-size: clamp(3.2rem, 17vw, 5rem); }
+      dl { grid-template-columns: 1fr; }
+      dt { padding-bottom: .15rem; border-bottom: 0; }
+      dd { padding-top: .15rem; }
+      .voice-grid, .test-list, .tv-studies { grid-template-columns: 1fr; }
+      .voice-pair { grid-template-columns: 1fr; }
+      .storyboard-toolbar { display: block; }
+      .format-switch { width: 100%; }
+      .format-button { flex: 1; min-width: 0; }
+      .frame-9 { width: min(78%, 320px); }
+      .scene-facts { grid-template-columns: 1fr; }
+      .distribution { display: block; border: 0; background: transparent; }
+      .dist-head { display: none; }
+      .dist-row { display: block; margin-bottom: 1px; border: 1px solid var(--border); }
+      .dist-cell { display: grid; grid-template-columns: 7.5rem 1fr; gap: .75rem; }
+      .dist-cell::before { content: attr(data-label); color: var(--muted); font: .68rem/1.4 var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+      .approval-row { grid-template-columns: 1fr; }
+      .approval-row .approval-cell:last-child { grid-column: auto; }
+      .approval-cell + .approval-cell { border-top: 1px solid var(--border); }
+      .approval-actions { align-items: stretch; }
+      .approval-actions .button { width: 100%; }
+      .image-caption { display: block; }
+      .image-caption span { display: block; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="topbar" data-od-id="navigation-header">
+    <div class="brand-lockup"><strong>Down Under Discourse</strong><span>Bíblia audiovisual 0.1</span></div>
+    <nav class="nav" aria-label="Seções da revisão">
+      <a class="nav-link" href="#elenco">Elenco</a><a class="nav-link" href="#ocasioes">Ocasiões</a><a class="nav-link" href="#voz">Voz</a><a class="nav-link" href="#storyboard">Storyboard</a><a class="nav-link" href="#sponsor">Sponsor</a><a class="nav-link" href="#distribuicao">Distribuição</a><a class="nav-link" href="#aprovacao">Aprovação</a>
+    </nav>
+    <span class="revision">REV 0.1 / 27.10.26</span>
+    <label class="visually-hidden" for="mobile-jump">Ir para uma seção</label>
+    <select class="mobile-jump" id="mobile-jump" data-od-id="mobile-section-control">
+      <option value="">Ir para...</option><option value="#elenco">Elenco</option><option value="#ocasioes">Ocasiões</option><option value="#voz">Voz</option><option value="#storyboard">Storyboard</option><option value="#sponsor">Sponsor</option><option value="#distribuicao">Distribuição</option><option value="#aprovacao">Aprovação</option>
+    </select>
+  </header>
+
+  <main id="conteudo">
+    <section class="hero" data-od-id="opening-editorial">
+      <div class="hero-copy">
+        <div>
+          <span class="status">Proposta para aprovação</span>
+          <p class="kicker">[ Bíblia audiovisual + storyboard ]</p>
+          <h1 data-od-id="opening-title">Down Under Discourse</h1>
+          <p class="lede">Painel de revisão artística do programa. A prova parte dos masters existentes e registra o que ainda depende da decisão do Felipe.</p>
+        </div>
+        <div class="hierarchy" aria-label="Hierarquia de marca e elenco">
+          <div><span class="meta">Programa</span><strong>Down Under Discourse</strong></div>
+          <div><span class="meta">Elenco</span><strong>Boomer &amp; Kev</strong></div>
+        </div>
+      </div>
+      <div class="hero-media">
+        <figure class="image-shell">
+          <img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Boomer e Kev na bancada do estúdio Down Under Discourse">
+          <figcaption class="image-caption"><span>MASTER_WIDE.PNG / REFERÊNCIA ORIGINAL</span><span>1376 × 768 / SEM ALTERAÇÕES</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section data-od-id="editorial-scope">
+      <div class="section-inner">
+        <div class="section-head"><div><p class="eyebrow">[ 00 / Escopo ]</p><h2 data-od-id="editorial-scope-heading">O que este painel decide</h2></div><p>Pré-produção para comparar material concreto. Teste técnico não equivale a aprovação artística.</p></div>
+        <div class="brief-grid">
+          <article class="brief-item" data-od-id="scope-card-recognition"><span class="scene-no">A</span><strong>Reconhecimento</strong><p>Personagem identificável por imagem e voz em falas diferentes.</p></article>
+          <article class="brief-item" data-od-id="scope-card-continuity"><span class="scene-no">B</span><strong>Continuidade</strong><p>Figurino, anatomia, set, props e intenção preservados entre planos e formatos.</p></article>
+          <article class="brief-item" data-od-id="scope-card-delivery"><span class="scene-no">C</span><strong>Duas entregas</strong><p>16:9 e 9:16 partem do mesmo manifesto. Duração e prioridade por rede continuam abertas.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="elenco" data-od-id="character-continuity">
+      <div class="section-inner">
+        <div class="section-head"><div><p class="eyebrow">[ 01 / Personagens ]</p><h2 data-od-id="character-heading">Base fiel aos masters</h2></div><p>A primeira prova preserva a referência visual atual. Ela ainda não está aprovada como figurino original definitivo.</p></div>
+        <div class="character-grid">
+          <article class="character" data-od-id="character-boomer">
+            <figure class="image-shell"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Master original de Boomer no estúdio"><figcaption class="image-caption"><span>MASTER_BOOMER.PNG</span><span>REFERÊNCIA, NÃO NOVA ARTE</span></figcaption></figure>
+            <div class="character-body"><div class="character-title"><h3>Boomer</h3><span class="tag">Esquerda da bancada</span></div><dl><dt>Identidade</dt><dd>Canguru antropomórfico, musculoso, castanho.</dd><dt>Atuação</dt><dd>Energia física e convicção; reações legíveis.</dd><dt>Gestos</dt><dd>Luvas apoiadas, avanço de tronco e movimentos de antebraço. A luva age como uma peça inteira.</dd><dt>Evitar</dt><dd>Dedos surgindo nas luvas, roupa que aparece e grito permanente.</dd></dl><div class="conflict"><strong>Conflito aberto</strong><p>O master mostra Boomer sem camiseta e sem corrente visível. A descrição do engine cita camiseta/corrente. Proposta: preservar o master na primeira prova, sem marcar aprovação.</p></div></div>
+          </article>
+          <article class="character" data-od-id="character-kev">
+            <figure class="image-shell"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Master original de Kev no estúdio"><figcaption class="image-caption"><span>MASTER_KEV.PNG</span><span>REFERÊNCIA, NÃO NOVA ARTE</span></figcaption></figure>
+            <div class="character-body"><div class="character-title"><h3>Kev</h3><span class="tag">Direita da bancada</span></div><dl><dt>Identidade</dt><dd>Coala antropomórfico cinza, orelhas claras volumosas e nariz preto.</dd><dt>Atuação</dt><dd>Economia de movimento, olhar e pausa deliberados.</dd><dt>Gestos</dt><dd>Piscar lento, inclinação e interação simples com o tablet.</dd><dt>Evitar</dt><dd>Expressividade frenética; mudança de rosto, orelhas ou escala.</dd></dl><div class="conflict"><strong>Continuidade</strong><p>Headset, tablet, direção do olhar e posição espacial devem permanecer coerentes. As marcas visíveis nas telas não são patrocínios confirmados.</p></div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="ocasioes" data-od-id="occasion-package">
+      <div class="section-inner">
+        <div class="section-head"><div><p class="eyebrow">[ 02 / Ocasiões ]</p><h2 data-od-id="occasion-heading">Um set, variações controladas</h2></div><p>Trocar figurino ou adereço exige uma decisão por episódio e o mesmo manifesto nas duas proporções.</p></div>
+        <div class="tabs" role="tablist" aria-label="Pacotes de ocasião">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="occasion-original" id="tab-original" data-occasion="original" data-od-id="occasion-tab-original">Original</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="occasion-jogo" id="tab-jogo" data-occasion="jogo" data-od-id="occasion-tab-game">Jogo</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="occasion-natal" id="tab-natal" data-occasion="natal" data-od-id="occasion-tab-christmas">Natal</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="occasion-halloween" id="tab-halloween" data-occasion="halloween" data-od-id="occasion-tab-halloween">Halloween</button>
+        </div>
+        <article class="occasion-panel" id="occasion-original" role="tabpanel" aria-labelledby="tab-original" data-active="true"><div class="occasion-copy"><span class="tag">Referência base, pendente de homologação</span><h3>Original</h3><p>Figurino original candidato com o set base. É a referência principal para anatomia, rostos, luvas, headset, bancada e posição dos personagens.</p><ul class="limits"><li>Preservar Boomer à esquerda e Kev à direita.</li><li>Props mudam de posição apenas por ação mostrada.</li><li>Definir o sistema de microfones a partir da base aprovada.</li></ul></div><div class="occasion-visual"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Set base original com Boomer e Kev"></div></article>
+        <article class="occasion-panel" id="occasion-jogo" role="tabpanel" aria-labelledby="tab-jogo" data-active="false" hidden><div class="occasion-copy"><span class="tag">Figurino candidato, ainda não renderizado</span><h3>Jogo</h3><p>Peça de time a aprovar. Clube ainda não definido. Pequenos itens de torcida podem ocupar zonas previamente escolhidas.</p><ul class="limits"><li>Preservar rostos, luvas e leitura do set.</li><li>Não desenhar uniforme sobre o master.</li><li>Registrar time, peça, props e telas no manifesto.</li></ul></div><div class="occasion-visual"><div class="set-map" aria-label="Estudo esquemático de posição de adereços para jogo"><div class="set-zone">Prop leve</div><div class="set-zone screen">TV / sponsor</div><div class="set-zone">Prop leve</div><div class="set-zone">Boomer</div><div class="set-zone">Centro livre</div><div class="set-zone">Kev</div><div class="set-zone desk">Bancada preservada / estudo de posição</div></div></div></article>
+        <article class="occasion-panel" id="occasion-natal" role="tabpanel" aria-labelledby="tab-natal" data-active="false" hidden><div class="occasion-copy"><span class="tag">Figurino candidato, ainda não renderizado</span><h3>Natal</h3><p>Acessório ou peça natalina a aprovar, com adereços localizados nas superfícies designadas. O roteiro candidato usa Natal leve.</p><ul class="limits"><li>Não esconder orelhas ou rosto.</li><li>O pequeno adereço entra desde o primeiro plano.</li><li>Não alterar a arquitetura do set.</li></ul></div><div class="occasion-visual"><div class="set-map" aria-label="Estudo esquemático de posição de adereços para Natal"><div class="set-zone">Adereço pequeno</div><div class="set-zone screen">TV / sponsor</div><div class="set-zone">Sem sobrepor rosto</div><div class="set-zone">Boomer</div><div class="set-zone">Eixo do diálogo</div><div class="set-zone">Kev</div><div class="set-zone desk">Bancada preservada / estudo de posição</div></div></div></article>
+        <article class="occasion-panel" id="occasion-halloween" role="tabpanel" aria-labelledby="tab-halloween" data-active="false" hidden><div class="occasion-copy"><span class="tag">Figurino candidato, ainda não renderizado</span><h3>Halloween</h3><p>Peça ou acessório temático a aprovar, com decoração localizada e sem transformar o elenco em outra espécie.</p><ul class="limits"><li>Não mudar anatomia nem tom do programa.</li><li>Evitar cobrir focinho, nariz e orelhas.</li><li>Preservar as mesmas escolhas em todos os planos.</li></ul></div><div class="occasion-visual"><div class="set-map" aria-label="Estudo esquemático de posição de adereços para Halloween"><div class="set-zone">Prop localizado</div><div class="set-zone screen">TV / sponsor</div><div class="set-zone">Prop localizado</div><div class="set-zone">Boomer</div><div class="set-zone">Centro livre</div><div class="set-zone">Kev</div><div class="set-zone desk">Bancada preservada / estudo de posição</div></div></div></article>
+      </div>
+    </section>
+
+    <section id="voz" data-od-id="voice-review">
+      <div class="section-inner">
+        <div class="section-head"><div><p class="eyebrow">[ 03 / Voz ]</p><h2 data-od-id="voice-heading">Ouvir antes de homologar</h2></div><p>S13/S14 venceram a régua anterior e seguem como preferência. Repetibilidade, identidade e sincronismo continuam pendentes.</p></div>
+        <div class="voice-grid">
+          <article class="voice-card" data-od-id="voice-native-boomer"><header><h3>Boomer / nativo</h3><span class="tag">A_b1 · 5,04 s</span></header><video controls preload="metadata" playsinline src="../../../../../review_frames/regua-vocal/raw/A_b1.mp4">Seu navegador não reproduz este vídeo.</video><p class="micro">Clipe nativo existente. Sem autoplay.</p></article>
+          <article class="voice-card" data-od-id="voice-native-kev"><header><h3>Kev / nativo</h3><span class="tag">A_k1 · 5,04 s</span></header><video controls preload="metadata" playsinline src="../../../../../review_frames/regua-vocal/raw/A_k1.mp4">Seu navegador não reproduz este vídeo.</video><p class="micro">Clipe nativo existente. Sem autoplay.</p></article>
+          <div class="voice-pair" data-od-id="voice-pilot-comparison"><div class="voice-name">Boomer</div><div class="voice-slot"><label for="boomer-pilot">Piloto existente · 6,9 s</label><audio id="boomer-pilot" controls preload="metadata" src="../../../../../review_frames/regua-vocal/PILOTO-BOOMER.mp3">Seu navegador não reproduz este áudio.</audio></div><div class="voice-slot"><p class="micro">Comparar sem inferir score. Registrar timbre, sotaque, ritmo, articulação, pausas e alcance emocional após escuta.</p></div></div>
+          <div class="voice-pair" data-od-id="voice-pilot-kev-c1"><div class="voice-name">Kev · 1</div><div class="voice-slot"><label for="kev-pilot-c1">Piloto de Kev · trecho 1</label><audio id="kev-pilot-c1" controls preload="metadata" src="../../../../../review_frames/regua-vocal/PILOTO-KEV-c1.mp3">Seu navegador não reproduz este áudio.</audio></div><div class="voice-slot"><p class="micro">Trecho existente do piloto para comparação com o nativo. A seleção da referência principal continua pendente de escuta e aprovação.</p></div></div>
+          <div class="voice-pair" data-od-id="voice-pilot-kev-c2"><div class="voice-name">Kev · 2</div><div class="voice-slot"><label for="kev-pilot-c2">Piloto de Kev · trecho 2</label><audio id="kev-pilot-c2" controls preload="metadata" src="../../../../../review_frames/regua-vocal/PILOTO-KEV-c2.mp3">Seu navegador não reproduz este áudio.</audio></div><div class="voice-slot"><p class="micro">Trecho existente do piloto para comparação com o nativo. A seleção da referência principal continua pendente de escuta e aprovação.</p></div></div>
+          <div class="voice-pair" data-od-id="voice-pilot-kev-c3"><div class="voice-name">Kev · 3</div><div class="voice-slot"><label for="kev-pilot-c3">Piloto de Kev · trecho 3</label><audio id="kev-pilot-c3" controls preload="metadata" src="../../../../../review_frames/regua-vocal/PILOTO-KEV-c3.mp3">Seu navegador não reproduz este áudio.</audio></div><div class="voice-slot"><p class="micro">Trecho existente do piloto para comparação com o nativo. A seleção da referência principal continua pendente de escuta e aprovação.</p></div></div>
+          <article class="voice-card" data-od-id="voice-assembled-test"><header><h3>Régua montada</h3><span class="tag">9,73 s · vertical</span></header><video controls preload="metadata" playsinline src="../../../../../review_frames/regua_native_final.mp4">Seu navegador não reproduz este vídeo.</video><p class="micro">Teste existente. Som audível não comprova identidade, texto correto ou sincronismo.</p></article>
+          <article class="voice-card"><h3>Teste de homologação</h3><p>Uma decisão vocal precisa sobreviver a texto, emoção, episódio e formato. O fallback TTS é outra fonte vocal e exige nova revisão.</p></article>
+        </div>
+        <ol class="test-list" data-od-id="voice-homologation-list"><li>Ouvir as referências em volume comparável e escolher uma referência principal por personagem.</li><li>Testar fala habitual, surpresa, ironia e pausa, sem acelerar o texto para caber.</li><li>Repetir a mesma frase em gerações distintas para observar variação involuntária.</li><li>Avaliar sem imagem, depois conferir texto completo e sincronismo por tomada.</li><li>Preservar áudio e interpretação entre 16:9 e 9:16 quando viável.</li><li>Revisar qualquer troca automática de fonte antes de aprovar a entrega.</li></ol>
+      </div>
+    </section>
+
+    <section id="storyboard" data-od-id="storyboard-review">
+      <div class="section-inner">
+        <div class="storyboard-toolbar"><div><p class="eyebrow">[ 04 / Storyboard ]</p><h2 data-od-id="storyboard-heading">Roteiro candidato · 7 cenas</h2><p>Ocasião candidata: Natal leve. Total planejado de aproximadamente 35 s, sujeito ao ritmo natural.</p></div><div class="format-switch" role="group" aria-label="Formato do storyboard"><button class="format-button" aria-pressed="true" data-format="horizontal" data-od-id="format-horizontal">16:9</button><button class="format-button" aria-pressed="false" data-format="vertical" data-od-id="format-vertical">9:16</button></div></div>
+        <div class="storyboard" data-format="horizontal">
+          <article class="scene" data-od-id="storyboard-scene-1"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Referência conjunta do estúdio para a cena 1"><span class="frame-label">Referência master · plano médio da dupla</span><i class="safe-guide" aria-hidden="true"></i></div><div class="story-frame frame-9 crop-boomer"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Estudo de recorte vertical de Boomer para a cena 1"><span class="frame-label">Estudo de crop · tela só se legível</span><i class="safe-guide" aria-hidden="true"></i></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 01</span><span class="duration">0–5 s</span></div><p class="line">Boomer: “I've sold the sponsor screen, mate. We're officially professionals.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Boomer avança ligeiramente; Kev observa.</dd></div><div><dt>Plano</dt><dd>Dupla em 16:9; médio de Boomer no vertical.</dd></div><div><dt>Crop</dt><dd>Incluir a tela apenas se permanecer legível.</dd></div><div><dt>Continuidade</dt><dd>Adereço natalino pequeno já presente; luvas inteiras.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-2"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Referência de Kev para a cena 2"><span class="frame-label">Referência master · close Kev</span></div><div class="story-frame frame-9 crop-kev"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Estudo de recorte vertical de Kev para a cena 2"><span class="frame-label">Estudo de crop · mesma intenção</span></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 02</span><span class="duration">5–9 s</span></div><p class="line">Kev: “It still says ‘Your sponsor here’.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Kev olha para a tela e volta para Boomer.</dd></div><div><dt>Plano</dt><dd>Close Kev nos dois formatos.</dd></div><div><dt>Reação</dt><dd>Preservar direção do olhar.</dd></div><div><dt>Continuidade</dt><dd>Tablet, headset e orelhas estáveis.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-3"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Referência de Boomer para a cena 3"><span class="frame-label">Referência master · médio Boomer</span></div><div class="story-frame frame-9 crop-boomer"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Estudo de recorte vertical de Boomer para a cena 3"><span class="frame-label">Estudo de crop · sem dedos</span></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 03</span><span class="duration">9–14 s</span></div><p class="line">Boomer: “Exactly. Exclusive opportunity. Very selective.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Luvas apoiadas; ar de vendedor confiante.</dd></div><div><dt>Plano</dt><dd>Médio Boomer; reação de Kev no corte seguinte.</dd></div><div><dt>Crop</dt><dd>Vertical mantém tronco e luvas legíveis.</dd></div><div><dt>Continuidade</dt><dd>Nenhum dedo aparece; figurino não muda.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-4"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Referência de Kev para a cena 4"><span class="frame-label">Referência master · close Kev</span></div><div class="story-frame frame-9 crop-kev"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Estudo de recorte vertical de Kev para a cena 4"><span class="frame-label">Estudo de crop · preservar pausa</span></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 04</span><span class="duration">14–19 s</span></div><p class="line">Kev: “You've emailed your mum three times.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Pausa antes de “three times”; mínimo movimento.</dd></div><div><dt>Plano</dt><dd>Close Kev nos dois formatos.</dd></div><div><dt>Reação</dt><dd>Humor seco, sem expressividade frenética.</dd></div><div><dt>Continuidade</dt><dd>Olhar, rosto e orelhas preservados.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-5"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Referência conjunta para a cena 5"><span class="frame-label">Referência master · mostrar adereço</span><i class="safe-guide" aria-hidden="true"></i></div><div class="story-frame frame-9 crop-boomer"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Estudo de recorte vertical de Boomer para a cena 5"><span class="frame-label">Estudo de crop · inserto se necessário</span><i class="safe-guide" aria-hidden="true"></i></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 05</span><span class="duration">19–25 s</span></div><p class="line">Boomer: “She's considering the premium package. Christmas special.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Boomer aponta com a luva inteira para um pequeno adereço já presente.</dd></div><div><dt>Plano</dt><dd>Médio/conjunto; vertical pode usar inserto.</dd></div><div><dt>Crop</dt><dd>Adereço precisa ser legível sem cobrir o elenco.</dd></div><div><dt>Continuidade</dt><dd>O prop existe desde a cena 1 e não muda de posição.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-6"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Referência conjunta para a cena 6"><span class="frame-label">Referência master · dupla ou reações</span></div><div class="story-frame frame-9 crop-split"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Referência de Boomer para estudo vertical"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Referência de Kev para estudo vertical"><span class="frame-label">Estudo conjunto · exige arte e validação</span></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 06</span><span class="duration">25–31 s</span></div><p class="line">Kev: “She asked you to bring the chairs back.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Olhar seco para a cadeira; Boomer começa a reagir.</dd></div><div><dt>Plano</dt><dd>Dupla ou reação sequenciada em 16:9.</dd></div><div><dt>Vertical</dt><dd>Cortes preservam a relação espacial; esquema não é plano gerado.</dd></div><div><dt>Continuidade</dt><dd>Kev à direita, Boomer à esquerda; cadeira não surge do nada.</dd></div></dl></div></article>
+          <article class="scene" data-od-id="storyboard-scene-7"><div class="scene-visual"><div class="story-frame frame-16"><img src="../../../public/assets/master_wide.png" width="1376" height="768" alt="Referência conjunta para a cena 7"><span class="frame-label">Referência master · encerramento conjunto</span></div><div class="story-frame frame-9 crop-split"><img src="../../../public/assets/master_boomer.png" width="1376" height="768" alt="Referência de Boomer para o encerramento vertical"><img src="../../../public/assets/master_kev.png" width="1376" height="768" alt="Referência de Kev para o encerramento vertical"><span class="frame-label">Estudo conjunto · exige arte e validação</span></div></div><div class="scene-copy"><div class="scene-top"><span class="scene-no">Cena 07</span><span class="duration">31–35 s</span></div><p class="line">Boomer: “Negotiations are ongoing.”</p><dl class="scene-facts"><div><dt>Ação</dt><dd>Pequena pausa, corte após a reação de Kev.</dd></div><div><dt>Plano</dt><dd>Conjunto sem vinheta longa.</dd></div><div><dt>Vertical</dt><dd>Boomer e reação final de Kev; terminar no payoff.</dd></div><div><dt>Continuidade</dt><dd>Mesmo set, ocasião, áudio e interpretação quando viável.</dd></div></dl></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="sponsor" data-od-id="sponsor-review"><div class="section-inner"><div class="section-head"><div><p class="eyebrow">[ 05 / Sponsor ]</p><h2 data-od-id="sponsor-heading">Superfície permanente, parceiro opcional</h2></div><p>A TV continua no set mesmo sem bloco falado. Marcas antigas presentes nos masters não representam patrocínio.</p></div><div class="sponsor-layout"><div class="sponsor-copy"><h3>Composição final separada</h3><p>Substituir as marcas antigas por texto controlado, com perspectiva e legibilidade verificadas. Não pintar sobre os masters neste painel.</p><p class="micro">Alternativa portuguesa como anotação de direção: “SEU SPONSOR AQUI”. A escolha do idioma depende do roteiro e do público.</p></div><div class="tv-studies" aria-label="Estudos gráficos de tela de sponsor"><div class="tv"><div><strong>SPONSOR</strong><span>Placeholder editorial</span></div></div><div class="tv"><div><strong>YOUR SPONSOR HERE</strong><span>Placeholder editorial em inglês</span></div></div></div></div></div></section>
+
+    <section id="distribuicao" data-od-id="distribution-review"><div class="section-inner"><div class="section-head"><div><p class="eyebrow">[ 06 / Distribuição ]</p><h2 data-od-id="distribution-heading">Hipóteses, não vencedores</h2></div><p>Nenhuma duração, cadência ou plataforma foi aprovada. Mudar uma variável por teste: gancho, duração ou montagem.</p></div><div class="distribution" role="table" aria-label="Hipóteses de distribuição"><div class="dist-row dist-head" role="row"><div class="dist-cell" role="columnheader">Canal</div><div class="dist-cell" role="columnheader">Hipótese editorial</div><div class="dist-cell" role="columnheader">Observar</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">YouTube 16:9</div><div class="dist-cell" data-label="Hipótese" role="cell">Episódios horizontais; duração aberta.</div><div class="dist-cell" data-label="Observar" role="cell">Retenção, retorno e interesse por episódio.</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">YouTube Shorts</div><div class="dist-cell" data-label="Hipótese" role="cell">Histórias verticais completas ou recortes autossuficientes.</div><div class="dist-cell" data-label="Observar" role="cell">Continuidade da história e resposta do público.</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">TikTok</div><div class="dist-cell" data-label="Hipótese" role="cell">Vertical com gancho e montagem adaptados quando necessário.</div><div class="dist-cell" data-label="Observar" role="cell">Tempo assistido, conclusão e compartilhamentos.</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">Instagram Reels</div><div class="dist-cell" data-label="Hipótese" role="cell">Episódios ou trechos verticais reconhecíveis.</div><div class="dist-cell" data-label="Observar" role="cell">Retenção disponível, compartilhamentos e visitas ao perfil.</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">Instagram Stories</div><div class="dist-cell" data-label="Hipótese" role="cell">Perguntas, pautas, prévias e bastidores.</div><div class="dist-cell" data-label="Observar" role="cell">Respostas e participação.</div></div>
+      <div class="dist-row" role="row"><div class="dist-cell" data-label="Canal" role="cell">Carrosséis / perfil</div><div class="dist-cell" data-label="Hipótese" role="cell">Apresentação do elenco e pontos de vista da dupla.</div><div class="dist-cell" data-label="Observar" role="cell">Compartilhamentos, salvamentos e compreensão da proposta.</div></div></div>
+      <div class="sources"><p class="eyebrow">Fontes oficiais registradas em 27/10/2026</p><ul><li><a href="https://ads.tiktok.com/resources/help/article/creative-best-practices?lang=en" target="_blank" rel="noreferrer">TikTok: Creative Best Practices</a>, referência de composição, não garantia orgânica.</li><li><a href="https://support.google.com/youtube/answer/15424877?hl=en" target="_blank" rel="noreferrer">YouTube: Shorts de até três minutos</a>.</li><li><a href="https://about.fb.com/news/2024/10/best-practices-education-hub-creators-instagram/" target="_blank" rel="noreferrer">Instagram: Best Practices</a>.</li><li><a href="https://about.fb.com/news/2024/12/trial-reels-try-content-non-followers-first-see-what-perfoms-best/" target="_blank" rel="noreferrer">Instagram: Trial Reels</a>.</li></ul></div></div></section>
+
+    <section id="aprovacao" data-od-id="approval-console"><div class="section-inner"><div class="section-head"><div><p class="eyebrow">[ 07 / Aprovação ]</p><h2 data-od-id="approval-heading">Decisão manual por eixo</h2></div><p>Nenhum item começa aprovado. O operador pode marcar “Revisar” ou “Aprovado por Felipe” e acrescentar uma nota.</p></div><div class="approval-intro"><p class="lede">Aprovação técnica, artística e publicação são etapas diferentes. Este painel registra apenas a revisão artística feita aqui.</p><div class="local-note"><strong>Persistência local</strong><p>As escolhas ficam somente neste navegador. Exportar JSON baixa uma cópia; não publica, não altera o engine e não toca no projeto original.</p></div></div><form id="approval-form"><div class="approval-list">
+      <div class="approval-row" data-axis="visual"><div class="approval-cell"><h3>Visual</h3><p class="micro">Personagens, anatomia e figurino base.</p></div><div class="approval-cell"><label for="status-visual">Decisão</label><select id="status-visual" name="visual-status"><option value="" selected>Sem decisão</option><option value="revisar">Revisar</option><option value="aprovado-por-felipe">Aprovado por Felipe</option></select></div><div class="approval-cell"><label for="notes-visual">Notas</label><textarea id="notes-visual" name="visual-notes" placeholder="Registre o que precisa mudar ou a base da aprovação"></textarea></div></div>
+      <div class="approval-row" data-axis="voz"><div class="approval-cell"><h3>Voz</h3><p class="micro">Identidade, repetibilidade e sincronismo.</p></div><div class="approval-cell"><label for="status-voz">Decisão</label><select id="status-voz" name="voz-status"><option value="" selected>Sem decisão</option><option value="revisar">Revisar</option><option value="aprovado-por-felipe">Aprovado por Felipe</option></select></div><div class="approval-cell"><label for="notes-voz">Notas</label><textarea id="notes-voz" name="voz-notes" placeholder="Compare o nativo com os três trechos do piloto e registre sua avaliação"></textarea></div></div>
+      <div class="approval-row" data-axis="cenario-ocasiao"><div class="approval-cell"><h3>Cenário / ocasião</h3><p class="micro">Set, props, figurino e telas.</p></div><div class="approval-cell"><label for="status-cenario">Decisão</label><select id="status-cenario" name="cenario-ocasiao-status"><option value="" selected>Sem decisão</option><option value="revisar">Revisar</option><option value="aprovado-por-felipe">Aprovado por Felipe</option></select></div><div class="approval-cell"><label for="notes-cenario">Notas</label><textarea id="notes-cenario" name="cenario-ocasiao-notes" placeholder="Informe ocasião e limites aceitos"></textarea></div></div>
+      <div class="approval-row" data-axis="storyboard"><div class="approval-cell"><h3>Storyboard</h3><p class="micro">Fala, ação, tempo, reação e continuidade.</p></div><div class="approval-cell"><label for="status-storyboard">Decisão</label><select id="status-storyboard" name="storyboard-status"><option value="" selected>Sem decisão</option><option value="revisar">Revisar</option><option value="aprovado-por-felipe">Aprovado por Felipe</option></select></div><div class="approval-cell"><label for="notes-storyboard">Notas</label><textarea id="notes-storyboard" name="storyboard-notes" placeholder="Registre ajustes por cena ou no ritmo geral"></textarea></div></div>
+      <div class="approval-row" data-axis="formatos"><div class="approval-cell"><h3>Formatos</h3><p class="micro">16:9, 9:16, crops e reações.</p></div><div class="approval-cell"><label for="status-formatos">Decisão</label><select id="status-formatos" name="formatos-status"><option value="" selected>Sem decisão</option><option value="revisar">Revisar</option><option value="aprovado-por-felipe">Aprovado por Felipe</option></select></div><div class="approval-cell"><label for="notes-formatos">Notas</label><textarea id="notes-formatos" name="formatos-notes" placeholder="Crops e margens ainda exigem teste nas interfaces reais"></textarea></div></div>
+      </div><div class="approval-actions"><output id="save-status" aria-live="polite">Nenhuma decisão salva nesta sessão.</output><div><button class="button" type="button" id="clear-decisions" data-od-id="clear-decisions">Limpar decisões locais</button> <button class="button primary" type="button" id="export-decisions" data-od-id="export-decisions">Exportar JSON</button></div></div></form></div></section>
+  </main>
+  <footer><p class="micro">Documento de trabalho · Boomer &amp; Kev / Down Under Discourse · Sem autorização de render, publicação ou alteração do engine.</p></footer>
+
+  <script>
+    (() => {
+      const storageKey = 'boomer-kev-art-review-v1';
+      const form = document.querySelector('#approval-form');
+      const saveStatus = document.querySelector('#save-status');
+      function collectDecisions() {
+        const decisions = {};
+        document.querySelectorAll('.approval-row').forEach((row) => {
+          decisions[row.dataset.axis] = {
+            status: row.querySelector('select').value || null,
+            notes: row.querySelector('textarea').value.trim() || null
+          };
+        });
+        return decisions;
+      }
+
+      function persist() {
+        const payload = { version: 1, scope: 'artistic-review-only', savedAt: new Date().toISOString(), decisions: collectDecisions() };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+        saveStatus.textContent = `Decisões salvas localmente às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}.`;
+      }
+
+      function restore() {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return;
+        try {
+          const saved = JSON.parse(raw);
+          document.querySelectorAll('.approval-row').forEach((row) => {
+            const item = saved.decisions?.[row.dataset.axis];
+            if (!item) return;
+            row.querySelector('select').value = item.status || '';
+            row.querySelector('textarea').value = item.notes || '';
+          });
+          saveStatus.textContent = 'Decisões locais anteriores recuperadas.';
+        } catch {
+          saveStatus.textContent = 'O registro local existente não pôde ser lido.';
+        }
+      }
+
+      document.querySelectorAll('.tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach((item) => item.setAttribute('aria-selected', 'false'));
+          document.querySelectorAll('.occasion-panel').forEach((panel) => { panel.dataset.active = 'false'; panel.hidden = true; });
+          tab.setAttribute('aria-selected', 'true');
+          const panel = document.querySelector(`#occasion-${tab.dataset.occasion}`);
+          panel.dataset.active = 'true'; panel.hidden = false;
+        });
+      });
+
+      document.querySelectorAll('.format-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.format-button').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+          button.setAttribute('aria-pressed', 'true');
+          document.querySelector('.storyboard').dataset.format = button.dataset.format;
+        });
+      });
+
+      document.querySelector('#mobile-jump').addEventListener('change', (event) => {
+        if (event.target.value) window.location.hash = event.target.value;
+      });
+
+      form.addEventListener('input', persist);
+      document.querySelector('#clear-decisions').addEventListener('click', () => {
+        if (!window.confirm('Limpar todas as decisões salvas somente neste navegador?')) return;
+        localStorage.removeItem(storageKey); form.reset(); saveStatus.textContent = 'Decisões locais removidas.';
+      });
+      document.querySelector('#export-decisions').addEventListener('click', () => {
+        const payload = { version: 1, programme: 'Down Under Discourse', cast: ['Boomer', 'Kev'], exportedAt: new Date().toISOString(), publication: false, engineChanged: false, decisions: collectDecisions() };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'down-under-discourse-decisoes.json'; link.click(); URL.revokeObjectURL(link.href);
+        saveStatus.textContent = 'JSON exportado localmente. Nada foi publicado.';
+      });
+
+      restore();
+    })();
+  </script>
+</body>
+</html>

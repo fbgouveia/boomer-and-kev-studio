@@ -1,14 +1,396 @@
 <!-- CONTINUIDADE_ATUAL_INICIO -->
 # Boomer & Kev — continuidade única
 
-Atualizado em **12/10/2026**. Este bloco é a única fonte operacional de pendências,
+Atualizado em **27/10/2026**. Este bloco é a fonte operacional atual.
+Detalhes e estados anteriores foram preservados no histórico abaixo do marcador.
+Documentos de direção artística não substituem esta continuidade.
+
+## Comece aqui
+
+**Prioridade do Felipe: consolidar a identidade audiovisual antes de publicar.**
+Em 27/10 ele definiu o programa multiformato e autorizou começar a preparação
+da bíblia e do painel de revisão ("O que a gente está esperando?").
+
+1. Abrir o painel de revisão; conferir elenco, ouvir referências e registrar escolhas.
+2. Aprovar/corrigir figurino original candidato, vozes, pacotes de ocasião e storyboard.
+3. Com o briefing artístico fechado, definir custo e autorizar o piloto pago (BK-07).
+4. Confirmar contas e autorizar a primeira publicação (BK-10); medir audiência.
+5. BK-31 continua aberto: corrigir alertas Telegram no n8n quando autorizado.
+
+## Direção confirmada por Felipe em 27/10
+
+- Entregas **16:9 e 9:16**, incluindo YouTube. Distribuição em TikTok,
+  Instagram Reels e YouTube Shorts ainda em estudo; duração e cadência abertas.
+- Instagram também deve ser estudado para Stories, carrosséis, apresentação
+  do elenco e relacionamento com audiência/patrocinadores.
+- Personagens e vozes reconhecíveis entre cenas, episódios e formatos.
+  Figurino original predominante; jogos, Natal e Halloween permitem variações
+  planejadas e consistentes ao longo de cada episódio.
+- **Mesmo estúdio**, com mudanças localizadas de decoração e adereços.
+  Preservar bancada, arquitetura, posições e identidade.
+- TVs de sponsor são permanentes. Sem parceiro: "Sponsor"/"Seu sponsor aqui"
+  ou equivalente em inglês. Com parceiro: marca/mensagem aprovadas.
+- **Todo bloco deve respeitar a personalidade de Boomer e Kev**, incluindo
+  pauta, humor, sponsor e ocasiões. Critério: isso é algo que diriam/fariam?
+  “Agregador de blocos” é a função editorial entendida; não presumir módulo técnico.
+- O contraste de atuação permanece: Boomer expansivo/físico; Kev seco/contido.
+  Figurino variável não autoriza mudança involuntária de rosto, anatomia ou voz.
+
+## Entregas locais desta sessão
+
+- `docs/programa/BIBLIA_AUDIOVISUAL.md`: versão 0.1 para aprovação, com fichas,
+  ocasiões, protocolo vocal, roteiro/storyboard candidato de 7 cenas e fontes
+  oficiais para o estudo inicial de distribuição. Não é o episódio 1 aprovado.
+- `docs/programa/REVISAO_FGSS.json`: Gestor de Motion Design aprovou o gate
+  **documental** `design_review`. Não equivale a homologação estética/vocal,
+  render aprovado ou prontidão de produção. Preflight do gestor: 28 testes OK.
+- `docs/programa/VERIFICACAO_PAINEL.md`: evidências de navegador, exportação e limites.
+- Painel criado no **Open Design / Local Codex**, com referências reais,
+  players, troca de ocasião, storyboard 16:9/9:16 e decisões por eixo.
+  Projeto: `boomer-kev-biblia-audiovisual-20261027`.
+  Run concluída: `a1c25158-14b8-47c0-bf1a-d7b495371fd8`.
+  Studio: http://127.0.0.1:49476/projects/boomer-kev-biblia-audiovisual-20261027/conversations/d0c73501-59b1-4e31-ab37-673dc0d16e83/files/index.html
+  Prévia: http://127.0.0.1:49439/api/projects/boomer-kev-biblia-audiovisual-20261027/raw/index.html
+  Links valem para esta sessão do Open Design; após reinício, atualizar com get_run.
+- Ajuste posterior via Open Design: incorporados os três trechos existentes de
+  Kev e corrigida a referência ausente; README atualizado. Não iniciar duplicata.
+- Chrome: conferido em 1440px e 390px, sem overflow horizontal do documento;
+  imagens e 7 mídias carregadas sem erro; ocasião/formato e decisão testados.
+  Todos os eixos devolvidos a **Sem decisão**. JSON de teste baixado em Downloads.
+  Não houve nova avaliação auditiva de timbre ou homologação de sincronismo.
+- Bíblia/painel permanecem candidatos. Não houve nova mídia paga, publicação
+  ou alteração do core. Felipe solicitou **salvar tudo**, incluindo commit/push.
+- `docs/programa/painel-fonte/`: fonte do painel versionada, caminhos locais
+  adaptados e ASSETS.json com hashes. Mídias preservadas nos locais originais.
+
+## Estado técnico verificado em 27/10
+
+- Git: `restore-engine`, HEAD `b26b0db` antes desta sessão; preservados
+  `graphify-out/`, `public/latest_episode.mp4` e `supabase/.temp/` não rastreados.
+- **124/124 unitários passaram**. TypeScript passou após iniciar dev e regenerar
+  cache de tipos de rotas arquivadas. **Lint: 9 erros/4 avisos**, ainda aberto.
+  Achados em `.agent/skills/`, `tests/trends-region.test.ts`, `tools/free-episode.mjs`.
+  Build e E2E completos não repetidos nesta sessão.
+- Leituras de Anthropic/Gemini/Replicate/Supabase OK. ElevenLabs LIMITED na
+  consulta de assinatura por escopo; geração de fala não testada.
+- Banco: **15 episódios** (11 assembled, 3 failed, 1 draft), **0 marcados
+  publicados**, **0 contas sociais**; não verifica publicações manuais externas.
+  Anon continua vendo 0 episódios. `pipeline_jobs`/`scene_jobs`: 404 (BK-17 adiado).
+- Produção: home 401 sem auth/200 com auth; Library 200 com auth.
+  Última sentinela registrada: GREEN em 26/10 UTC (24 e 25/10 também GREEN).
+  `/api/cron/agent`: 404, divergindo do antigo registro 501.
+- Produção manual pelo Studio; orquestrador n8n estava inativo desde 19/07,
+  conforme revisão de 12/10. Estado do workflow não revalidado nesta sessão.
+- Voz da conversa: Kokoro iniciado em `127.0.0.1:8880`; ferramenta confirmou
+  reprodução com `pm_alex`. Dev do Studio iniciado em `127.0.0.1:3000`.
+
+## Pendências atuais
+
+| ID | Trabalho/decisão | Dependência |
+|---|---|---|
+| Identidade | Aprovar referência original, voz e continuidade multiformato no painel | Felipe; repetibilidade exige prova adicional |
+| BK-07 | Escolher roteiro e autorizar primeiro piloto/render pago | Briefing artístico, custo definido |
+| BK-10 | Confirmar contas e autorizar publicação | Entrega aprovada |
+| BK-31 | Corrigir Telegram n8n: HTML + escape nos 2 nós | Workflow compartilhado; não alterado nesta sessão |
+| QA local | Corrigir escopo e achados do lint | 9 erros/4 avisos observados |
+| BK-17 | Migração e worker durável em pipeline_jobs/scene_jobs; orçamento/reserva | **Adiado por Felipe em 12/10** até haver volume |
+| BK-19 | ShowProfile e 2 elencos adicionais homologados | Depois da identidade do programa; arte via Open Design/Gestor |
+| BK-20 | Credenciais/endpoint/quotas GLM-5.3-Flash | Sem adaptador/benchmark antes disso |
+| BK-21 | SaaS/white label, tenants, quotas e cobrança | Após validação de audiência |
+| BK-22 | Custo por aprovado, falhas, latência e retenção | Publicação; BK-17 para operação em volume |
+| BK-26b | Pautas→roteiro automático | Cadência e local de revisão a definir |
+| BK-09 | POC opcional de lipsync animal | Autorização específica |
+| BK-11/12/13 | Produto, marca/interface e operação | Histórico, sem execução automática |
+| Offer Radar | Coletor nº 4 do Arquiteto, em_pesquisa | Último da fila externa |
+
+Restam as decisões da entrevista: meta 90 dias, receita, horas/semana, público,
+contas, origem das pautas, episódio 1, orçamento e titularidade; a decisão de
+plataformas avançou com YouTube e estudo das redes verticais. Contagem antiga
+de 10 perguntas não foi revalidada após as novas definições.
+
+## Descobertas que afetam a próxima etapa
+
+- Master de Boomer sem camiseta conflita com cadastro que exige camiseta e
+  corrente; teste nativo muda figurino dentro do clipe. Decidir a base antes de corrigir.
+- Há gesto de dois dedos descrito para luvas sem dedos; ajustar direção após aprovação.
+- Fala nativa usa descrição australiana genérica, sem vincular voiceStyle/voiceId
+  por personagem. Fallback TTS pode mudar timbre; som audível não prova identidade.
+- `PILOTO-KEV.mp3` citado nas notas não existe; existem os trechos `-c1/-c2/-c3`.
+- Roteiro exige WIDE, mas certos planos viram solo no vertical. Sponsor falado
+  e produtos são inseridos por índice de cena; separar isso das TVs permanentes.
+- Banco já tem render_jobs legada: BK-17 usa **pipeline_jobs** para evitar colisão.
+- Marcas reais dos masters não são patrocínios confirmados. Texto/logo final
+  deve ser composto com controle; não depender de letras geradas.
+
+## Como retomar e verificar
+
+Raiz com espaço: `Developer/PROJETO Boomer and Kev/`. Git/app em
+`BOOMER AND KEV/boomer-and-kev-studio`. O HANDOFF da raiz é link: preservar.
+Remote `fbgouveia/boomer-and-kev-studio`. Nunca iniciar outro app na raiz.
+
+Leis: `CÉREBRO/LEIS_FGSS.md` e roteador do FGSS Brain.
+Diagnóstico sem gasto: `npm run check:connections`.
+Verificação de implementação: `npx tsc --noEmit`, `npm run test:unit`, build,
+verify/security/idempotency standalone e test:deploy conforme escopo.
+BK-06/18/27/29/30 e correções de 12/10 estão no histórico; não reabrir sem evidência.
+Detalhes de antigas descobertas e comandos de rollback ficam no histórico.
+
+## Prompt para a próxima sessão
+
+Use o [prompt detalhado de retomada](#prompt-proxima-sessao-20261027), abaixo
+do marcador, e o relato da sessão imediatamente antes dele. É consulta pontual.
+<!-- CONTINUIDADE_ATUAL_FIM -->
+
+<a id="sessao-20261027-retomada"></a>
+## Sessão de 27/10/2026: revisão, direção audiovisual e salvamento
+
+Este registro preserva o trabalho da sessão. A lista operacional vigente está
+no bloco inicial. As propostas artísticas continuam sujeitas à aprovação de Felipe.
+
+### Intenção e decisões confirmadas
+
+Felipe pediu ativação do FGSS e da voz, revisão do projeto e pendências.
+Em seguida esclareceu a prioridade: consistência de personagens e vozes,
+acabamento profissional e preparação do cenário para patrocinadores.
+
+As correções de escopo foram incorporadas:
+
+- O programa terá versões horizontais 16:9 e verticais 9:16 e incluirá YouTube.
+  TikTok, Instagram Reels e YouTube Shorts precisam de estudo, sem plataforma
+  vencedora, duração ou cadência presumidas.
+- Instagram também deve ser pensado como espaço de relacionamento: Stories,
+  carrosséis, apresentação dos personagens, pautas e contato com patrocinadores.
+- O figurino original será predominante; jogos, Natal e Halloween permitem
+  roupas e acessórios escolhidos para aquele episódio.
+- O cenário é sempre o mesmo estúdio, com decoração e adereços localizados.
+  Não reconstruir sua arquitetura a cada data comemorativa.
+- TVs de sponsor permanecem. Sem parceiro, usar brincadeiras como Sponsor,
+  Seu sponsor aqui ou equivalente em inglês; com parceiro, aplicar marca aprovada.
+- Todo bloco deve passar pela personalidade de Boomer e Kev. Pauta, roteiro,
+  sponsor, humor, ocasião, atuação e montagem devem parecer parte do programa.
+  Boomer traz convicção e energia física; Kev traz pausa, observação e resposta seca.
+  A personalidade permite emoções e variações coerentes; não obriga a repetir
+  a mesma piada nem a humilhar sempre o mesmo personagem.
+- O termo “agregador de blocos” foi tratado como função editorial. A busca não
+  identificou componente com esse nome literal. A interface tem Global Signal
+  Aggregator para pautas em DirectorTerminal e um contador BLOCKS para cenas.
+  O termo não prova implementação de fiscalização automática de personalidade.
+- “Cav” na conversa foi entendido como Kev, o coala existente; não criar outro elenco.
+
+### Atualizações e entregas
+
+1. Leis FGSS e continuidade foram lidas. A revisão inicial usou busca local e
+   verificações proporcionais; não houve alteração do core do Studio.
+2. O serviço de voz estava desligado. A primeira tentativa falhou por conexão.
+   Kokoro já instalado foi iniciado com bind 127.0.0.1:8880, usando MPS;
+   sem reinstalar dependências. Saúde respondeu healthy e a ferramenta confirmou
+   geração/reprodução de mensagens em português com pm_alex. Isso não é geração
+   das vozes dos personagens, nem confirma que Felipe ouviu cada mensagem.
+3. Studio dev iniciado em 127.0.0.1:3000. A primeira checagem TypeScript falhou
+   em .next/dev/types/validator.ts por referências a rotas arquivadas. Após o
+   dev regenerar os tipos, a mesma checagem passou, sem modificar fonte do app.
+4. 124 testes unitários passaram. Lint falhou com 9 erros/4 avisos em skills
+   locais, tests/trends-region.test.ts e tools/free-episode.mjs. Não declarar
+   QA inteiramente verde. Build e E2E completos não foram repetidos.
+5. check:connections confirmou home, imagens e trends locais, Anthropic, Gemini,
+   Replicate e Supabase. ElevenLabs retornou LIMITED ao ler assinatura, coerente
+   com escopo restrito; isso não prova falha de síntese e não houve teste pago.
+6. Leituras do banco confirmaram 15 episódios: 11 assembled, 3 failed, 1 draft;
+   nenhum marcado published e nenhuma conta social. Publicações manuais fora
+   do Studio não foram auditadas. Anon continuou vendo zero episódios.
+7. As tabelas pipeline_jobs e scene_jobs retornaram 404, coerente com BK-17
+   adiado por Felipe. Home em produção: 401 sem auth e 200 com auth; Library
+   200 autenticada. /api/cron/agent retornou 404. Últimas três sentinelas lidas
+   foram GREEN em 24, 25 e 26/10 UTC. Nenhuma nova sonda paga foi disparada.
+8. Criada docs/programa/BIBLIA_AUDIOVISUAL.md: versão 0.1 candidata, fichas do
+   elenco, ocasiões, regras do set, protocolo de voz, storyboard, sponsor e canais.
+   O roteiro de sete cenas sobre Your sponsor here é candidato de teste, com
+   Natal leve e aproximadamente 35 s planejados. Não é episódio 1 aprovado.
+9. Open Design foi usado com Local Codex autenticado. O painel é um documento
+   visual de pré-produção; não altera a interface do Studio. Projeto e run estão
+   no bloco atual. O projeto terminou com status succeeded. A biblioteca/skill
+   industrial-brutalist-ui organizou a página, preservando as referências do show.
+10. Painel reúne três masters, dois clipes nativos, piloto de Boomer, três
+    trechos do piloto de Kev e a régua montada. Os originais foram preservados.
+    Troca Original/Jogo/Natal/Halloween mostra fichas de direção; não existem
+    novas artes sazonais renderizadas. Storyboard alterna 16:9/9:16.
+11. O navegador integrado estava indisponível. A conexão Chrome existente foi
+    usada para conferir seções, formatos, ocasiões, imagens e metadados de mídia
+    em 1440px e 390px. Sem overflow horizontal nesses tamanhos. Isso não substitui
+    um teste em telefone nem uma avaliação auditiva de timbre/sincronismo.
+12. Os cinco eixos do formulário terminaram Sem decisão. Exportação criou um
+    JSON em Downloads com os cinco status null, publication false e engineChanged
+    false. O evento de download do controle do browser expirou; o arquivo no disco
+    foi conferido independentemente. Não confundir o JSON de teste com aprovação.
+13. O Gestor de Motion Design passou no preflight (28 testes) e emitiu
+    approved_for_next_gate apenas para o contrato design_review da bíblia.
+    A avaliação determinística não julga timbre/estética nem libera produção.
+14. A continuidade foi reduzida a menos de 150 linhas, preservando o bloco
+    anterior como snapshot e mantendo todo o histórico. O link HANDOFF da raiz
+    continuou apontando para o arquivo versionado no Studio.
+15. A pedido de salvar tudo, foram preparados fonte HTML do painel, READMEs,
+    especificação visual e manifesto de mídias com hashes em painel-fonte/.
+    Só caminhos de mídia foram adaptados na cópia Git. Os binários não foram
+    movidos nem incluídos no commit. Clone isolado exige as mídias do workspace.
+16. Nenhum conteúdo foi publicado, nenhum novo vídeo/áudio de personagem foi
+    gerado e não houve alteração de Supabase, n8n ou produção nesta sessão.
+
+### Descobertas com consequência para a execução
+
+- O master original de Boomer o mostra sem camiseta e sem corrente; o cadastro
+  exige camiseta preta e corrente. O teste nativo mostra mudança de figurino
+  dentro do clipe. É preciso escolher a base oficial e alinhar imagem e instruções.
+- Luvas sem dedos conflitam com instruções para apontar dois dedos. Aprovar
+  uma linguagem de gestos compatível antes de gerar novas tomadas.
+- No modo nativo atual, o comando de fala usa um sotaque australiano genérico;
+  voiceStyle e voiceId do cadastro não vinculam a voz gerada pelo Kling.
+  O fallback ElevenLabs pode alterar o timbre. Áudio audível não prova que a
+  voz é a mesma, que disse o texto correto ou que a boca sincronizou.
+- As amostras S13/S14 venceram a régua anterior, preservando a preferência de
+  Felipe; uma comparação direcional não comprova repetibilidade entre episódios.
+- PILOTO-KEV.mp3 citado nas notas não existe. Os arquivos reais são os trechos
+  PILOTO-KEV-c1.mp3, -c2.mp3 e -c3.mp3. Foram incorporados sem eleger um vencedor.
+- O roteiro exige um WIDE, mas certos planos são convertidos em solo no
+  vertical. Reações e relação espacial precisam de storyboard para cada proporção.
+- Produtos/logos de sponsor entram por índice de cena e o roteiro pede um
+  fake sponsor break. Separar a TV permanente do set de uma esquete falada,
+  que deve ser uma decisão editorial do episódio.
+- Os masters têm marcas reais. Não atribuir patrocínio sem confirmação;
+  compor texto e marcas com controle na entrega final.
+- No Open Design, o workflow inicial ficou vinculado à request da criação.
+  Uma tentativa de nova geração com o mesmo workflow e outra request foi
+  rejeitada por conflito. Nenhuma segunda run iniciou. O ajuste pontual de
+  áudio foi feito pelos recursos normais de arquivo após a primeira run concluir.
+  Não repetir start_run às cegas nem alterar payload mantendo requestId.
+- As decisões do painel são locais ao navegador e à origem. Copiar o HTML ou
+  mudar de porta não transfere as decisões automaticamente. Usar o JSON exportado
+  como registro; o painel ainda não tem importação automática de decisões.
+- Links de preview/studio dependem da sessão local do Open Design. Projeto,
+  run, fonte versionada e manifesto são referências de recuperação.
+
+### Pendências e ordem de execução
+
+1. Revisão artística de Felipe no painel: referência base, vozes, ocasiões,
+   storyboard e formatos. Não tratar a aprovação do princípio de personalidade
+   como aprovação de cada voz, imagem ou fala candidata.
+2. Preparar uma prova de repetibilidade com diferentes falas, emoções e gerações.
+   Apresentar custo antes de chamadas pagas. Preservar a preferência vocal anterior
+   e comparar alternativas apenas se a prova mostrar falha material.
+3. Depois das escolhas, preparar tarefas cirúrgicas para alinhar cadastro,
+   instruções de atuação, voiceStyle, fallback e montagem de blocos. Não alterar
+   o core automaticamente a partir desta documentação candidata.
+4. Definir episódio 1, orçamento e autorizar render (BK-07), depois contas e
+   publicação (BK-10). Medir audiência e custo real por entrega aprovada.
+5. Continuam abertos o lint e BK-31 Telegram. BK-17 segue adiado; BK-19/20/21,
+   BK-22, BK-26b e backlog permanecem na tabela operacional atual.
+
+### Escopo do salvamento e integridade
+
+Versionar somente HANDOFF.md e docs/programa/. Preservar os arquivos preexistentes
+graphify-out/, public/latest_episode.mp4 e supabase/.temp/. Não usar git add -A.
+Não tocar no root link, no core, nos segredos nem nas mídias originais.
+O pedido de salvar autoriza commit/push da documentação no remote já existente.
+Não é autorização de deploy, publicação de conteúdo ou render pago.
+
+Antes do commit, a revisão independente do pacote por Gemini 3.8 Flash retornou
+PASS. Foi revisão do pacote sanitizado, não inspeção independente do disco ou
+produção. Integridade das mídias, equivalência do snapshot, sintaxe JS, JSON,
+histórico e limite do bloco atual foram verificados localmente. Dois textos
+copiados tinham linha em branco extra no EOF; normalizados antes do commit.
+
+O contrato de dados do backup é ASSETS.json: versão, projeto/run de origem,
+hash do HTML e registros por mídia com caminhos relativos, tamanho e sha256.
+A prova de restauração deve resolver cada src local e comparar os hashes.
+Não são criadas cópias paralelas de pendências: este HANDOFF continua único.
+
+<a id="prompt-proxima-sessao-20261027"></a>
+### Prompt detalhado para a próxima sessão
+
+```text
+Retome o Boomer & Kev na pasta correta:
+/Users/felipegouveia/Developer/PROJETO Boomer and Kev
+
+Acione o FGSS e a voz local, se disponíveis. Leia as leis canônicas e classifique
+a tarefa. Leia somente o bloco atual de HANDOFF.md até CONTINUIDADE_ATUAL_FIM;
+depois consulte pontualmente o relato desta sessão e este prompt. Não leia o
+histórico inteiro nem reabra checkboxes antigos como tarefas atuais.
+
+A prioridade é consolidar a identidade audiovisual antes de publicar.
+Leia docs/programa/BIBLIA_AUDIOVISUAL.md, REVISAO_FGSS.json e
+VERIFICACAO_PAINEL.md. O parecer FGSS aprova só contrato/procedência;
+personagens, figurino, voz e storyboard ainda aguardam aprovação artística.
+
+Abra o painel existente no Open Design, projeto
+boomer-kev-biblia-audiovisual-20261027, run
+a1c25158-14b8-47c0-bf1a-d7b495371fd8. Use get_run para obter links atuais;
+não iniciar outra geração apenas porque o link antigo parou. Há uma cópia
+versionada em docs/programa/painel-fonte/index.html e instruções no README.
+ASSETS.json permite conferir as mídias originais sem mover nem duplicar binários.
+
+Conduza a revisão com material concreto, começando pelo figurino original e
+pelas referências de voz. Preserve a preferência anterior S13/S14. Kev tem
+três trechos reais de piloto (-c1/-c2/-c3); não procurar o inexistente arquivo
+PILOTO-KEV.mp3 nem marcar um trecho como vencedor sem escuta de Felipe.
+Verifique decisões efetivamente dadas pelo usuário ou JSON que ele fornecer;
+o JSON exportado em Downloads nesta sessão era um teste com tudo pendente.
+
+Requisitos já confirmados e que não devem ser perguntados novamente:
+- versões 16:9 e 9:16, incluindo YouTube;
+- estudar TikTok, Instagram Reels e Shorts, ainda sem duração/cadência fechadas;
+- Instagram também para Stories, carrosséis, elenco e comunidade;
+- figurino original predominante, com variações planejadas para jogos e datas;
+- mesmo estúdio com decoração localizada e TVs permanentes de sponsor;
+- sem parceiro, brincadeiras Sponsor/Seu sponsor aqui; com parceiro, marca aprovada;
+- todo bloco respeita a personalidade de Boomer e Kev: isso é algo que diriam/fariam?
+
+Agregador de blocos significa a função editorial entendida na conversa;
+não presuma um componente técnico com esse nome nem validação automática pronta.
+Boomer é expansivo/físico/convicto; Kev é seco/contido/observador.
+O contraste admite emoções naturais e não obriga a repetir a mesma piada.
+
+Mostre a contradição entre master de Boomer sem camiseta e cadastro que exige
+camiseta/corrente; aguarde a escolha da base oficial antes de alinhar o core.
+Também há gesto de dedos incompatível com luvas, voz nativa genérica/fallback
+com risco de troca de timbre, WIDE convertido em solo vertical e sponsor por índice.
+O storyboard de sete cenas é candidato de teste de Natal leve, não episódio 1 aprovado.
+Variações sazonais do painel são fichas de direção, não figurinos já renderizados.
+
+Depois das escolhas artísticas, prepare uma prova de repetibilidade vocal e
+continuidade visual nas duas proporções, com custo definido antes de geração paga.
+Use Open Design com Local Codex para nova arte e revisão do Gestor de Motion Design.
+Não trocar silenciosamente para Cloud/BYOK. Não alterar app, produzir mídia paga,
+publicar, aplicar migração BK-17 ou editar workflow compartilhado sem o escopo devido.
+
+Estado técnico observado em 27/10: 124 testes unitários passaram; TypeScript
+passou após regenerar cache; lint tem 9 erros/4 avisos. Build/E2E não foram
+repetidos. Banco tinha 15 episódios, 0 marcados publicados e 0 contas sociais.
+Última sentinela consultada: GREEN em 26/10 UTC. Isso é evidência datada,
+não uma garantia de saúde futura. BK-31 segue aberto e BK-17 segue adiado.
+
+Preserve alterações preexistentes, mídias e o link HANDOFF da raiz.
+Continue autonomamente no que já estiver autorizado; não repita perguntas
+resolvidas nem considere preferência geral uma aprovação artística específica.
+Ao receber salvar, faça pendências, atualizações, descobertas, HANDOFF, commit e push.
+```
+
+
+## Snapshot do bloco operacional anterior — consolidado em 27/10/2026
+
+Preservado para consulta pontual. Este bloco não é a lista atual de tarefas.
+
+# Boomer & Kev — continuidade única
+
+Atualizado em **27/10/2026**. Este bloco é a única fonte operacional de pendências,
 atualizações e descobertas. Meta de tamanho: **≤ ~150 linhas** (BK-23). Ao salvar,
 mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só o estado.
 
 ## ▶ Comece aqui (próxima sessão — salvo 12/10/2026, fim do dia)
 
-Produção está **verde** (11/11 rotas, sentinela GREEN). O app está pronto para produzir;
-o gargalo é decisão, não código. Ordem de ataque:
+Em 27/10, home e Library respondem em produção com autenticação; a última sentinela
+registrada é GREEN (26/10 UTC). O gargalo principal continua sendo validar e publicar
+o primeiro episódio. **Diretriz posterior do Felipe (27/10): fechar primeiro a
+consistência audiovisual do programa multiformato**, conforme abaixo. Há uma
+pendência de lint local. A ordem operacional de 12/10 abaixo deve respeitar essa prioridade:
 
 1. **Felipe responde as 10 perguntas ⭐ que restam da entrevista** (eram 11; na conversa saiu "12" por erro de contagem) (objetivo 90 dias, receita,
    horas/semana, público, plataformas, contas, origem dos temas, roteiro do ep. 1,
@@ -20,6 +402,66 @@ o gargalo é decisão, não código. Ordem de ataque:
 3. **BK-07** — escolher roteiro + autorizar o 1º render pago (episódio 1).
 4. **BK-10** — confirmar contas e autorizar a 1ª publicação.
 5. Só depois: BK-17 (Felipe decidiu adiar em 12/10), BK-20 GLM, BK-21 SaaS.
+
+## Revisão de 27/10/2026 — evidência atual
+
+- Git continua em `b26b0db`, branch `restore-engine`; nenhuma alteração rastreada
+  anterior à revisão. Preservados os não rastreados `graphify-out/`,
+  `public/latest_episode.mp4` e `supabase/.temp/`.
+- Banco consultado somente para leitura: **15 episódios**, sendo 11 `assembled`,
+  3 `failed`, 1 `draft`; **0 marcados como publicados** e **0 contas sociais**.
+  Isso não verifica publicações manuais fora do Studio. Anon segue vendo 0 episódios.
+- Últimas 3 sentinelas registradas: GREEN em 24, 25 e 26/10 UTC. HTTP em produção:
+  home 401 sem auth/200 com auth; `/api/episodes` 200 com auth.
+  `/api/cron/agent` responde **404**, divergindo do 501 anotado em 12/10.
+- **124/124 testes unitários passaram**. TypeScript passou após iniciar o dev server
+  e regenerar tipos locais; a primeira tentativa falhou por cache de rotas arquivadas.
+  **Lint falhou: 9 erros/4 avisos** em `.agent/skills/`,
+  `tests/trends-region.test.ts` e `tools/free-episode.mjs`. Corrigir escopo e achados
+  antes de voltar a declarar QA totalmente verde. Build/E2E não repetidos nesta revisão.
+- Home, 2 imagens canônicas e trends locais: HTTP 200. Leituras de Anthropic,
+  Gemini, Replicate e Supabase: OK. ElevenLabs: LIMITED por escopo de leitura da
+  assinatura; geração de fala não foi testada. `pipeline_jobs`/`scene_jobs`: 404,
+  coerente com BK-17 adiado. BK-31 não foi revalidado no n8n.
+- Voz da conversa: Kokoro estava desligado; iniciado com a instalação existente,
+  restrito a `127.0.0.1:8880`, sem instalar dependências. Saúde OK e ferramenta
+  confirmou geração/reprodução com `pm_alex`; audição pelo Felipe não confirmada.
+  Studio dev iniciado em `127.0.0.1:3000`. Nenhum render pago ou publicação executado.
+
+## Direção editorial de 27/10 — intenção confirmada pelo Felipe
+
+- Programa para **YouTube e distribuição vertical a estudar em TikTok, Instagram
+  Reels e YouTube Shorts**, com versões **16:9 e 9:16**. Papel de cada rede,
+  duração e cadência ainda não definidos. Instagram inclui estudar também Stories,
+  carrosséis, apresentação do elenco e relacionamento com o público/patrocinadores.
+- Personagens e vozes devem manter identidade reconhecível entre cenas, episódios
+  e formatos. Há **figurino original predominante**, com variações deliberadas para
+  jogos, Natal, Halloween e outras datas. Variação escolhida deve manter continuidade.
+- **Mesmo estúdio físico de referência**: decoração e adereços mudam conforme a data,
+  preservando sua estrutura. TVs com espaço de sponsor são parte permanente do set.
+  Sem patrocinador: brincadeiras como "Sponsor"/"Seu sponsor aqui"; com patrocinador:
+  inserir marca aprovada. Essas definições substituem a hipótese de figurino invariável.
+- Revisão constatou: master do Boomer sem camiseta versus cadastro exigindo camiseta
+  e corrente; nos frames do teste nativo o figurino muda dentro do clipe. Há gesto de
+  dois dedos descrito para luvas sem dedos; masters têm marcas reais no fundo.
+  Fala nativa usa descrição australiana genérica, sem vincular `voiceStyle`/voiceId
+  específico de cada personagem; QC de áudio audível não prova identidade vocal.
+  Fallback TTS pode mudar timbre. Repetibilidade entre episódios ainda não comprovada.
+- Storyboard precisa prever duas composições: roteiro exige WIDE, mas pipeline
+  converte certos planos em solo no vertical. Cenas 4/5 recebem sponsor por índice;
+  tela "seu sponsor aqui" e eventual esquete de sponsor devem ser decisões distintas.
+- **Método proposto, ainda sem aprovação artística final:** bíblia do programa,
+  referências visuais/vocais aprovadas, pacote de ocasião por episódio, storyboard
+  16:9/9:16 e piloto de continuidade antes de escalar. Arte via Open Design e Gestor
+  de Motion Design. Não gerados novos vídeos, vozes de personagem ou designs.
+- **Execução autorizada em seguida (27/10, "O que a gente está esperando?"):**
+  criada `docs/programa/BIBLIA_AUDIOVISUAL.md`, com fichas, ocasiões, protocolo
+  vocal, storyboard candidato de 7 cenas e estudo inicial de distribuição.
+  `docs/programa/REVISAO_FGSS.json` registra gate documental `design_review` do
+  Gestor de Motion Design; isso não homologa estética, timbres ou produção.
+  Painel visual em criação no Open Design, Local Codex, projeto
+  `boomer-kev-biblia-audiovisual-20261027`, run
+  `a1c25158-14b8-47c0-bf1a-d7b495371fd8`. Não iniciar duplicata enquanto estiver running.
 
 ## Como retomar
 
@@ -84,6 +526,7 @@ o gargalo é decisão, não código. Ordem de ataque:
 
 | ID | Pendência | Aceite |
 |---|---|---|
+| QA local | Corrigir lint: 9 erros/4 avisos observados em 27/10 | `npm run lint` passa; separar skills locais do código do aplicativo e corrigir testes/ferramenta. |
 | BK-17 | Worker durável sobre `pipeline_jobs`/`scene_jobs`; orçamento/reserva | Só após a migração existir no remoto. |
 | BK-19 | ShowProfile por show; 2 elencos adicionais homologados (arte via Open Design/Gestor) | Pack novo roda sem editar engine; Engine DNA com 3+ packs conferido em 1440px. |
 | BK-21 | SaaS/white label: identidade, tenants, RLS por dono, quotas, cobrança | Depois de validação de audiência. |
@@ -172,7 +615,6 @@ o gargalo é decisão, não código. Ordem de ataque:
 15. `deploy_studio.sh` com `rsync --delete public/` apagava imagens geradas em produção
     (corrigido com `--exclude assets/generated/`).
 
-<!-- CONTINUIDADE_ATUAL_FIM -->
 
 ## Histórico — bloco de continuidade até 12/10/2026 (arquivado na BK-23)
 

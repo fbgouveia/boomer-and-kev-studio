@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-27T07:23:56.370281+00:00",
+  "openDesignProject": "boomer-kev-biblia-audiovisual-20261027",
+  "openDesignRun": "a1c25158-14b8-47c0-bf1a-d7b495371fd8",
+  "originalHtmlSha256": "37658b404199e6fba79d7ea4642f7728b8518ffb50b4cb031832dfe375e8a862",
+  "snapshotHtmlSha256": "989c1425fdc95081e0ef78c3ed88e497bf28885387bcd48167dcf09fdc4ca0fc",
+  "adaptation": "Only media src paths changed; original media was neither copied nor moved.",
+  "assets": [
+    {
+      "openDesignPath": "assets/master-wide.png",
+      "snapshotPath": "../../../public/assets/master_wide.png",
+      "bytes": 1701479,
+      "sha256": "f27452c8b36b10ab9a0c0bc8befc2377f775e4619cdd744a315d78d195c97b57"
+    },
+    {
+      "openDesignPath": "assets/master-boomer.png",
+      "snapshotPath": "../../../public/assets/master_boomer.png",
+      "bytes": 1758037,
+      "sha256": "49c560e08d1883699863f9a6c0ef90c830f7c501f577776ca440383102cc2e99"
+    },
+    {
+      "openDesignPath": "assets/master-kev.png",
+      "snapshotPath": "../../../public/assets/master_kev.png",
+      "bytes": 1932711,
+      "sha256": "39cd80c3c06688ea1d5d5875262a8de44ccee1c3c3a9f8bacee9ad886b6fceda"
+    },
+    {
+      "openDesignPath": "assets/boomer-native-a-b1.mp4",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/raw/A_b1.mp4",
+      "bytes": 6767137,
+      "sha256": "929e981bd73e03b79ef9736410eb14639901e1e8ef5ad10e24d7ca22a214e5d7"
+    },
+    {
+      "openDesignPath": "assets/kev-native-a-k1.mp4",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/raw/A_k1.mp4",
+      "bytes": 9542659,
+      "sha256": "a8969c3c2e1d0e564a0e37b02779b817f210f420c251684d962e3f17b7cc1182"
+    },
+    {
+      "openDesignPath": "assets/boomer-piloto.mp3",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/PILOTO-BOOMER.mp3",
+      "bytes": 111305,
+      "sha256": "0ec849876c9d1700bbbce96e5fe08a4644c65aaf3566a04113f59dec3f00a3b0"
+    },
+    {
+      "openDesignPath": "assets/kev-piloto-c1.mp3",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/PILOTO-KEV-c1.mp3",
+      "bytes": 27977,
+      "sha256": "1bc661672865d15209de0eebcae59dc3d3570971e110e250366996c6f3357d1c"
+    },
+    {
+      "openDesignPath": "assets/kev-piloto-c2.mp3",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/PILOTO-KEV-c2.mp3",
+      "bytes": 31433,
+      "sha256": "51d15610bb0bf2669a742b1e73f0ea8e46730e79dc48b9053f60d070d5b80e98"
+    },
+    {
+      "openDesignPath": "assets/kev-piloto-c3.mp3",
+      "snapshotPath": "../../../../../review_frames/regua-vocal/PILOTO-KEV-c3.mp3",
+      "bytes": 32585,
+      "sha256": "1ff7c5119ce02eb3348524fa65065714628f59e8b70c4a611be8d0453074444c"
+    },
+    {
+      "openDesignPath": "assets/regua-native-final.mp4",
+      "snapshotPath": "../../../../../review_frames/regua_native_final.mp4",
+      "bytes": 8932814,
+      "sha256": "30dfe628e5cb6cef823d873783658c6b23bc32667ca8dbde0f8dda8019a952f6"
+    }
+  ],
+  "mediaBinariesAddedToGitByThisSave": false,
+  "mediaFilesCopiedByThisSave": false
+}
