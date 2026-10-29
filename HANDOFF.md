@@ -37,7 +37,13 @@ Raiz apurada: sessão Claude Code `543a1001` (27/10, ~22:03 local) inseriu o blo
 em `src/app/page.tsx`, via scripts Python no Bash, após um "sim" genérico. A proposta
 falava em "a visão E-Konte ganha as imagens"; não apresentou mudança de tela nem passou
 pelo Open Design/Chairman. Ficou sem commit. `DraftingTable.tsx` mudou só lógica.
-Nenhuma sessão Codex/Gemini tocou nisso. **Revertido em 29/10 por ordem do Felipe:**
+**Painel "Bíblia Audiovisual 0.1" também é fora da plataforma e Felipe nunca o pediu
+assim:** criado por sessão **Codex** de 27/10 (16:08 local, rollout `01a17bf9`) após
+"O que a gente está esperando?", como página avulsa no Open Design. Felipe pedia
+consistência de personagens/vozes/storyboard **dentro do Studio**. Não abrir esse painel
+como entrega; usar só como rascunho de conteúdo. Integrar ao Studio exige design no
+Open Design + aprovação do Felipe (layout congelado).
+Nenhuma sessão Codex/Gemini tocou no storyboard. **Revertido em 29/10 por ordem do Felipe:**
 `page.tsx` voltou ao commit; só a correção de figurino (onAssemble ignora o figurino
 do brainstorm) foi reaplicada. tsc OK, 131/131 unitários, home 200. Sobra sem uso:
 `src/lib/storyboard.ts`, `tests/storyboard.test.ts` e o campo `keyframes` em `types`.
@@ -115,6 +121,7 @@ do brainstorm) foi reaplicada. tsc OK, 131/131 unitários, home 200. Sobra sem u
 |---|---|---|
 | Teste de estresse 27/10 | Autorizado até US$15. Ep. 9:16 (4 cenas, 39,4 s) COMPLETED: job `c05a674c`, Supabase público. Ep. 16:9 COMPLETED: job `89de9a8b` (39,4 s). Gasto estimado ~US$11,20 (8 clipes de 10 s com áudio; conferir fatura). No 16:9, TVs do Kev mostram QANTAS e VEGEMITE (marcas reais, vindas de `master_kev.png`); gravata-borboleta do Kev repetiu nos 2 formatos; recarregar a página perde o roteiro montado. Achados: Kev ganha gravata-borboleta e corte com texto embaralhado na cena 2; legenda fora de sincronia; barra presa em 40%; radar com regiões fora de AU/US/BR/GB cai em AU; botão Start usa Gemini sem travas; estimativa de custo abaixo do real. Voz: Felipe precisa ouvir | Ver item 8 do plano |
 | Engine 27/10 (tarde), não commitado | FEITO e testado (131/131, tsc, lint): storyboard integrado (`src/lib/storyboard.ts`; render bloqueado sem os quadros aprovados; o quadro vira start_image do Kling); corte seco (`editing-policy`); câmera travada e personagens sentados no prompt do Kling; lista do que evitar sem "naked/shirtless" (causa provável da gravata do Kev); ficha do Boomer = master; figurino da IA ignorado; dupla alterna e trava de equilíbrio no Commit; plano segue quem fala; falas de até 12 palavras e duração estimada pela fala; `tools/qc_speech.py` (QC de fala local, com autoteste). Ep. `93b56ca1` (com storyboard): Kev sem gravata nas 2 cenas; cena 3 perfeita; cena 1 com corte, porque a ação era "andando" (corrigido depois). Ainda não renderizado com falas curtas e regra de sentado | Próximo render precisa de autorização (~US$2,80) |
+| Design Identity Lock v1 (29/10) | Proposta dentro da aba ENGINE DNA (sem aba nova): placar 0/7 eixos, Aprovar/Corrigir em rosto e voz com players, conflito figurino, marcas reais, Occasion DNA, Framing DNA 16:9/9:16. Arquivos `design/rascunhos/engine-dna-identidade-v1.html/.jpeg`; registrada em `design/LOG.md` | **Aprovação visual do Felipe** antes de qualquer código |
 | Radar YouTube (aprovado 29/10) | Relatório semanal "receita de formato": 4 nichos (animação/mascotes, duplas de comédia, notícias com humor, animais em shorts); Claude propõe canais, Felipe aprova; Gemini analisa só top 5/semana via link (sem download; preço conferido antes); manual primeiro; não copiar, não baixar, não mexer no Studio, todo número com fonte+data. Nunca existiu antes (Radar = 4 refs estáticas). Etapa 1: Felipe cria `YOUTUBE_API_KEY` em projeto Google novo | Chave do Felipe |
 | Correções engine | 7 itens em `docs/programa/PLANO_CORRECOES_20261027.md` (revisão completa 27/10). Decisões: Boomer sem camisa; remover 6 campos mortos; sponsor opcional; pauta EUA+mundo+AU com fatos da fonte | Nada executado; sem custo pago |
 | Identidade | Aprovar referência original, voz e continuidade multiformato no painel | Felipe; repetibilidade exige prova adicional |
@@ -138,6 +145,18 @@ plataformas avançou com YouTube e estudo das redes verticais. Contagem antiga
 de 10 perguntas não foi revalidada após as novas definições.
 
 ## Descobertas que afetam a próxima etapa
+
+- **29/10 — Design tem fonte única:** `design/README.md` + `design/LOG.md` no Studio; regra
+  também em `LEIS_FGSS.md` (lida por todas as LLMs) e no `AGENTS.md` da raiz. O Codex do
+  Open Design roda na pasta do OD e **não lê** o AGENTS.md do projeto — por isso a regra
+  precisou ir para a lei central. Conferir projetos OD sem linha no LOG a cada sessão.
+- **29/10 — Masters com marcas reais nos dois personagens:** Boomer mostra Gumtree, Outback
+  e Aussie; Kev mostra Qantas e Vegemite. Risco jurídico em todo vídeo.
+- **29/10 — Studio local sem login:** `STUDIO_AUTH_USER= STUDIO_AUTH_PASSWORD= npx next dev
+  -H 127.0.0.1 -p 3000` (o proxy libera fora de produção sem credenciais). `npm run dev`
+  normal volta a pedir login; produção não muda.
+- **29/10 — Rastreador de canais YouTube nunca existiu** em nenhum log (Claude/Codex/Gemini/
+  claude-mem); Studio Labs/trend-hunter arquivados em 12/10 eram simulados.
 
 - Master de Boomer sem camiseta conflita com cadastro que exige camiseta e
   corrente; teste nativo muda figurino dentro do clipe. Decidir a base antes de corrigir.
