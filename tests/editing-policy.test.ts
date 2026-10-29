@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { describe, it } from 'node:test';
-import { buildEditingPlan, klingDurationForAudio } from '../src/lib/editing-policy';
+import { buildEditingPlan, estimateSpeechSeconds, klingDurationForAudio } from '../src/lib/editing-policy';
 
 const episode = [
   { characterId: 'boomer', emotion: 'EXCITED' },
@@ -27,11 +27,10 @@ describe('buildEditingPlan — constituição de edição e retenção', () => {
     ]);
   });
 
-  test('marca mudança de bloco e mantém cortes discretos dentro do bloco', () => {
+  test('corte seco entre todas as cenas, inclusive na entrada e saída do sponsor', () => {
     const plan = buildEditingPlan(episode);
-    assert.deepEqual(plan.transitions[2], { type: 'fadeblack', dur: 0.5 });
-    assert.deepEqual(plan.transitions[4], { type: 'fadeblack', dur: 0.5 });
-    assert.deepEqual(plan.transitions[3], { type: 'fade', dur: 0.35 });
+    assert.equal(plan.transitions.length, episode.length - 1);
+    for (const t of plan.transitions) assert.deepEqual(t, { type: 'fade', dur: 0.04 });
   });
 
   test('posiciona SFX por beat narrativo, não por percentual da duração', () => {
@@ -41,12 +40,12 @@ describe('buildEditingPlan — constituição de edição e retenção', () => {
     });
   });
 
-  test('preserva deadpan como contraste em vez de tratá-lo como intensidade', () => {
+  test('deadpan também entra em corte seco (sem fusão lenta)', () => {
     const plan = buildEditingPlan([
       { characterId: 'boomer', emotion: 'EXCITED' },
       { characterId: 'kev', emotion: 'DEADPAN' },
     ]);
-    assert.deepEqual(plan.transitions[0], { type: 'fade', dur: 0.35 });
+    assert.deepEqual(plan.transitions[0], { type: 'fade', dur: 0.04 });
   });
 
   test('aceita roteiros menores sem inventar sponsor break', () => {
@@ -79,5 +78,17 @@ describe('klingDurationForAudio — fala inteira (BK-16)', () => {
     assert.equal(klingDurationForAudio(undefined, 10), 10);
     assert.equal(klingDurationForAudio(0, 5), 5);
     assert.equal(klingDurationForAudio(NaN, 5), 5);
+  });
+});
+
+describe('estimateSpeechSeconds — fala curta cabe no clipe de 5 s', () => {
+  it('até ~12 palavras estima 5 s ou menos', () => {
+    assert.equal(estimateSpeechSeconds('So they are comparing prices. Big deal, mate. Yeah, nah.'), 4);
+    assert.ok(estimateSpeechSeconds('one two three four five six seven eight nine ten eleven twelve') <= 5);
+  });
+  it('fala longa passa de 5 s (vira clipe de 10 s) e respeita limites', () => {
+    assert.ok(estimateSpeechSeconds('word '.repeat(20)) > 5);
+    assert.equal(estimateSpeechSeconds('Oi!'), 3);
+    assert.equal(estimateSpeechSeconds('word '.repeat(60)), 10);
   });
 });

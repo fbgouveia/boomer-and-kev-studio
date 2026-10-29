@@ -19,6 +19,8 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { assertBalanced } from '@/lib/script-gates';
+import { estimateSpeechSeconds } from '@/lib/editing-policy';
 
 type BrainstormOption = {
     characterId: string;
@@ -114,15 +116,24 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 setError(`${data.error}: ${data.details || 'Unknown error'}`);
             } else {
                 setBrainstorm(data);
-                // Auto-tune the initial assembly
-                if (data.hooks?.length > 0) setSelectedHook(0);
-                if (data.bridges?.length > 0) setSelectedBridge(0);
-                if (data.reactions?.length > 0) setSelectedReaction(0);
-                if (data.sponsorPitch?.length > 0) setSelectedSponsorPitch(0);
-                if (data.sponsorRebuttal?.length > 0) setSelectedSponsorRebuttal(0);
-                if (data.interaction1?.length > 0) setSelectedInteraction1(0);
-                if (data.interaction2?.length > 0) setSelectedInteraction2(0);
-                if (data.closings?.length > 0) setSelectedClosing(0);
+                // Escolha automática ALTERNANDO Boomer/Kev: pegar sempre a 1ª opção virou
+                // monólogo de 4 Boomers no teste de 27/10 (a dupla é o formato).
+                let previous = '';
+                const pick = (opts?: BrainstormOption[]) => {
+                    if (!opts?.length) return null;
+                    const other = opts.findIndex(o => o.characterId !== previous);
+                    const index = other >= 0 ? other : 0;
+                    previous = opts[index].characterId;
+                    return index;
+                };
+                setSelectedHook(pick(data.hooks));
+                setSelectedBridge(pick(data.bridges));
+                setSelectedReaction(pick(data.reactions));
+                setSelectedSponsorPitch(pick(data.sponsorPitch));
+                setSelectedSponsorRebuttal(pick(data.sponsorRebuttal));
+                setSelectedInteraction1(pick(data.interaction1));
+                setSelectedInteraction2(pick(data.interaction2));
+                setSelectedClosing(pick(data.closings));
             }
         } catch (error) {
             console.error("BRAINSTORM_ERROR", error);
@@ -162,13 +173,13 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
 
         if (!hook || !bridge || !reaction || !sPitch || !sReb || !i1 || !i2 || !closing) return;
 
-        onAssemble([
+        const lines = [
             {
                 id: Math.random().toString(36).substr(2, 9),
                 characterId: hook.characterId || 'boomer',
                 text: hook.text,
                 shotType: (hook.characterId === 'kev') ? 'KEV_CU' : 'BOOMER_MCU',
-                durationEst: 6,
+                durationEst: estimateSpeechSeconds(hook.text),
                 emotion: hook.emotion || 'INTENSE',
                 action: hook.action || 'AGGRESSIVE_SHADOW_BOXING',
                 status: 'IDLE'
@@ -178,7 +189,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 characterId: bridge.characterId || 'boomer',
                 text: bridge.text,
                 shotType: (bridge.characterId === 'kev') ? 'KEV_CU' : 'BOOMER_MCU',
-                durationEst: 7,
+                durationEst: estimateSpeechSeconds(bridge.text),
                 emotion: bridge.emotion || 'EXCITED',
                 action: bridge.action || 'GESTURING_WILDLY',
                 status: 'IDLE'
@@ -188,7 +199,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 characterId: reaction.characterId || 'kev',
                 text: reaction.text,
                 shotType: (reaction.characterId === 'boomer') ? 'BOOMER_MCU' : 'KEV_CU',
-                durationEst: 5,
+                durationEst: estimateSpeechSeconds(reaction.text),
                 emotion: reaction.emotion || 'DEADPAN',
                 action: reaction.action || 'SLOW_BLINKING',
                 status: 'IDLE'
@@ -198,7 +209,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 characterId: sPitch.characterId || 'boomer',
                 text: sPitch.text,
                 shotType: 'WIDE',
-                durationEst: 7,
+                durationEst: estimateSpeechSeconds(sPitch.text),
                 emotion: sPitch.emotion || 'SALESMAN',
                 action: sPitch.action || 'HOLDING_IMAGINARY_PRODUCT',
                 status: 'IDLE'
@@ -208,7 +219,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 characterId: sReb.characterId || 'kev',
                 text: sReb.text,
                 shotType: 'KEV_CU',
-                durationEst: 5,
+                durationEst: estimateSpeechSeconds(sReb.text),
                 emotion: sReb.emotion || 'DISGUSTED',
                 action: sReb.action || 'SHAKING_HEAD',
                 status: 'IDLE'
@@ -217,8 +228,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 id: Math.random().toString(36).substr(2, 9),
                 characterId: i1.characterId || 'boomer',
                 text: i1.text,
-                shotType: 'BOOMER_MCU',
-                durationEst: 6,
+                shotType: i1.characterId === 'kev' ? 'KEV_CU' : 'BOOMER_MCU',
+                durationEst: estimateSpeechSeconds(i1.text),
                 emotion: i1.emotion || 'ENGAGED',
                 action: i1.action || 'TALKING',
                 status: 'IDLE'
@@ -228,7 +239,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 characterId: i2.characterId || 'kev',
                 text: i2.text,
                 shotType: 'WIDE',
-                durationEst: 6,
+                durationEst: estimateSpeechSeconds(i2.text),
                 emotion: i2.emotion || 'ENGAGED',
                 action: i2.action || 'TALKING',
                 status: 'IDLE'
@@ -237,13 +248,21 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 id: Math.random().toString(36).substr(2, 9),
                 characterId: closing.characterId || 'boomer',
                 text: closing.text,
-                shotType: 'BOOMER_MCU',
-                durationEst: 6,
+                shotType: closing.characterId === 'kev' ? 'KEV_CU' : 'BOOMER_MCU',
+                durationEst: estimateSpeechSeconds(closing.text),
                 emotion: closing.emotion || 'PUMPED',
                 action: closing.action || 'BICEP_FLEX_AND_POINT',
                 status: 'IDLE'
             },
-        ], brainstorm.wardrobe);
+        ] as Parameters<typeof onAssemble>[0];
+        // Mesma trava da rota de roteiro (script-gates): duo virou monólogo = não monta.
+        try {
+            assertBalanced(lines);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : String(e));
+            return;
+        }
+        onAssemble(lines, brainstorm.wardrobe);
     };
 
     const renderOption = (option: BrainstormOption, index: number, isSelected: boolean, onSelect: () => void) => (

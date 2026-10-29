@@ -12,9 +12,13 @@ export type EditorialBeat =
   | 'payoff';
 
 export type EditingTransition = {
-  type: 'fade' | 'fadeblack';
+  type: 'fade';
   dur: number;
 };
+
+// Decisão Felipe 27/10: comédia rápida = corte seco entre TODAS as cenas.
+// 0,04 s (~1 quadro) só evita estalo no áudio; visualmente é corte.
+const HARD_CUT: EditingTransition = { type: 'fade', dur: 0.04 };
 
 export type EditingPlan = {
   beats: EditorialBeat[];
@@ -24,15 +28,6 @@ export type EditingPlan = {
     laughSceneIndex: number;
   };
 };
-
-const INTENSE_EMOTIONS = new Set([
-  'INTENSE',
-  'EXCITED',
-  'ANGRY',
-  'SHOCKED',
-  'FURIOUS',
-  'EXPLOSIVE',
-]);
 
 function beatFor(index: number, count: number): EditorialBeat {
   if (index === 0) return 'hook';
@@ -51,32 +46,10 @@ function beatFor(index: number, count: number): EditorialBeat {
   return 'climax';
 }
 
-function transitionFor(
-  previous: EditingScene,
-  next: EditingScene,
-  nextBeat: EditorialBeat,
-  previousBeat: EditorialBeat,
-): EditingTransition {
-  // Transição visível somente quando muda o bloco editorial.
-  if (nextBeat === 'sponsor' && previousBeat !== 'sponsor') {
-    return { type: 'fadeblack', dur: 0.5 };
-  }
-  if (previousBeat === 'sponsor' && nextBeat !== 'sponsor') {
-    return { type: 'fadeblack', dur: 0.5 };
-  }
-
-  // Mesmo personagem: continuidade visual; energia alta: corte de TV.
-  if (previous.characterId === next.characterId) return { type: 'fade', dur: 0.04 };
-  const intense = INTENSE_EMOTIONS.has(String(next.emotion || '').toUpperCase());
-  return intense ? { type: 'fade', dur: 0.04 } : { type: 'fade', dur: 0.35 };
-}
-
 export function buildEditingPlan(script: EditingScene[]): EditingPlan {
   if (!script.length) throw new Error('editing plan exige pelo menos uma cena');
   const beats = script.map((_, index) => beatFor(index, script.length));
-  const transitions = script.slice(1).map((scene, offset) =>
-    transitionFor(script[offset], scene, beats[offset + 1], beats[offset]),
-  );
+  const transitions = script.slice(1).map(() => HARD_CUT);
 
   const lastSponsor = beats.lastIndexOf('sponsor');
   const climax = beats.lastIndexOf('climax');
@@ -103,4 +76,12 @@ export function klingDurationForAudio(audioDuration: number | undefined, fallbac
     return fallback;
   }
   return audioDuration > 5 ? 10 : 5;
+}
+
+// Teste 27/10: toda cena saía com 6-7 s fixos => clipe de 10 s do Kling, e as derivas
+// (corte inventado, cenário trocado) apareciam quase sempre depois dos 5 s.
+// ~2,5 palavras/s; fala de até ~12 palavras cabe no clipe de 5 s (metade do custo).
+export function estimateSpeechSeconds(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(10, Math.max(3, Math.ceil(words / 2.5)));
 }

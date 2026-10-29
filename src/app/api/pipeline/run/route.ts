@@ -213,6 +213,11 @@ async function assembleVideo(
 // o Kling INVENTAR o segundo personagem sem referência — infidelidade de personagem. Achado 30/07.
 const SOLO_SHOTS_IN_VERTICAL = new Set(['WIDE', 'OTS_BOOMER', 'GOPRO_FISHEYE']);
 
+// Uma lista só para o launch normal e o encadeado (antes duplicada).
+// Sem "missing clothes/naked/shirtless": Boomer (sem camisa) e Kev (só pelagem) são assim
+// por design — pedir para evitar "sem roupa" fazia o Kling vestir o Kev (gravata, teste 27/10).
+const KLING_NEGATIVE_PROMPT = "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, added clothing, bow tie, necktie, shirt, accessories not in the reference image, bad anatomy, deformed limbs, camera cut, scene change, transition, zoom, camera movement, brand logos, readable text";
+
 export const getDetailedPrompt = (line: PromptLine, directorIdea = "Trending News", directorSnippet = "", sceneIndex = 0, wardrobe?: { boomer?: string, kev?: string, studio?: string }, aspect: '9:16' | '16:9' = '9:16', voiceMode: 'kling_native' | 'elevenlabs' = 'kling_native') => {
   const char = resolveCharacter(line.characterId);
   const shot = SHOT_TYPES.find(s => s.id === line.shotType);
@@ -278,7 +283,10 @@ export const getDetailedPrompt = (line: PromptLine, directorIdea = "Trending New
   }
 
   // WP 1.6: cada clipe deve parecer um TRECHO de transmissão contínua, não um vídeo com início/fim.
-  const continuityDirective = `CONTINUITY: This is a segment of an ONGOING live podcast broadcast. The character is ALREADY mid-conversation when the shot begins — no settling in, no greeting gesture, no looking for position. The shot ENDS mid-energy, as if the camera simply cut away; never a wrap-up pose, never a fade-out feeling.`;
+  // Teste 27/10: "as if the camera simply cut away" coincidiu com cortes inventados pelo
+  // Kling na 2ª metade dos clipes de 10s, e o "cinematic" com zoom lento. Câmera travada:
+  // ritmo e cortes são decididos na montagem (corte seco), nunca dentro do clipe.
+  const continuityDirective = `CONTINUITY: This is a segment of an ONGOING live podcast broadcast. The character is ALREADY mid-conversation when the shot begins — no settling in, no greeting gesture, no looking for position. ONE single continuous shot from start to end: locked-off static camera on a tripod, no zoom, no push-in, no pan, no camera cuts, no change of angle, no scene change. Same framing in the last frame as in the first frame. The character stays SEATED at the desk for the whole shot: never stands up, walks or leaves the chair.`;
 
   // --ar seguia cravado em 9:16 mesmo com o formato 16:9 selecionado (achado 30/07).
   return `CINEMATIC MASTERPIECE. ${characterAnchor} ${anthropomorphicDirective} ${actionBlock} ${speechBlock} ${continuityDirective} ${cameraBlock} ${envBlock} --ar ${aspect} --v 6.0`;
@@ -721,7 +729,7 @@ async function processPipeline(
             duration: klingDuration,
             aspect_ratio: aspect,
             start_image: startImage,
-            negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
+            negative_prompt: KLING_NEGATIVE_PROMPT,
             generate_audio: voiceMode === 'kling_native'
           });
 
@@ -788,7 +796,7 @@ async function processPipeline(
             duration: scene.launch.duration,
             aspect_ratio: aspect,
             start_image: frameUri,
-            negative_prompt: "morphing, anatomical mutations, bare hands, human fingers, extra fingers, deformed gloves, missing clothes, naked, shirtless, bad anatomy, deformed limbs",
+            negative_prompt: KLING_NEGATIVE_PROMPT,
             generate_audio: voiceMode === 'kling_native'
           });
           scene.predictionId = prediction.id;

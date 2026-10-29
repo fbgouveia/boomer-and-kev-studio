@@ -1,7 +1,7 @@
 <!-- CONTINUIDADE_ATUAL_INICIO -->
 # Boomer & Kev — continuidade única
 
-Atualizado em **27/10/2026**. Este bloco é a fonte operacional atual.
+Atualizado em **29/10/2026** (sessão 29/10: layout, auditoria, Radar YouTube). Este bloco é a fonte operacional atual.
 Detalhes e estados anteriores foram preservados no histórico abaixo do marcador.
 Documentos de direção artística não substituem esta continuidade.
 
@@ -11,11 +11,36 @@ Documentos de direção artística não substituem esta continuidade.
 Em 27/10 ele definiu o programa multiformato e autorizou começar a preparação
 da bíblia e do painel de revisão ("O que a gente está esperando?").
 
+0. **PENDÊNCIA IMEDIATA (Felipe, 29/10): criar a chave da API do YouTube** para o
+   Radar YouTube (plano aprovado; ver tabela de pendências). ~5 min, grátis, sem cartão:
+   1. https://console.cloud.google.com/projectcreate → projeto novo `boomer-kev-radar`
+      (novo para fugir do bloqueio de cobrança do projeto atual).
+   2. https://console.cloud.google.com/apis/library/youtube.googleapis.com → conferir
+      projeto no topo → **Ativar**.
+   3. https://console.cloud.google.com/apis/credentials → **+ Criar credenciais → Chave de API**.
+   4. **Editar chave → Restringir chave → YouTube Data API v3 → Salvar.**
+   5. Adicionar `YOUTUBE_API_KEY=<chave>` ao fim do `.env.local` do Studio
+      (`! open -e ".../boomer-and-kev-studio/.env.local"`). Nunca colar a chave no chat.
+   Depois dizer "chave pronta": a IA testa sem exibir a chave e pesquisa 20–30 canais
+   candidatos nos 4 nichos para Felipe aprovar.
 1. Abrir o painel de revisão; conferir elenco, ouvir referências e registrar escolhas.
 2. Aprovar/corrigir figurino original candidato, vozes, pacotes de ocasião e storyboard.
 3. Com o briefing artístico fechado, definir custo e autorizar o piloto pago (BK-07).
 4. Confirmar contas e autorizar a primeira publicação (BK-10); medir audiência.
 5. BK-31 continua aberto: corrigir alertas Telegram no n8n quando autorizado.
+
+## LAYOUT CONGELADO — Felipe, 29/10/2026
+
+Nenhuma LLM altera o layout do Studio sem ordem explícita (regra também em `AGENTS.md`).
+Raiz apurada: sessão Claude Code `543a1001` (27/10, ~22:03 local) inseriu o bloco
+"STORYBOARD 9:16 · N/4 APROVADOS" e os cartões "Quadro-chave" (Aprovar/Refazer/Gerar)
+em `src/app/page.tsx`, via scripts Python no Bash, após um "sim" genérico. A proposta
+falava em "a visão E-Konte ganha as imagens"; não apresentou mudança de tela nem passou
+pelo Open Design/Chairman. Ficou sem commit. `DraftingTable.tsx` mudou só lógica.
+Nenhuma sessão Codex/Gemini tocou nisso. **Revertido em 29/10 por ordem do Felipe:**
+`page.tsx` voltou ao commit; só a correção de figurino (onAssemble ignora o figurino
+do brainstorm) foi reaplicada. tsc OK, 131/131 unitários, home 200. Sobra sem uso:
+`src/lib/storyboard.ts`, `tests/storyboard.test.ts` e o campo `keyframes` em `types`.
 
 ## Direção confirmada por Felipe em 27/10
 
@@ -88,6 +113,10 @@ da bíblia e do painel de revisão ("O que a gente está esperando?").
 
 | ID | Trabalho/decisão | Dependência |
 |---|---|---|
+| Teste de estresse 27/10 | Autorizado até US$15. Ep. 9:16 (4 cenas, 39,4 s) COMPLETED: job `c05a674c`, Supabase público. Ep. 16:9 COMPLETED: job `89de9a8b` (39,4 s). Gasto estimado ~US$11,20 (8 clipes de 10 s com áudio; conferir fatura). No 16:9, TVs do Kev mostram QANTAS e VEGEMITE (marcas reais, vindas de `master_kev.png`); gravata-borboleta do Kev repetiu nos 2 formatos; recarregar a página perde o roteiro montado. Achados: Kev ganha gravata-borboleta e corte com texto embaralhado na cena 2; legenda fora de sincronia; barra presa em 40%; radar com regiões fora de AU/US/BR/GB cai em AU; botão Start usa Gemini sem travas; estimativa de custo abaixo do real. Voz: Felipe precisa ouvir | Ver item 8 do plano |
+| Engine 27/10 (tarde), não commitado | FEITO e testado (131/131, tsc, lint): storyboard integrado (`src/lib/storyboard.ts`; render bloqueado sem os quadros aprovados; o quadro vira start_image do Kling); corte seco (`editing-policy`); câmera travada e personagens sentados no prompt do Kling; lista do que evitar sem "naked/shirtless" (causa provável da gravata do Kev); ficha do Boomer = master; figurino da IA ignorado; dupla alterna e trava de equilíbrio no Commit; plano segue quem fala; falas de até 12 palavras e duração estimada pela fala; `tools/qc_speech.py` (QC de fala local, com autoteste). Ep. `93b56ca1` (com storyboard): Kev sem gravata nas 2 cenas; cena 3 perfeita; cena 1 com corte, porque a ação era "andando" (corrigido depois). Ainda não renderizado com falas curtas e regra de sentado | Próximo render precisa de autorização (~US$2,80) |
+| Radar YouTube (aprovado 29/10) | Relatório semanal "receita de formato": 4 nichos (animação/mascotes, duplas de comédia, notícias com humor, animais em shorts); Claude propõe canais, Felipe aprova; Gemini analisa só top 5/semana via link (sem download; preço conferido antes); manual primeiro; não copiar, não baixar, não mexer no Studio, todo número com fonte+data. Nunca existiu antes (Radar = 4 refs estáticas). Etapa 1: Felipe cria `YOUTUBE_API_KEY` em projeto Google novo | Chave do Felipe |
+| Correções engine | 7 itens em `docs/programa/PLANO_CORRECOES_20261027.md` (revisão completa 27/10). Decisões: Boomer sem camisa; remover 6 campos mortos; sponsor opcional; pauta EUA+mundo+AU com fatos da fonte | Nada executado; sem custo pago |
 | Identidade | Aprovar referência original, voz e continuidade multiformato no painel | Felipe; repetibilidade exige prova adicional |
 | BK-07 | Escolher roteiro e autorizar primeiro piloto/render pago | Briefing artístico, custo definido |
 | BK-10 | Confirmar contas e autorizar publicação | Entrega aprovada |
@@ -380,7 +409,7 @@ Preservado para consulta pontual. Este bloco não é a lista atual de tarefas.
 
 # Boomer & Kev — continuidade única
 
-Atualizado em **27/10/2026**. Este bloco é a única fonte operacional de pendências,
+Atualizado em **29/10/2026** (sessão 29/10: layout, auditoria, Radar YouTube). Este bloco é a única fonte operacional de pendências,
 atualizações e descobertas. Meta de tamanho: **≤ ~150 linhas** (BK-23). Ao salvar,
 mova o detalhe de sessão para o histórico abaixo do marcador e deixe aqui só o estado.
 

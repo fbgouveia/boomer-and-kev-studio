@@ -70,8 +70,8 @@ export async function POST(req: Request) {
 
       Each option in the list must be a JSON object containing:
       - characterId: "boomer" or "kev"
-      - text: dialogue string filled with rich Aussie slang and character humor. Keep it short (1-2 sentences).
-      - action: physical motion description matching character DNA.
+      - text: dialogue string filled with rich Aussie slang and character humor. MAX 12 WORDS (it must be spoken in under 5 seconds). Short and punchy beats long.
+      - action: UPPER-BODY motion while SEATED at the podcast desk, matching character DNA (e.g. leans into the mic, slow blink, points a glove at the lens). NEVER stand up, walk, pace, leap, dance or leave the chair: the whole show is filmed seated.
       - emotion: emotion value (e.g. "INTENSE", "DEADPAN", "EXCITED", "CONFUSED").
       - retentionScore: integer 0-100, YOUR honest estimate of hook strength (a model guess, not a measured metric — use the full range).
       - reasoning: 1 short sentence explanation of the comedic/narrative value of this option.

@@ -72,14 +72,16 @@ export const CHARACTERS: Character[] = [
             { emotion: 'Explosive', action: "Shadow boxing intensely towards the camera" },
             { emotion: 'Enthusiastic', action: "Flexing biceps while talking" },
             { emotion: 'Aggressive', action: "Leaning in aggressively into the microphone" },
-            { emotion: 'Power', action: "Pointing two fingers directly at the lens (The 'Listen Here' point)" },
+            // Luva de boxe não tem dedos: gestos com dedos fazem o Kling inventar mãos.
+            { emotion: 'Power', action: "Pointing a whole boxing glove directly at the lens (The 'Listen Here' point)" },
             { emotion: 'Attentive', action: "Rubbing chin thoughtfully with a boxing glove" },
-            { emotion: 'Vibe', action: "Throwing a 'Shaka' sign with a gloved hand" },
+            { emotion: 'Vibe', action: "Thumping his chest twice with a gloved fist" },
             { emotion: 'Sweaty', action: "Wiping sweat from brow with a boxing glove" }
         ],
-        defaultOutfit: "Wearing large red boxing gloves (NO fingers), gold chain, and a tight black singlet shirt with 'BOOMER' written on the chest. Never shirtless. Always wears large professional studio headphones.",
+        // Decisão Felipe 27/10: figurino original = master_boomer.png (sem camisa, sem corrente).
+        defaultOutfit: "Wearing large red boxing gloves (NO fingers) and a professional studio headset with a boom microphone. No shirt: bare muscular fur torso, exactly as in the reference image. No chain, no jewellery.",
         voiceStyle: 'Deep, booming Queensland accent. Fast-paced, high energy.',
-        imagePromptContext: 'anthropomorphic muscular kangaroo, acting exactly like a human podcast host, human posture, large red padded boxing gloves (no fingers), gold chain necklace, wearing a tight black singlet shirt with BOOMER written on the chest, professional studio headphones, detailed fur texture, strong studio lighting',
+        imagePromptContext: 'anthropomorphic muscular kangaroo, acting exactly like a human podcast host, human posture, large red padded boxing gloves (no fingers), bare muscular fur torso with no shirt, professional studio headset with boom microphone, detailed fur texture, strong studio lighting',
         lightingKey: 'High-contrast rim lighting, warm key light, dramatic shadows to emphasize musculature',
         voiceId: 'IKne3meq5aSn9XLyUdCD', // Charlie - Deep, Confident, Energetic
         voice: { modelId: 'eleven_multilingual_v2', stability: 0.30, style: 0.70, similarityBoost: 0.75, speakerBoost: true },

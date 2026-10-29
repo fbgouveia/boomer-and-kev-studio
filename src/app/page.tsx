@@ -1893,7 +1893,10 @@ export default function Home() {
           snippet={directorSnippet}
           apiKey={apiKeys.gemini}
           onClose={() => setIsDrafting(false)}
-          onAssemble={(draftedLines, wardrobe) => {
+          // Figurino original predominante (Felipe 27/10): o figurino inventado pelo brainstorm
+          // (roupão, boné, luvas nas orelhas no teste) não é aplicado. Ocasiões planejadas
+          // entram pelo seletor do plano (item 3), não pela IA.
+          onAssemble={(draftedLines) => {
             const hydratedScript = draftedLines.map((line, idx) => ({
               ...line,
               id: `scene-${Date.now()}-${idx}`,
@@ -1902,9 +1905,7 @@ export default function Home() {
               studioReference: GUIDE_IMAGES[line.shotType]
             }));
             setScript(hydratedScript as ScriptLine[]);
-            if (wardrobe) {
-              setWardrobeConfig(wardrobe);
-            }
+            setWardrobeConfig({});
             setIsDrafting(false);
             setActiveTab('script');
           }}

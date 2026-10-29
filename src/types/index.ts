@@ -24,6 +24,8 @@ export interface ScriptLine {
   cameraMovement?: string;
   compositionNotes?: string;
   storyboardSketch?: string;
+  // Storyboard integrado: quadro-chave nativo por formato, aprovado antes do render.
+  keyframes?: Partial<Record<'9:16' | '16:9', { url: string; approved: boolean }>>;
 }
 
 export type EpisodeStatus =
