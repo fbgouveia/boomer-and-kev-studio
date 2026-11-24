@@ -13,7 +13,7 @@ Seedance 2.5 480p 0,1177 / 720p 0,2647 / 1080p 0,6518. O `/estimate` agora devol
 
 **Fase A — Fechar e proteger o que existe**
 1. Felipe confirma as recargas (Gemini ~US$5, API Higgsfield ~US$5); conferir saldo antes/depois.
-2. "Salvar": commit do P0/P1 Higgsfield, tela roteiro+storyboard, Identity Lock, rig v1, pesquisas, piloto (sem `.env.local`).
+2. ~~"Salvar"~~ ✅ feito em 24/11: commit `16aec5b` na branch `restore-engine` (push OK). Fora do commit, de propósito: `graphify-out/`, `supabase/.temp/`, `public/latest_episode.mp4`, `public/assets/generated/*.jpg` (preexistentes) e placas/composições do rig (regeneráveis, no `.gitignore`).
 3. Ensinar o app a ler o preço `type=description` (taxa USD/s por resolução, estrito, arredonda para cima) + testes + revisão independente — código de dinheiro.
 4. Resolução de saída explícita no payload (1080p) para o preço lido bater com o cobrado.
 5. Conferir na fatura Higgsfield/Gemini o custo real do 1º clipe vs reserva.
