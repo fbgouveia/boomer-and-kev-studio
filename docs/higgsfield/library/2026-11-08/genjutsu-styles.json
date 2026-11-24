@@ -1,0 +1,230 @@
+{
+  "source": "Higgsfield MCP get_presets source=genjutsu category=genjutsu-styles",
+  "pages": [
+    {
+      "source": "marketing_studio",
+      "category": "genjutsu-styles",
+      "categories": [
+        {
+          "slug": "genjutsu",
+          "name": "Higgsfield"
+        },
+        {
+          "slug": "genjutsu-trending",
+          "name": "Trending"
+        },
+        {
+          "slug": "genjutsu-new",
+          "name": "New"
+        },
+        {
+          "slug": "genjutsu-styles",
+          "name": "Styles"
+        }
+      ],
+      "items": [
+        {
+          "id": "genjutsu-style:067b27d4-8d8f-44d1-a24b-0f4c28012e4b",
+          "name": "Hand-Painted Cel Animation",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/c82c8999-ab3c-4ffa-be6b-7f2c26601e46.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/4c0c1a60-3184-4e6b-90b1-6f6ff479123e.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:2b5b68c4-9253-4d79-9d05-81e7718d8d7a",
+          "name": "Knitted Yarn World",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/503426a7-2965-41bd-bdbf-c61c8ce4c698.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/5c2f5251-e100-4ecb-baca-f32dd026f0ad.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:368c6a65-4a48-4e3a-80c7-c460455b5e17",
+          "name": "Expressive 2D Animation",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/8bfdb57c-42ac-4ab8-8da5-071a7dce386d.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/c1fe8718-9e29-43e9-96a8-c31026b4450f.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:6bce8e75-df92-487f-a4f0-a324a6a297f3",
+          "name": "Rounded Toy CGI",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/fb5c31a7-fc65-48bf-968d-e882eb62b2eb.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/d94a16ba-2675-4da1-ad54-9157df77dfa1.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:bf6aee41-83a8-433c-b5a5-2309c7bd5b26",
+          "name": "Felt Puppet Stop Motion",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/23c5d423-c85d-4ae5-abe9-c2dd88aec631.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/fc0dad71-1ea2-4f8b-943c-7ce21702fd96.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:c3268f8d-4cc0-423c-975d-ca1bf7df385a",
+          "name": "Grotesque Street CGI",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/895b0fd5-a79f-48e2-ac39-868d38959a7c.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/a60999ff-1574-4823-b31d-b1ae5bf8d3df.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:e82b7bbb-c8bf-4d70-a866-e7b15e744a2b",
+          "name": "Warm Painterly 3D Animation",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/9ec3f2fd-7b6e-44ba-8d09-e01d217f6b55.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/04bb6062-17ce-4a5e-8a5c-14310d9561f4.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:523cf5be-67fc-46d6-bfdb-56ccc3e2a8f6",
+          "name": "Graphic Cel",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/3f87bbff-fd1a-4d93-8b32-5db0c8700a85.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/c8881bd8-1891-4ca5-abd9-288e600f03e8.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:89484749-e1b9-40c9-979e-fc578c3aad6d",
+          "name": "Expressive Gouache Fashion",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/7c9e2e5d-f704-46fd-aeec-2f45e9579e12.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/941191a2-aad2-4c87-9613-7b139c85a029.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:f7786536-123b-47b8-ab65-ee0647df1509",
+          "name": "Sculptural 3D Fashion",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/5db936eb-1040-4b71-afb5-80737ab73716.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/4ac9536e-04e3-4325-9622-9c8b77000aea.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:f1d0c30d-a2ec-4c33-a892-d8d158e2d093",
+          "name": "Chunky Textured Low-Poly",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/aad05a6a-a4c4-4931-8701-e26face70a82.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/661f14cb-7fd9-4e50-99fc-f98290e22c6e.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:c2143317-f28d-4c3c-a0b8-39bd547e08a7",
+          "name": "Cel-Shaded CG Anime",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/01e641df-bce6-4d88-91ed-c6081516c76c.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/c5c759d8-c066-4c70-adf9-52b7838cc43d.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:85bc9e2c-f896-41d7-b280-53f2f5e321ac",
+          "name": "Painterly Cinematic 3D",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/2500c15f-600d-495e-a731-921e57f174b0.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/6bb12140-74e0-4249-aabb-3a9e4cc95c2e.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:55aee79b-bb36-40e3-b957-205e6867a3d9",
+          "name": "Outline-free Cel",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/ac1fd12b-8e5d-4572-98b3-ef5bb3132e30.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/7c835158-7e96-49f1-9cb8-68b3369793b0.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:083abd05-afbd-4cda-857f-7f2d2082e9b2",
+          "name": "Painterly Sculpted Animation",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/c8ee6085-e998-4871-bf77-186e16e094d4.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/91ec3be0-8b14-4bfa-a0f4-17889ae22102.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:41d02f6d-1d5d-4efa-9942-9fe71de9429b",
+          "name": "Neon Graphic Cinematic 3D",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/3eac90ae-9081-4a60-b6af-4009f96e8a95.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/08189891-2c6b-4726-8193-744fc201cfbd.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:f2b4e920-3b1e-4931-8a86-b06566005145",
+          "name": "Textured Gouache Character Illustration",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/99e895b2-4e98-4243-b650-abadbd2fa259.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/54ede5c1-a35b-43f2-a5b9-30743f2c8ac3.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:3dc6d454-808d-4e27-8a4e-4751da818324",
+          "name": "Comic 3D",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/39bedcae-c0e5-4476-a7a9-195b718bf7a8.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/a2eb8b8b-9114-4787-9fab-f708fb32cb45.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:255f5244-b43d-43fc-9c28-7138f8c12984",
+          "name": "Retro Game 3D",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/1d19b204-5844-4365-a78e-175324c3db9f.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/5ee339db-0c20-474a-9b4b-54f4026101ec.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu-style:e54beac7-ca48-4034-856b-0a6f2b05081a",
+          "name": "Nighttime Anime Pixel Art",
+          "description": "Genjutsu Style (Restyle): redraws the user's own video in this look; motion, camera and framing stay as filmed. The preview is the style's example, never the user's input. Run with execute_preset (source genjutsu, this preset_id) after the user supplies their video and asks to generate.",
+          "kind": "genjutsu-style",
+          "type": "genjutsu",
+          "thumbnail_url": "https://static-public-media.higgsfield.ai/restyle-presets/95a250bf-6019-412e-bf36-80c594845b63.webp",
+          "preview_url": "https://static-public-media.higgsfield.ai/restyle-presets/5fc71fdb-8b1b-4543-bcf3-aeb02c39275f.mp4",
+          "preview_type": "video"
+        }
+      ],
+      "next_cursor": null
+    }
+  ]
+}

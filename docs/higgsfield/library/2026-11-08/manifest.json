@@ -1,0 +1,64 @@
+{
+  "retrieved_on": "2026-11-08",
+  "models": 138,
+  "video_models": 60,
+  "recipes": 80,
+  "galleries": {
+    "marketing-studio": 649,
+    "viral": 87,
+    "genjutsu": 35,
+    "genjutsu-styles": 20,
+    "soul": 33
+  },
+  "gallery_entries_total": 824,
+  "files": [
+    {
+      "file": "genjutsu-styles.json",
+      "bytes": 16774,
+      "sha256": "97950bc4267a908caccfd3bd1a2a35f3403af014de5af7d8b8da21fd93a6431a"
+    },
+    {
+      "file": "genjutsu.json",
+      "bytes": 41578,
+      "sha256": "6ec95d3ebb8c401808def4b74a2add925517fe15405e48f32f3a67f09ce2f7e4"
+    },
+    {
+      "file": "marketing-studio.json",
+      "bytes": 344904,
+      "sha256": "ca67921c2673624fc6fbbeb9cb47aa5ad4f6fe735af74ba3dbaa09c2b1df7d8a"
+    },
+    {
+      "file": "models.json",
+      "bytes": 259580,
+      "sha256": "6f345c8987742d082562c0ecefbab78970db9c4d4a2dee5f19d3bdb3da562b90"
+    },
+    {
+      "file": "recipes.json",
+      "bytes": 344308,
+      "sha256": "5e34717464a30ebad2152438b884efdb910a6cdc4f2421ce30bd55c9ce8f88ab"
+    },
+    {
+      "file": "selection-and-quotes.json",
+      "bytes": 30132,
+      "sha256": "e38856a62a1e1e2a1c5594af59c16621525416a7d7b01a3a10dbe7e6be2f8133"
+    },
+    {
+      "file": "soul.json",
+      "bytes": 13480,
+      "sha256": "3d3e596ba3b23bc72955f5370af0e67c446760960a72205cfcf1df2caf13bf0e"
+    },
+    {
+      "file": "tool-reference.json",
+      "bytes": 444977,
+      "sha256": "8082574bf753f3bc124a8d03d8a8cbc0726dd48047baa4cc7f408f4237e58635"
+    },
+    {
+      "file": "viral.json",
+      "bytes": 48544,
+      "sha256": "52048b8ddda93ac95a2d3cfa731c99686e634217e79e6b7dab24478ed7fafbe4"
+    }
+  ],
+  "raw_media_downloaded": false,
+  "model_weights_downloaded": false,
+  "generation_submitted": false
+}

@@ -1,0 +1,3790 @@
+diff --git a/.env.example b/.env.example
+index b4f64a2..2e9d4bc 100644
+--- a/.env.example
++++ b/.env.example
+@@ -14,6 +14,21 @@ ANTHROPIC_API_KEY=
+ SCRIPT_MODEL=claude-sonnet-5
+ HF_CREDENTIALS=
+ 
++# Higgsfield (API direta, backend only — decisao 08/11/2026)
++# HF_API_KEY = valor completo copiado do console. SERVER-ONLY: nunca no browser,
++# logs, jobs ou respostas. Deixe em branco ate a raiz ativar a configuracao.
++HF_API_KEY=
++# VIDEO_PROVIDER: vazio/replicate = Replicate (legado, comportamento inalterado);
++# higgsfield = API direta https://api.higgsfield.ai. Valor invalido e rejeitado
++# (sem fallback silencioso que duplicaria gasto pago).
++VIDEO_PROVIDER=
++# Modelo Higgsfield confirmado para esta fase (contrato em architecture/higgsfield-api.md).
++HIGGSFIELD_MODEL=kling-video/v3.0/pro/image-to-video
++# Teto ACUMULADO dos testes iniciais em USD (padrão 30 — decisao do Felipe).
++# A reserva vive em disco (.tmp/budget_*.json) e vale entre jobs, reinicios e
++# processos; submissao incerta NUNCA libera verba.
++HIGGSFIELD_INITIAL_TEST_CAP_USD=30
++
+ # Supabase (active persistence)
+ NEXT_PUBLIC_SUPABASE_URL=
+ NEXT_PUBLIC_SUPABASE_ANON_KEY=
+diff --git a/src/app/api/pipeline/run/route.ts b/src/app/api/pipeline/run/route.ts
+index 0ef2025..32163c1 100644
+--- a/src/app/api/pipeline/run/route.ts
++++ b/src/app/api/pipeline/run/route.ts
+@@ -1,5 +1,5 @@
+ import { NextResponse } from 'next/server';
+-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync, statSync } from 'node:fs';
++import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, statSync } from 'node:fs';
+ import path from 'node:path';
+ import { spawn, spawnSync } from 'node:child_process';
+ import crypto from 'node:crypto';
+@@ -20,6 +20,32 @@ import {
+ import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests } from '@/lib/reconciliation';
+ import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
+ import { buildAssSubtitles, type CaptionCue } from '@/lib/captions';
++import { writeJsonAtomic, mergeJobUpdate } from '@/lib/pipeline-job-state';
++import {
++  resolveVideoProviderConfig,
++  VideoProviderConfigError,
++  DEFAULT_HIGGSFIELD_MODEL,
++  LEGACY_REPLICATE_MODEL,
++  type FrozenVideoProviderConfig,
++  type VideoProviderName,
++} from '@/lib/video-provider';
++import {
++  HiggsfieldClient,
++  validateMediaUrl,
++  type HiggsfieldSound,
++} from '@/lib/higgsfield';
++import { budgetCapMicrosFromEnv, chargeCost, readBudgetSummary, releaseCost } from '@/lib/cost-ledger';
++import { formatUsd } from '@/lib/money';
++import {
++  HiggsfieldSceneError,
++  fetchHiggsfieldOutcomeOrNull,
++  launchHiggsfieldScene,
++  planHiggsfieldRecovery,
++  pollHiggsfieldScene,
++  reconcileHiggsfieldRequests,
++  resubmitHiggsfieldScene,
++  type HiggsfieldSceneRequest,
++} from '@/lib/higgsfield-scene';
+ 
+ import { runPipelineSchema, type RunPipelineInput } from '@/lib/validations';
+ import type { Prediction } from 'replicate';
+@@ -41,6 +67,44 @@ type SceneProviderRequest = {
+   launchedAt: string;
+ };
+ 
++// Item de trabalho do loop de vídeo: predição Replicate (legado) OU geração
++// Higgsfield (API direta), com submissão encadeada adiada quando preciso.
++type SceneWorkItem = {
++  sceneId: string;
++  index: number;
++  audioDataUri?: string;
++  status: 'PROCESSING' | 'CHAINED';
++  predictionId?: string | null;
++  chainFrom?: string | null;
++  launch?: { prompt: string; duration: 5 | 10 };
++  hf?: HiggsfieldSceneRequest;
++  hfLaunch?: { prompt: string; duration: number; attempt: number; sound: HiggsfieldSound };
++  reconciledUrl?: string;
++};
++
++type AnySceneRequest = SceneProviderRequest | HiggsfieldSceneRequest;
++
++const isHiggsfieldRequest = (request: AnySceneRequest | undefined | null): request is HiggsfieldSceneRequest =>
++  !!request && request.provider === 'higgsfield';
++
++const isReplicateRequest = (request: AnySceneRequest | undefined | null): request is SceneProviderRequest =>
++  !!request && request.provider !== 'higgsfield';
++
++// Soma das reservas ativas das cenas Higgsfield (para o topo do job JSON).
++const sumHiggsfieldReserves = (requests: Record<string, AnySceneRequest>) =>
++  Object.values(requests).reduce(
++    (sum, request) => (isHiggsfieldRequest(request) ? sum + request.reservedUsdMicros : sum),
++    0,
++  );
++
++const describeHiggsfieldError = (error: unknown): string => {
++  if (error instanceof HiggsfieldSceneError) {
++    const details = Object.entries(error.details).map(([key, value]) => `${key}=${String(value)}`).join(' ');
++    return `${error.code}: ${error.message}${details ? ` (${details})` : ''}`;
++  }
++  return errorMessage(error);
++};
++
+ type IdempotencyRecord = {
+   jobId: string;
+   payloadHash: string;
+@@ -74,17 +138,6 @@ function replayIdempotentJob(idempotencyPath: string, payloadHash: string, tmpDi
+   });
+ }
+ 
+-function writeJsonAtomic(filePath: string, value: unknown) {
+-  const temporaryPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+-  try {
+-    writeFileSync(temporaryPath, JSON.stringify(value, null, 2), { flag: 'wx' });
+-    renameSync(temporaryPath, filePath);
+-  } catch (error) {
+-    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+-    throw error;
+-  }
+-}
+-
+ // FFmpeg Video Assembly function
+ type Target = { width: number; height: number; fps: number };
+ // Dimensões de saída por formato. Quando os clipes já vêm no aspect escolhido
+@@ -378,6 +431,48 @@ async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16
+   return `data:image/jpeg;base64,${readFileSync(out).toString('base64')}`;
+ }
+ 
++// Entradas visuais de launch COMPARTILHADAS pelos dois provedores: prompt canônico,
++// âncora recortada pro aspect (data URI local ou URL remota) e duração pela regra
++// de fala 5/10s. Comportamento idêntico ao fluxo Replicate original.
++async function resolveSceneLaunchVisuals(args: {
++  line: RunPipelineInput['script'][number];
++  sceneIndex: number;
++  aspect: '9:16' | '16:9';
++  directorIdea: string;
++  directorSnippet: string;
++  wardrobe?: { boomer?: string, kev?: string, studio?: string };
++  voiceMode: 'kling_native' | 'elevenlabs';
++  audioDuration: number | undefined;
++  fallbackDuration: 5 | 10;
++  tmpDir: string;
++  jobId: string;
++  sceneId: string;
++}): Promise<{ prompt: string; startImage?: string; duration: 5 | 10; interfaceReferenceUsed: boolean }> {
++  const prompt = getDetailedPrompt(args.line, args.directorIdea, args.directorSnippet, args.sceneIndex, args.wardrobe, args.aspect, args.voiceMode);
++  const character = resolveCharacter(args.line.characterId);
++
++  // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
++  // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
++  // BK-16: referência escolhida na interface (Engine DNA) é efetiva — vence a canônica.
++  const anchorImage = args.line.characterReference
++    || (args.aspect === '16:9' && (args.line.shotType === 'WIDE' || args.line.shotType === 'OTS_BOOMER')
++      ? '/assets/master_wide.png'
++      : character?.referenceImage);
++
++  // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
++  const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
++  const startImage = await reframeAnchorToAspect(anchorImage, args.aspect, args.tmpDir, `${args.jobId}_${args.sceneId}`, anchorFocusX);
++
++  // BK-16 (fala inteira): clipe Kling dimensionado pelo áudio REAL medido.
++  const duration = klingDurationForAudio(args.audioDuration, args.fallbackDuration);
++  return {
++    prompt,
++    startImage,
++    duration,
++    interfaceReferenceUsed: Boolean(args.line.characterReference && args.line.characterReference !== character?.referenceImage),
++  };
++}
++
+ // WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
+ 
+ // Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
+@@ -476,45 +571,86 @@ async function processPipeline(
+   // BK-17 (parcial local): predições pagas persistidas ANTES do polling —
+   // se o processo cair depois da cobrança, o resultado incerto fica conservado
+   // no estado do job em vez de sumir com a memória do worker.
+-  let providerRequests: Record<string, SceneProviderRequest> = {};
++  let providerRequests: Record<string, AnySceneRequest> = {};
+   // BK-17 (incremento 1): ledger de estado por cena — o estado do job diz quais
+   // cenas têm áudio/vídeo prontos mesmo após falha ou reinício.
+   let sceneStates: Record<string, string> = {};
++  // Provedor congelado na criação do job: retomadas NUNCA trocam de provedor
++  // (jobs legados sem o campo continuam no replicate).
++  let jobProvider: VideoProviderName = 'replicate';
++  let jobModel: string = LEGACY_REPLICATE_MODEL;
+   try {
+     const existingState = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+     providerRequests = existingState.providerRequests || {};
+     sceneStates = existingState.sceneStates || {};
++    if (existingState.provider === 'higgsfield') jobProvider = 'higgsfield';
++    jobModel = typeof existingState.providerModel === 'string' && existingState.providerModel
++      ? existingState.providerModel
++      : (jobProvider === 'higgsfield' ? DEFAULT_HIGGSFIELD_MODEL : LEGACY_REPLICATE_MODEL);
+   } catch { /* job novo sem estado prévio */ }
+ 
+   const markScene = (sceneId: string, state: 'AUDIO_READY' | 'VIDEO_READY') => {
+     sceneStates = { ...sceneStates, [sceneId]: state };
+-    updateJob({ sceneStates });
++    const completed = Object.values(sceneStates).filter((s) => s === 'VIDEO_READY').length;
++    // Progresso por cena como dados para o controle existente (sem tocar UI).
++    updateJob({ sceneStates, sceneProgress: { completed, total: script.length } });
++  };
++
++  // Persistência CRÍTICA: falha de gravação PROPAGA — chamadas antes/depois de
++  // submissão paga não podem fingir checkpoint e lançar geração sem ele.
++  const updateJobCritical = (updates: JobUpdate) => {
++    const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
++    const newData = mergeJobUpdate(currentData, updates);
++    writeJsonAtomic(jobFilePath, newData);
++    // Heartbeat do lease: o dono vivo atualiza o prazo; silence longo não expira
++    // o lease desde que abaixo do TTL.
++    refreshResumeLease(tmpDir, jobId, workerInstanceId);
+   };
+ 
+   const updateJob = (updates: JobUpdate) => {
+     try {
+-      const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+-      const newData = {
+-        ...currentData,
+-        ...updates,
+-        updatedAt: new Date().toISOString(),
+-        logs: [...currentData.logs, ...(updates.logs || [])]
+-      };
+-      writeJsonAtomic(jobFilePath, newData);
+-      // Heartbeat do lease: o dono vivo atualiza o prazo; silence longo não expira
+-      // o lease desde que abaixo do TTL.
+-      refreshResumeLease(tmpDir, jobId, workerInstanceId);
++      updateJobCritical(updates);
+     } catch (e) {
+       console.error("Failed to write job status file:", e);
+     }
+   };
+ 
++  // Persistidor crítico do registro de cena Higgsfield (payload/chave/reserva).
++  const makeHiggsfieldPersister = (sceneId: string) => (record: HiggsfieldSceneRequest) => {
++    providerRequests[sceneId] = record;
++    updateJobCritical({
++      providerRequests,
++      costReserveUsdMicros: sumHiggsfieldReserves(providerRequests),
++    });
++  };
++
+   const replicateToken = process.env.REPLICATE_API_TOKEN;
+   const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
+-  const replicate = replicateToken ? new Replicate({ auth: replicateToken }) : null;
++  // Cada job usa SOMENTE o provedor congelado: replicate instanciado apenas
++  // quando o job é replicate; cliente HF apenas quando o job é higgsfield.
++  const replicate = jobProvider === 'replicate' && replicateToken ? new Replicate({ auth: replicateToken }) : null;
++  let hfClient: HiggsfieldClient | null = null;
++  let hfCapMicros = 0;
+   let episodeRegistered = false;
+ 
+   try {
++    // Configuração do provedor Higgsfield precisa estar íntegra ANTES de qualquer
++    // gasto (voz incluída no modo elevenlabs). Sem chave não há fallback pago.
++    if (jobProvider === 'higgsfield') {
++      const hfApiKey = process.env.HF_API_KEY;
++      if (!hfApiKey) {
++        throw new Error('PROVIDER_CONFIG: HF_API_KEY ausente para job congelado em higgsfield — sem fallback para Replicate (evita gasto duplicado).');
++      }
++      hfClient = new HiggsfieldClient({ apiKey: hfApiKey });
++      hfCapMicros = budgetCapMicrosFromEnv(process.env);
++      const budget = readBudgetSummary(tmpDir, hfCapMicros);
++      if (budget.corruptEntries.length) {
++        updateJob({ logs: [`⚠️ [Orçamento] ${budget.corruptEntries.length} entrada(s) ilegível(is) no ledger — novas reservas ficam bloqueadas até revisão manual.`] });
++      }
++      updateJob({ logs: [`🏦 [Orçamento] Testes iniciais Higgsfield: comprometido ${formatUsd(budget.reservedMicros + budget.chargedMicros)} de teto ${formatUsd(budget.capMicros)} (restante ${formatUsd(budget.remainingMicros)}).`] });
++      updateJob({ logs: [`🎞️ PROVIDER: higgsfield (modelo ${jobModel}) — congelado neste job.`] });
++    }
++
+     // VOICE_GATE (modo elevenlabs) começa pelas precondições locais: não cria
+     // episódio fantasma quando a configuração já prova que nenhuma cena poderá ser
+     // sintetizada. No modo kling_native (régua BK-18) o Kling fala — não há TTS.
+@@ -621,7 +757,7 @@ async function processPipeline(
+ 
+     // Step 1b: Kling Launch — só executa com o gate de voz 100% verde
+     currentStage = 'video_generation';
+-    const scenesToProcess = [];
++    const scenesToProcess: SceneWorkItem[] = [];
+ 
+     for (let i = 0; i < script.length; i++) {
+       const line = script[i];
+@@ -643,15 +779,15 @@ async function processPipeline(
+         updateJob({ logs: [`⚠️ [Scene ${index}] Checkpoint vídeo inválido (corrompido/parcial) — re-renderizando.`] });
+       }
+ 
+-      // 1b. Video Generation (Kling)
+-      const isSandbox = !replicate;
++      // 1b. Video Generation. Sandbox de piloto existe SOMENTE no caminho replicate.
++      const isReplicateSandbox = jobProvider === 'replicate' && !replicate;
+ 
+       // BK-17: reconciliação de predições incertas ANTES de repetir cobrança.
+       // Sucesso => reutiliza o resultado pago; processando => retoma polling;
+       // falha confirmada => nova predição; incerto/indisponível => run para
+       // (PROVIDER_UNKNOWN), nunca predição nova às cegas.
+       const pendingRequest = providerRequests[sceneId];
+-      if (replicate && pendingRequest?.predictionId) {
++      if (replicate && isReplicateRequest(pendingRequest) && pendingRequest.predictionId) {
+         const outcome = await fetchPredictionOutcome(replicate, pendingRequest.predictionId);
+         const action = reconciliationAction(outcome);
+         if (action === 'REUSE') {
+@@ -696,39 +832,25 @@ async function processPipeline(
+       if (replicate) {
+         try {
+           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
+-          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect, voiceMode);
+-          const character = resolveCharacter(line.characterId);
+-          
+-          // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
+-          // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
+-          // ponytail: two-shot vertical de verdade (OTS/empilhado) exige arte nova — P0a item 4.
+-          // Mesma regra do prompt (SOLO_SHOTS_IN_VERTICAL): two-shot so em 16:9. Se estas duas
+-          // condicoes divergirem, o prompt volta a pedir dois personagens com ancora de um.
+-          // BK-16: referência escolhida na interface (Engine DNA) é efetiva — vence a canônica.
+-          const anchorImage = line.characterReference
+-            || (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER')
+-              ? '/assets/master_wide.png'
+-              : character?.referenceImage);
+-
+-          // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
+-          const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
+-          const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`, anchorFocusX);
+-          if (line.characterReference && line.characterReference !== character?.referenceImage) {
++          const visuals = await resolveSceneLaunchVisuals({
++            line, sceneIndex: i, aspect, directorIdea, directorSnippet, wardrobe, voiceMode,
++            audioDuration: audioDurations.get(sceneId), fallbackDuration: line.durationEst <= 5 ? 5 : 10,
++            tmpDir, jobId, sceneId,
++          });
++          if (visuals.interfaceReferenceUsed) {
+             updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
+           }
+ 
+-          // BK-16 (fala inteira): clipe Kling dimensionado pelo áudio REAL medido —
+-          // áudio > 5s pede clipe de 10s; -shortest no mux não corta mais a fala.
+-          const klingDuration = klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10);
++          const klingDuration = visuals.duration;
+           if (klingDuration === 10 && (line.durationEst <= 5)) {
+             updateJob({ logs: [`⏱️ [Scene ${index}] Áudio real excede 5s — clipe Kling de 10s para fala inteira.`] });
+           }
+ 
+           const prediction = await createKlingPrediction(replicate, {
+-            prompt: prompt,
++            prompt: visuals.prompt,
+             duration: klingDuration,
+             aspect_ratio: aspect,
+-            start_image: startImage,
++            start_image: visuals.startImage,
+             negative_prompt: KLING_NEGATIVE_PROMPT,
+             generate_audio: voiceMode === 'kling_native'
+           });
+@@ -758,7 +880,108 @@ async function processPipeline(
+         }
+       }
+ 
+-      if (isSandbox) {
++      if (jobProvider === 'higgsfield') {
++        // ── Caminho Higgsfield (API direta) ──────────────────────────────────
++        // Mesmos contratos do caminho replicate: reconciliar antes de repetir
++        // cobrança, encadeamento adiado, persistência crítica de payload/chave.
++        const pending = isHiggsfieldRequest(pendingRequest) ? pendingRequest : undefined;
++        if (pending) {
++          const outcome = await fetchHiggsfieldOutcomeOrNull(hfClient!, pending);
++          const plan = planHiggsfieldRecovery(pending, outcome);
++
++          if (plan.kind === 'reuse_result') {
++            // Concluída no provedor: cobrança confirmada (fica retida no ledger).
++            chargeCost({ ledgerDir: tmpDir, operationKey: pending.operationKey });
++            updateJob({ logs: [`🛟 [Scene ${index}] Geração Higgsfield reconciliada: SUCESSO no provedor — resultado reutilizado (nada novo lançado). Cobrança confirmada: ${formatUsd(pending.reservedUsdMicros)}.`] });
++            scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: pending, reconciledUrl: plan.outputUrl });
++            continue;
++          }
++          if (plan.kind === 'keep_polling') {
++            updateJob({ logs: [`⏳ [Scene ${index}] Geração Higgsfield ainda processando no provedor — polling retomado sem nova cobrança.`] });
++            scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: pending });
++            continue;
++          }
++          if (plan.kind === 'resubmit_same_key') {
++            // POST anterior de resultado desconhecido: MESMA chave + MESMO payload
++            // persistidos. Nunca chave nova (evitaria cobrança duplicada).
++            updateJob({ logs: [`🛟 [Scene ${index}] Submissão Higgsfield incerta (sem requestId) — resubmissão com a MESMA chave/payload persistidos.`] });
++            try {
++              const record = await resubmitHiggsfieldScene({
++                record: pending,
++                client: hfClient!,
++                ledgerDir: tmpDir,
++                capMicros: hfCapMicros,
++                persistRequest: makeHiggsfieldPersister(sceneId),
++                log: (m) => updateJob({ logs: [m] }),
++              });
++              scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: record });
++            } catch (error) {
++              throw new Error(`[Scene ${index}] Higgsfield resubmit falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
++            }
++            continue;
++          }
++          if (plan.kind === 'relaunch_new_attempt') {
++            const terminalStatus = outcome?.kind === 'failed_terminal' ? outcome.terminalStatus : 'desconhecido';
++            updateJob({ logs: [`⚠️ [Scene ${index}] Geração Higgsfield confirmada como ${terminalStatus} pelo provedor — reserva liberada (sem cobrança) e nova tentativa com chave nova.`] });
++            releaseCost({ ledgerDir: tmpDir, operationKey: pending.operationKey, reason: 'provider_terminal_no_charge' });
++            delete providerRequests[sceneId];
++            updateJobCritical({
++              providerRequests,
++              costReserveUsdMicros: sumHiggsfieldReserves(providerRequests),
++            });
++            // cai para o launch fresco abaixo (attempt = pending.attempt + 1)
++          }
++          if (plan.kind === 'stop_unresolved') {
++            throw new Error(`PROVIDER_UNKNOWN: não foi possível reconciliar a geração paga ${pending.requestId} (${plan.reason}). Run interrompido para evitar cobrança duplicada — reconcilie e retome.`);
++          }
++        }
++
++        const attempt = (pending?.attempt ?? 0) + 1;
++        const hfSound: HiggsfieldSound = voiceMode === 'kling_native' ? 'on' : 'off';
++
++        const visuals = await resolveSceneLaunchVisuals({
++          line, sceneIndex: i, aspect, directorIdea, directorSnippet, wardrobe, voiceMode,
++          audioDuration: audioDurations.get(sceneId), fallbackDuration: line.durationEst <= 5 ? 5 : 10,
++          tmpDir, jobId, sceneId,
++        });
++        if (visuals.interfaceReferenceUsed) {
++          updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
++        }
++
++        if (chainFrom) {
++          updateJob({ logs: [`🔗 [Scene ${index}] Encadeada à anterior (mesmo personagem) — submissão Higgsfield adiada p/ herdar o último frame.`] });
++          scenesToProcess.push({
++            sceneId, index, audioDataUri, status: "CHAINED", chainFrom,
++            hfLaunch: { prompt: visuals.prompt, duration: visuals.duration, attempt, sound: hfSound },
++          });
++          continue;
++        }
++
++        updateJob({ logs: [`🎬 [Scene ${index}] Submetendo ${jobModel} via Higgsfield (duração ${visuals.duration}s, sound ${hfSound})...`] });
++        try {
++          const record = await launchHiggsfieldScene({
++            jobId,
++            sceneId,
++            attempt,
++            anchor: visuals.startImage,
++            prompt: visuals.prompt,
++            duration: visuals.duration,
++            sound: hfSound,
++            client: hfClient!,
++            model: jobModel,
++            ledgerDir: tmpDir,
++            capMicros: hfCapMicros,
++            persistRequest: makeHiggsfieldPersister(sceneId),
++            log: (m) => updateJob({ logs: [m] }),
++          });
++          scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: record });
++        } catch (error) {
++          throw new Error(`[Scene ${index}] Higgsfield launch falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
++        }
++        continue;
++      }
++
++      if (isReplicateSandbox) {
+         // Sem Replicate não há render real. Vídeo piloto só com opt-in explícito
+         // de desenvolvimento — nunca entregar clipe de outro episódio como se fosse este.
+         if (process.env.STUDIO_SANDBOX !== '1') {
+@@ -786,8 +1009,37 @@ async function processPipeline(
+     for (const scene of scenesToProcess) {
+       try {
+         // WP 1.6: cena encadeada — o clipe anterior já foi processado neste loop
+-        // sequencial; extrai o último frame dele e SÓ AGORA lança o Kling.
+-        if (!scene.predictionId && scene.chainFrom && scene.launch) {
++        // sequencial; extrai o último frame dele e SÓ AGORA lança a geração.
++        if (!scene.hf && scene.hfLaunch && scene.chainFrom) {
++          // Higgsfield encadeado: o frame vira data URI ⇒ upload ⇒ payload com a
++          // public_url (mesmos passos do launch comum, MESMA chave por tentativa).
++          const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
++          updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
++          const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
++          try {
++            const record = await launchHiggsfieldScene({
++              jobId,
++              sceneId: scene.sceneId,
++              attempt: scene.hfLaunch.attempt,
++              anchor: frameUri,
++              prompt: scene.hfLaunch.prompt,
++              duration: scene.hfLaunch.duration,
++              sound: scene.hfLaunch.sound,
++              client: hfClient!,
++              model: jobModel,
++              ledgerDir: tmpDir,
++              capMicros: hfCapMicros,
++              persistRequest: makeHiggsfieldPersister(scene.sceneId),
++              log: (m) => updateJob({ logs: [m] }),
++            });
++            scene.hf = record;
++          } catch (error) {
++            throw new Error(`[Scene ${scene.index}] Higgsfield launch encadeado falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
++          }
++        }
++
++        if (!scene.hf && !scene.predictionId && scene.chainFrom && scene.launch) {
++          // WP 1.6 (replicate): encadeada — extrai o último frame e lança o Kling.
+           const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
+           updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
+           const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
+@@ -809,15 +1061,41 @@ async function processPipeline(
+           updateJob({ providerRequests });
+         }
+ 
+-        if (!scene.predictionId) throw new Error(`cena ${scene.index}: sem predictionId (launch encadeado falhou?)`);
++        if (!scene.hf && !scene.predictionId) throw new Error(`cena ${scene.index}: sem referência de geração (launch encadeado falhou?)`);
+         let klingVideoUrl: string;
+-        if ('reconciledUrl' in scene && scene.reconciledUrl) {
+-          klingVideoUrl = scene.reconciledUrl;
+-          updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do provedor em uso (polling pulado).`] });
++        if (scene.hf) {
++          if ('reconciledUrl' in scene && scene.reconciledUrl) {
++            klingVideoUrl = scene.reconciledUrl;
++            updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do Higgsfield em uso (polling pulado).`] });
++          } else {
++            updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Higgsfield (requestId ${scene.hf.requestId})...`] });
++            try {
++              const result = await pollHiggsfieldScene({
++                record: scene.hf,
++                client: hfClient!,
++                ledgerDir: tmpDir,
++                log: (m) => updateJob({ logs: [m] }),
++              });
++              klingVideoUrl = result.outputUrl;
++            } catch (error) {
++              // Reserva/estado permanecem em disco: retomada reconcilia ou relança
++              // com chave de tentativa nova — nunca gasto às cegas.
++              updateJob({ costReserveUsdMicros: sumHiggsfieldReserves(providerRequests) });
++              throw new Error(`Higgsfield polling falhou (${describeHiggsfieldError(error)})`);
++            }
++          }
++          // URL de mídia: HTTPS válido, sem credenciais — o download não leva
++          // Authorization alguma (storage/CDN do provedor).
++          klingVideoUrl = validateMediaUrl(klingVideoUrl, 'video.url');
+         } else {
+-          updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
+-          const output = await pollPrediction(replicate!, scene.predictionId);
+-          klingVideoUrl = Array.isArray(output) ? output[0] : output;
++          if ('reconciledUrl' in scene && scene.reconciledUrl) {
++            klingVideoUrl = scene.reconciledUrl;
++            updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do provedor em uso (polling pulado).`] });
++          } else {
++            updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
++            const output = await pollPrediction(replicate!, scene.predictionId!);
++            klingVideoUrl = Array.isArray(output) ? output[0] : output;
++          }
+         }
+         updateJob({ logs: [`✅ [Scene ${scene.index}] Kling video generated: ${klingVideoUrl}`] });
+ 
+@@ -1043,16 +1321,29 @@ async function processPipeline(
+       }
+     }
+ 
+-    const uncertainPredictions = Object.entries(providerRequests)
+-      .map(([sceneId, request]) => `${sceneId}:${request.predictionId}`);
++    const uncertainReplicate = Object.entries(providerRequests)
++      .filter(([, request]) => isReplicateRequest(request))
++      .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
++    const uncertainHiggsfield = Object.entries(providerRequests)
++      .filter(([, request]) => isHiggsfieldRequest(request) && request.requestId)
++      .map(([sceneId, request]) => `${sceneId}:${(request as HiggsfieldSceneRequest).requestId}`);
++    const higgsfieldUnresolved = Object.entries(providerRequests)
++      .filter(([, request]) => isHiggsfieldRequest(request) && !request.requestId)
++      .map(([sceneId]) => sceneId);
+     updateJob({
+       status: "FAILED",
+       progress: 0,
+       failureStage: currentStage,
+       logs: [
+         `🔴 CRITICAL_PIPELINE_ERROR em ${currentStage}: ${errorMessage(error)}`,
+-        ...(uncertainPredictions.length
+-          ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
++        ...(uncertainReplicate.length
++          ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainReplicate.join(', ')}`]
++          : []),
++        ...(uncertainHiggsfield.length
++          ? [`⚠️ HIGGSFIELD SUBMISSIONS UNCERTAIN (reservas retidas — reconciliar pelo requestId antes de relançar): ${uncertainHiggsfield.join(', ')}`]
++          : []),
++        ...(higgsfieldUnresolved.length
++          ? [`⚠️ HIGGSFIELD SUBMISSÕES INCERTAS SEM requestId (retomada resubmete a MESMA chave/payload — nunca chave nova): ${higgsfieldUnresolved.join(', ')}`]
+           : [])
+       ]
+     });
+@@ -1105,6 +1396,17 @@ export async function POST(req: Request) {
+ 
+     const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe, resumeJobId } = validation.data;
+ 
++    // Provedor resolvido no SERVIDOR e congelado por job. O schema zod já descarta
++    // campos desconhecidos — o cliente nunca envia chave HF nem escolhe o modelo.
++    // Configuração inválida é erro explícito, sem fallback silencioso p/ Replicate.
++    let providerConfig: FrozenVideoProviderConfig;
++    try {
++      providerConfig = resolveVideoProviderConfig(process.env);
++    } catch (error) {
++      const code = error instanceof VideoProviderConfigError ? error.code : 'VIDEO_PROVIDER_INVALID';
++      return NextResponse.json({ error: code, details: errorMessage(error) }, { status: 500 });
++    }
++
+     // Create .tmp directory
+     const tmpDir = path.resolve(process.cwd(), '.tmp');
+     if (!existsSync(tmpDir)) {
+@@ -1144,10 +1446,29 @@ export async function POST(req: Request) {
+         });
+       }
+ 
++      // Troca de provedor/modelo entre criação e retomada é conflito explícito:
++      // clipe gerado por outro provedor/modelo não é reutilizado silenciosamente.
++      if (existingData.provider && existingData.provider !== providerConfig.provider) {
++        return NextResponse.json({
++          error: "RESUME_CONFIG_CONFLICT",
++          details: `Job congelado no provedor ${existingData.provider}; o servidor agora resolve ${providerConfig.provider}. Provedor não troca no meio do job.`
++        }, { status: 409 });
++      }
++      if (providerConfig.provider === 'higgsfield' && existingData.providerModel && existingData.providerModel !== providerConfig.model) {
++        return NextResponse.json({
++          error: "RESUME_CONFIG_CONFLICT",
++          details: `Modelo Higgsfield mudou (${existingData.providerModel} → ${providerConfig.model}). Crie um job novo em vez de retomar.`
++        }, { status: 409 });
++      }
++
+       // BK-16: retomada usa a versão aprovada. Roteiro/voz/aspecto/referências/
+       // figurino diferentes = conflito explícito (nova versão ou job novo), nunca
+-      // mistura de cache antigo com payload novo.
+-      const configHash = pipelineConfigHash(validation.data);
++      // mistura de cache antigo com payload novo. Em higgsfield, provedor/modelo
++      // congelados também entram no hash (legado replicate mantém hash anterior).
++      const providerForHash = providerConfig.provider === 'higgsfield'
++        ? { provider: providerConfig.provider, model: providerConfig.model }
++        : undefined;
++      const configHash = pipelineConfigHash(validation.data, providerForHash);
+       const decision = evaluateResume(
+         existingData,
+         { configHash },
+@@ -1157,7 +1478,7 @@ export async function POST(req: Request) {
+         return NextResponse.json({
+           error: decision.code,
+           details: decision.code === 'RESUME_CONFIG_CONFLICT'
+-            ? "O roteiro/voz/aspecto/referências mudaram desde o job original. Crie um novo job (nova versão) em vez de retomar com conteúdo alterado."
++            ? "O roteiro/voz/aspecto/referências (ou provedor/modelo) mudaram desde o job original. Crie um novo job (nova versão) em vez de retomar com conteúdo alterado."
+             : "Este job já tem um executor ativo. Aguarde a conclusão ou a reconciliação do worker atual."
+         }, { status: 409 });
+       }
+@@ -1176,6 +1497,8 @@ export async function POST(req: Request) {
+         ...existingData,
+         status: "PROCESSING",
+         configHash,
++        provider: providerConfig.provider,
++        providerModel: providerConfig.model,
+         workerInstanceId,
+         updatedAt: new Date().toISOString(),
+         logs: [
+@@ -1209,7 +1532,15 @@ export async function POST(req: Request) {
+         engine,
+         // BK-16: identidade da versão aprovada — retomadas com conteúdo diferente
+         // são rejeitadas por comparação de hash, não por confiança do cliente.
+-        configHash: pipelineConfigHash(validation.data),
++        configHash: pipelineConfigHash(
++          validation.data,
++          providerConfig.provider === 'higgsfield'
++            ? { provider: providerConfig.provider, model: providerConfig.model }
++            : undefined,
++        ),
++        // Provedor/modelo congelados na criação — o worker usa EXCLUSIVAMENTE estes.
++        provider: providerConfig.provider,
++        providerModel: providerConfig.model,
+         providerRequests: {},
+         workerInstanceId,
+         createdAt: now,
+@@ -1264,8 +1595,18 @@ export async function GET(req: Request) {
+       // BK-16: reconciliação de estado — o worker original morreu com o restart do
+       // processo. O job é marcado FAILED (sem retry automático), mas os artefatos
+       // e checkpoints são PRESERVADOS: retomada valida e reutiliza o que já foi pago.
+-      const uncertainPredictions = Object.entries(jobData.providerRequests || {})
++      const statusTmpDir = path.resolve(process.cwd(), '.tmp');
++      const allRequests: Record<string, AnySceneRequest> = jobData.providerRequests || {};
++      const replicateEntries = Object.entries(allRequests).filter(([, request]) => isReplicateRequest(request));
++      const higgsfieldEntries = Object.entries(allRequests).filter(([, request]) => isHiggsfieldRequest(request));
++      const uncertainPredictions = replicateEntries
+         .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
++      const higgsfieldWithId = higgsfieldEntries
++        .filter(([, request]) => isHiggsfieldRequest(request) && request.requestId)
++        .map(([sceneId, request]) => `${sceneId}:${(request as HiggsfieldSceneRequest).requestId}`);
++      const higgsfieldWithoutId = higgsfieldEntries
++        .filter(([, request]) => isHiggsfieldRequest(request) && !request.requestId)
++        .map(([sceneId]) => sceneId);
+       // BK-17 (incremento 2): se há credencial do provedor, reconcilia AGORA —
+       // o operador vê o destino de cada predição paga no próprio status.
+       let reconciliationLogs: string[] = [];
+@@ -1283,12 +1624,67 @@ export async function GET(req: Request) {
+           reconciliationLogs = [`⚠️ RECONCILE_UNAVAILABLE: não foi possível consultar as predições pagas agora.`];
+         }
+       }
++      if (higgsfieldEntries.length) {
++        if (process.env.HF_API_KEY) {
++          try {
++            const hfRequests: Record<string, HiggsfieldSceneRequest> = {};
++            for (const [sceneId, request] of higgsfieldEntries) {
++              hfRequests[sceneId] = request as HiggsfieldSceneRequest;
++            }
++            const reconciled = await reconcileHiggsfieldRequests(
++              new HiggsfieldClient({ apiKey: process.env.HF_API_KEY }),
++              hfRequests,
++            );
++            reconciliationLogs.push(
++              ...Object.values(reconciled).map((r) =>
++                `🔎 RECONCILED [higgsfield] ${r.sceneId}:${r.requestId} => ${r.action}${r.detail ? ` (${r.detail})` : ''}`
++              ),
++            );
++            // Efeitos no ledger comprovados pelo provedor: conclusão cobra (fica
++            // retida); término terminal failed/nsfw/canceled libera (contrato de
++            // não-cobrança). Incertezas NUNCA mexem no ledger.
++            for (const entry of Object.values(reconciled)) {
++              const record = hfRequests[entry.sceneId];
++              if (!record) continue;
++              if (entry.action === 'REUSE') {
++                const charge = chargeCost({ ledgerDir: statusTmpDir, operationKey: record.operationKey });
++                reconciliationLogs.push(
++                  charge.kind === 'conflict'
++                    ? `⚠️ [Orçamento] Cobrança de ${entry.sceneId} conflitante (estado ${charge.state}) — reserve preservada.`
++                    : `💰 [Orçamento] ${entry.sceneId} confirmado cobrado (${formatUsd(record.reservedUsdMicros)}).`
++                );
++              }
++              if (entry.action === 'RELAUNCH') {
++                const release = releaseCost({
++                  ledgerDir: statusTmpDir,
++                  operationKey: record.operationKey,
++                  reason: 'provider_terminal_no_charge',
++                });
++                reconciliationLogs.push(
++                  release.kind === 'released'
++                    ? `↩️ [Orçamento] Reserva de ${entry.sceneId} liberada (término terminal sem cobrança).`
++                    : `⚠️ [Orçamento] Reserva de ${entry.sceneId} mantida (estado ${release.kind}).`
++                );
++              }
++            }
++          } catch (reconcileError) {
++            console.warn(`[Pipeline Status] Reconciliação Higgsfield falhou para ${idValidation.data}:`, reconcileError);
++            reconciliationLogs.push(`⚠️ RECONCILE_UNAVAILABLE [higgsfield]: não foi possível consultar as gerações pagas agora — reservas preservadas.`);
++          }
++        } else {
++          reconciliationLogs.push(`⚠️ RECONCILE_UNAVAILABLE [higgsfield]: HF_API_KEY ausente — reservas preservadas; reconcilie após restaurar a credencial.`);
++        }
++        if (higgsfieldWithoutId.length) {
++          reconciliationLogs.push(`♻️ [higgsfield] ${higgsfieldWithoutId.length} submissão(ões) incerta(s) sem requestId — a retomada resubmete a MESMA chave/payload (nunca chave nova).`);
++        }
++      }
+       jobData = {
+         ...jobData,
+         status: 'FAILED',
+         progress: 0,
+         failureCode: 'WORKER_RESTARTED',
+         failureStage: 'reconciliation',
++        costReserveUsdMicros: sumHiggsfieldReserves(allRequests),
+         updatedAt: new Date().toISOString(),
+         logs: [
+           ...(Array.isArray(jobData.logs) ? jobData.logs : []),
+@@ -1297,12 +1693,15 @@ export async function GET(req: Request) {
+           ...reconciliationLogs,
+           ...(uncertainPredictions.length && !reconciliationLogs.length
+             ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
++            : []),
++          ...(higgsfieldWithId.length && !reconciliationLogs.length
++            ? [`⚠️ HIGGSFIELD SUBMISSIONS UNCERTAIN (reservas retidas — reconciliar antes de relançar): ${higgsfieldWithId.join(', ')}`]
+             : [])
+         ]
+       };
+       writeJsonAtomic(jobFilePath, jobData);
+       // O dono anterior do lease está morto (provado acima): libera para a retomada.
+-      releaseResumeLease(path.resolve(process.cwd(), '.tmp'), idValidation.data);
++      releaseResumeLease(statusTmpDir, idValidation.data);
+     }
+     return NextResponse.json(jobData);
+ 
+diff --git a/src/lib/resume-policy.ts b/src/lib/resume-policy.ts
+index 3618221..3a0f7a0 100644
+--- a/src/lib/resume-policy.ts
++++ b/src/lib/resume-policy.ts
+@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
+ import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+ import path from 'node:path';
+ import type { RunPipelineInput } from '@/lib/validations';
++import type { VideoProviderName } from '@/lib/video-provider';
+ 
+ // BK-05/BK-16 — contrato de retomada:
+ // 1. Resume com roteiro/voz/aspecto/referências alterados => conflito explícito,
+@@ -37,7 +38,24 @@ export function immutablePipelineConfig(data: Omit<RunPipelineInput, 'approval'
+     };
+ }
+ 
+-export function pipelineConfigHash(data: Omit<RunPipelineInput, 'approval' | 'resumeJobId'>): string {
++export function pipelineConfigHash(
++    data: Omit<RunPipelineInput, 'approval' | 'resumeJobId'>,
++    provider?: { provider: VideoProviderName; model: string },
++): string {
++    // Higgsfield: provedor/modelo congelados entram no hash — retomada com
++    // provedor ou modelo diferente é conflito explícito (nunca reutiliza clipe
++    // gerado por outro provedor/modelo).
++    if (provider && provider.provider === 'higgsfield') {
++        return crypto
++            .createHash('sha256')
++            .update(JSON.stringify({
++                ...immutablePipelineConfig(data),
++                videoProvider: { provider: provider.provider, model: provider.model },
++            }))
++            .digest('hex');
++    }
++    // Replicate/legado: hash byte-idêntico ao anterior — jobs antigos continuam
++    // retomáveis sem migração (fallback de provedor deles já é implícito).
+     return crypto
+         .createHash('sha256')
+         .update(JSON.stringify(immutablePipelineConfig(data)))
+diff --git a/tests/validations.test.ts b/tests/validations.test.ts
+index 6ae3059..8520c6c 100644
+--- a/tests/validations.test.ts
++++ b/tests/validations.test.ts
+@@ -1,6 +1,6 @@
+ import assert from 'node:assert/strict';
+ import { describe, it } from 'node:test';
+-import { balanceSchema } from '@/lib/validations';
++import { balanceSchema, runPipelineSchema } from '@/lib/validations';
+ 
+ // renderSchema/voiceSchema saíram com /api/render e /api/ai/voice (arquivadas em
+ // 12/10/2026). A validação do pipeline vivo está em pipeline-checkpoint e cast-registry.
+@@ -11,3 +11,32 @@ describe('balanceSchema', () => {
+         assert.equal(balanceSchema.safeParse({ elevenlabs: 'x'.repeat(513) }).success, false);
+     });
+ });
++
++describe('runPipelineSchema — cliente nunca fornece credencial/modelo de Higgsfield', () => {
++    const baseInput = {
++        script: [{
++            id: 'scene1',
++            characterId: 'boomer',
++            text: 'Mate, look at this',
++            shotType: 'WIDE',
++            action: 'leans into the microphone',
++            emotion: 'excited',
++            durationEst: 5,
++        }],
++    };
++
++    it('campos desconhecidos do cliente (hfApiKey/videoProvider/higgsfieldModel) são descartados', () => {
++        const parsed = runPipelineSchema.safeParse({
++            ...baseInput,
++            hfApiKey: 'hf-evil-injected-key',
++            videoProvider: 'higgsfield',
++            higgsfieldModel: 'evil/model',
++        });
++        assert.equal(parsed.success, true);
++        if (parsed.success) {
++            assert.equal('hfApiKey' in parsed.data, false);
++            assert.equal('videoProvider' in parsed.data, false);
++            assert.equal('higgsfieldModel' in parsed.data, false);
++        }
++    });
++});
+diff --git a/src/lib/canonical-json.ts b/src/lib/canonical-json.ts
+new file mode 100644
+index 0000000..1f7139d
+--- /dev/null
++++ b/src/lib/canonical-json.ts
+@@ -0,0 +1,15 @@
++// Serialização canônica (chaves ordenadas) para hashes estáveis.
++// JSON.stringify comum depende da ordem de inserção; retomadas precisam do MESMO
++// hash para o mesmo conteúdo (payload/idempotência), mesmo após round-trip em disco.
++export function canonicalJson(value: unknown): string {
++    if (Array.isArray(value)) {
++        return `[${value.map(canonicalJson).join(',')}]`;
++    }
++    if (value && typeof value === 'object') {
++        const entries = Object.entries(value as Record<string, unknown>)
++            .filter(([, v]) => v !== undefined)
++            .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
++        return `{${entries.map(([key, val]) => `${JSON.stringify(key)}:${canonicalJson(val)}`).join(',')}}`;
++    }
++    return JSON.stringify(value) ?? 'null';
++}
+diff --git a/src/lib/cost-ledger.ts b/src/lib/cost-ledger.ts
+new file mode 100644
+index 0000000..fc2f9aa
+--- /dev/null
++++ b/src/lib/cost-ledger.ts
+@@ -0,0 +1,358 @@
++// Ledger durável do teto global dos testes iniciais Higgsfield (US$30 acumulados,
++// não por job). Tudo em micros USD inteiros, persistido em disco e compartilhado
++// entre jobs/processos/reinícios.
++//
++// Design lock-free: a reserva é criada ATOMICAMENTE (link exclusivo) ANTES da soma
++// de verificação. Quem chega depois enxerga as reservas anteriores e aborta se o
++// teto estourar — corridas entre processos podem rejeitar a mais (conservador),
++// jamais gastar a mais. Reserva sem resultado conhecido permanece retida:
++// submissão incerta nunca libera verba por suposição.
++
++import crypto from 'node:crypto';
++import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync, linkSync, renameSync } from 'node:fs';
++import path from 'node:path';
++import { parseUsdToMicros, MICRO_PER_USD } from '@/lib/money';
++
++export { MICRO_PER_USD };
++
++const RELEASED_RETENTION_MS = 7 * 24 * 60 * 60_000;
++
++// Liberação SÓ com contrato documentado de não-cobrança:
++// - submission_rejected_no_generation: o provedor recusou o pedido (4xx) — nenhuma
++//   geração foi criada, logo nada pode ser cobrado.
++// - provider_terminal_no_charge: término confirmado failed/nsfw/canceled no
++//   contrato do provedor (cobre na conclusão, não no fracasso terminal).
++// Estados desconhecidos/ambíguos NUNCA liberam — a reserva fica retida.
++export type ReleaseReason = 'submission_rejected_no_generation' | 'provider_terminal_no_charge';
++
++const RELEASE_REASONS: readonly ReleaseReason[] = [
++    'submission_rejected_no_generation',
++    'provider_terminal_no_charge',
++];
++
++type LedgerState = 'RESERVED' | 'CHARGED' | 'RELEASED';
++
++type LedgerRecord = {
++    key: string;
++    amountMicros: number;
++    payloadHash: string;
++    state: LedgerState;
++    jobId?: string;
++    sceneId?: string;
++    releaseReason?: string;
++    createdAt: string;
++    updatedAt: string;
++};
++
++export type CostReservation = {
++    operationKey: string;
++    filePath: string;
++    amountMicros: number;
++};
++
++export type ReserveOutcome =
++    | { kind: 'reserved'; reservation: CostReservation }
++    // Mesma chave + mesmo payload: idempotente, NUNCA reserva duas vezes.
++    | { kind: 'existing'; reservation: CostReservation }
++    | { kind: 'conflict'; reason: 'PAYLOAD_MISMATCH' | 'KEY_RELEASED_USE_NEW_ATTEMPT' }
++    | { kind: 'budget_exceeded'; requestedMicros: number; committedMicros: number; capMicros: number }
++    | { kind: 'ledger_corrupt'; filePath: string };
++
++export type ChargeOutcome =
++    | { kind: 'charged' }
++    | { kind: 'already_charged' }
++    | { kind: 'unknown_key' }
++    | { kind: 'conflict'; state: string };
++
++export type ReleaseOutcome =
++    | { kind: 'released' }
++    | { kind: 'already_released' }
++    | { kind: 'unknown_key' }
++    | { kind: 'charged_cannot_release' }
++    | { kind: 'conflict'; state: string };
++
++export type BudgetSummary = {
++    capMicros: number;
++    reservedMicros: number;
++    chargedMicros: number;
++    remainingMicros: number;
++    corruptEntries: string[];
++};
++
++function reservationPath(ledgerDir: string, operationKey: string): string {
++    const digest = crypto.createHash('sha256').update(operationKey).digest('hex');
++    return path.join(ledgerDir, `budget_${digest}.json`);
++}
++
++function readRecord(filePath: string): { ok: true; record: LedgerRecord } | { ok: false } {
++    try {
++        const record = JSON.parse(readFileSync(filePath, 'utf8')) as LedgerRecord;
++        if (
++            typeof record?.key !== 'string'
++            || typeof record?.amountMicros !== 'number'
++            || typeof record?.state !== 'string'
++            || typeof record?.payloadHash !== 'string'
++        ) {
++            return { ok: false };
++        }
++        return { ok: true, record };
++    } catch {
++        return { ok: false };
++    }
++}
++
++// Substituição atômica de registro existente (RESERVED → CHARGED/RELEASED).
++function writeRecordAtomic(filePath: string, record: LedgerRecord): void {
++    const tempPath = `${filePath}.tmp.${process.pid}.${crypto.randomUUID()}`;
++    writeFileSync(tempPath, JSON.stringify(record, null, 2), { flag: 'wx' });
++    try {
++        renameSync(tempPath, filePath);
++    } finally {
++        try { unlinkSync(tempPath); } catch { /* rename moveu; nada a limpar */ }
++    }
++}
++
++// Criação exclusiva: write em temporário + link. Se o destino já existe (EEXIST),
++// outro processo venceu a corrida pela MESMA chave — o perdedor adota o registro
++// existente. Leitores nunca veem arquivo parcial.
++function createReservationAtomically(filePath: string, record: LedgerRecord): boolean {
++    const tempPath = `${filePath}.tmp.${process.pid}.${crypto.randomUUID()}`;
++    try {
++        writeFileSync(tempPath, JSON.stringify(record, null, 2), { flag: 'wx' });
++        try {
++            linkSync(tempPath, filePath);
++            return true;
++        } catch (error) {
++            if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
++            throw error;
++        }
++    } finally {
++        try { unlinkSync(tempPath); } catch { /* já removido */ }
++    }
++}
++
++function scanLedger(ledgerDir: string): {
++    reservedMicros: number;
++    chargedMicros: number;
++    corrupt: string[];
++} {
++    let reservedMicros = 0;
++    let chargedMicros = 0;
++    const corrupt: string[] = [];
++    let entries: string[];
++    try {
++        entries = readdirSync(ledgerDir);
++    } catch {
++        return { reservedMicros, chargedMicros, corrupt };
++    }
++    for (const name of entries) {
++        if (!name.startsWith('budget_') || !name.endsWith('.json') || name.includes('.tmp.')) continue;
++        const filePath = path.join(ledgerDir, name);
++        const parsed = readRecord(filePath);
++        if (!parsed.ok) {
++            corrupt.push(name);
++            continue;
++        }
++        // Quantia negativa/corrompida no campo: conta como zero aqui, mas o registro
++        // ilegível como um todo é o caso tratado acima. Estados ativos somam.
++        const amount = Number.isFinite(parsed.record.amountMicros)
++            ? Math.max(0, Math.round(parsed.record.amountMicros))
++            : 0;
++        if (parsed.record.state === 'RESERVED') reservedMicros += amount;
++        if (parsed.record.state === 'CHARGED') chargedMicros += amount;
++    }
++    return { reservedMicros, chargedMicros, corrupt };
++}
++
++// Poda best-effort de liberações antigas (auditoria 7 dias). Reservas e cobranças
++// NUNCA são podadas — são a prova de dinheiro comprometido.
++function pruneReleased(ledgerDir: string, nowMs: number): void {
++    let entries: string[];
++    try {
++        entries = readdirSync(ledgerDir);
++    } catch {
++        return;
++    }
++    for (const name of entries) {
++        if (!name.startsWith('budget_') || !name.endsWith('.json') || name.includes('.tmp.')) continue;
++        const filePath = path.join(ledgerDir, name);
++        const parsed = readRecord(filePath);
++        if (!parsed.ok || parsed.record.state !== 'RELEASED') continue;
++        const updatedAt = Date.parse(parsed.record.updatedAt);
++        if (Number.isFinite(updatedAt) && nowMs - updatedAt > RELEASED_RETENTION_MS) {
++            try { unlinkSync(filePath); } catch { /* poda best-effort */ }
++        }
++    }
++}
++
++export function reserveCost(params: {
++    ledgerDir: string;
++    operationKey: string;
++    amountMicros: number;
++    payloadHash: string;
++    jobId?: string;
++    sceneId?: string;
++    capMicros: number;
++    now?: number;
++}): ReserveOutcome {
++    const { ledgerDir, operationKey, payloadHash, capMicros } = params;
++    const amountMicros = Math.round(params.amountMicros);
++    if (!Number.isSafeInteger(amountMicros) || amountMicros <= 0) {
++        throw new Error(`cost-ledger: quantia inválida para reserva: ${params.amountMicros}`);
++    }
++    if (!operationKey || operationKey.length > 200) {
++        throw new Error('cost-ledger: operationKey inválida');
++    }
++    if (!/^[0-9a-f]{64}$/.test(payloadHash)) {
++        throw new Error('cost-ledger: payloadHash deve ser sha256 hexadecimal');
++    }
++    if (!Number.isSafeInteger(capMicros) || capMicros <= 0) {
++        throw new Error('cost-ledger: capMicros inválido');
++    }
++
++    mkdirSync(ledgerDir, { recursive: true });
++    const filePath = reservationPath(ledgerDir, operationKey);
++
++    if (existsSync(filePath)) {
++        return adoptExisting(filePath, operationKey, payloadHash);
++    }
++
++    pruneReleased(ledgerDir, params.now ?? Date.now());
++
++    const nowIso = new Date(params.now ?? Date.now()).toISOString();
++    const record: LedgerRecord = {
++        key: operationKey,
++        amountMicros,
++        payloadHash,
++        state: 'RESERVED',
++        jobId: params.jobId,
++        sceneId: params.sceneId,
++        createdAt: nowIso,
++        updatedAt: nowIso,
++    };
++
++    let won: boolean;
++    try {
++        won = createReservationAtomically(filePath, record);
++    } catch (error) {
++        throw new Error(`cost-ledger: falha ao gravar reserva ${operationKey}: ${error instanceof Error ? error.message : String(error)}`);
++    }
++    if (!won) {
++        return adoptExisting(filePath, operationKey, payloadHash);
++    }
++
++    // Reserva-então-verifica: o arquivo próprio JÁ está na soma — a checagem é
++    // `total (inclusive esta reserva) <= teto`. Quem chega depois enxerga as
++    // reservas anteriores e aborta; corridas podem rejeitar a mais (conservador),
++    // jamais gastar a mais. Janela de crash entre criar e verificar retém no
++    // máximo UMA reserva pendente (conservador, nunca silencia verba).
++    const scan = scanLedger(ledgerDir);
++    if (scan.corrupt.length) {
++        try { unlinkSync(filePath); } catch { /* retenção conservadora */ }
++        return { kind: 'ledger_corrupt', filePath: path.join(ledgerDir, scan.corrupt[0]) };
++    }
++    const committed = scan.reservedMicros + scan.chargedMicros;
++    if (committed > capMicros) {
++        try { unlinkSync(filePath); } catch {
++            // Rollback falhou: a reserva permanece retida (conservador) e o erro
++            // aponta o arquivo para intervenção manual.
++            throw new Error(`cost-ledger: rollback da reserva excedente falhou (${operationKey}) — verifique ${filePath}`);
++        }
++        return {
++            kind: 'budget_exceeded',
++            requestedMicros: amountMicros,
++            committedMicros: committed,
++            capMicros,
++        };
++    }
++    return { kind: 'reserved', reservation: { operationKey, filePath, amountMicros } };
++}
++
++function adoptExisting(filePath: string, operationKey: string, payloadHash: string): ReserveOutcome {
++    const parsed = readRecord(filePath);
++    if (!parsed.ok) return { kind: 'ledger_corrupt', filePath };
++    const existing = parsed.record;
++    if (existing.key !== operationKey) return { kind: 'ledger_corrupt', filePath };
++    if (existing.payloadHash !== payloadHash) {
++        return { kind: 'conflict', reason: 'PAYLOAD_MISMATCH' };
++    }
++    if (existing.state === 'RELEASED') {
++        // Retomada após falha confirmada exige NOVA chave de tentativa (nova reserva).
++        return { kind: 'conflict', reason: 'KEY_RELEASED_USE_NEW_ATTEMPT' };
++    }
++    return {
++        kind: 'existing',
++        reservation: { operationKey, filePath, amountMicros: existing.amountMicros },
++    };
++}
++
++// Cobrança confirmada (geração concluída): fica retida para sempre no teto.
++export function chargeCost(params: {
++    ledgerDir: string;
++    operationKey: string;
++    now?: number;
++}): ChargeOutcome {
++    const filePath = reservationPath(params.ledgerDir, params.operationKey);
++    const parsed = readRecord(filePath);
++    if (!parsed.ok) return { kind: 'unknown_key' };
++    if (parsed.record.state === 'CHARGED') return { kind: 'already_charged' };
++    if (parsed.record.state !== 'RESERVED') {
++        return { kind: 'conflict', state: parsed.record.state };
++    }
++    writeRecordAtomic(filePath, {
++        ...parsed.record,
++        state: 'CHARGED',
++        updatedAt: new Date(params.now ?? Date.now()).toISOString(),
++    });
++    return { kind: 'charged' };
++}
++
++export function releaseCost(params: {
++    ledgerDir: string;
++    operationKey: string;
++    reason: ReleaseReason;
++    now?: number;
++}): ReleaseOutcome {
++    if (!RELEASE_REASONS.includes(params.reason)) {
++        throw new Error(`cost-ledger: motivo de liberação não documentado: ${params.reason}`);
++    }
++    const filePath = reservationPath(params.ledgerDir, params.operationKey);
++    const parsed = readRecord(filePath);
++    if (!parsed.ok) return { kind: 'unknown_key' };
++    if (parsed.record.state === 'RELEASED') return { kind: 'already_released' };
++    if (parsed.record.state === 'CHARGED') return { kind: 'charged_cannot_release' };
++    if (parsed.record.state !== 'RESERVED') {
++        return { kind: 'conflict', state: parsed.record.state };
++    }
++    writeRecordAtomic(filePath, {
++        ...parsed.record,
++        state: 'RELEASED',
++        releaseReason: params.reason,
++        updatedAt: new Date(params.now ?? Date.now()).toISOString(),
++    });
++    return { kind: 'released' };
++}
++
++export function readBudgetSummary(ledgerDir: string, capMicros: number): BudgetSummary {
++    const scan = scanLedger(ledgerDir);
++    const committed = scan.reservedMicros + scan.chargedMicros;
++    return {
++        capMicros,
++        reservedMicros: scan.reservedMicros,
++        chargedMicros: scan.chargedMicros,
++        remainingMicros: Math.max(0, capMicros - committed),
++        corruptEntries: scan.corrupt,
++    };
++}
++
++// Teto dos testes iniciais: US$30 acumulados por padrão (decisão do Felipe,
++// 08/11/2026). Override documentado por ambiente; inválido é erro explícito.
++export function budgetCapMicrosFromEnv(env: Record<string, string | undefined> = process.env): number {
++    const raw = (env.HIGGSFIELD_INITIAL_TEST_CAP_USD ?? '').trim();
++    if (raw === '') return 30 * MICRO_PER_USD;
++    const micros = parseUsdToMicros(raw);
++    if (micros === null || micros <= 0) {
++        throw new Error(`HIGGSFIELD_INITIAL_TEST_CAP_USD inválido: "${raw.slice(0, 64)}" (use USD decimal, ex.: 30 ou 30.00)`);
++    }
++    return micros;
++}
+diff --git a/src/lib/higgsfield-scene.ts b/src/lib/higgsfield-scene.ts
+new file mode 100644
+index 0000000..e2d3b35
+--- /dev/null
++++ b/src/lib/higgsfield-scene.ts
+@@ -0,0 +1,523 @@
++// Orquestração de UMA cena no Higgsfield: preparar imagem → estimar → reservar →
++// persistir (CRÍTICO) → submeter → sondar. A persistência crítica é injetada pelo
++// worker: falha de gravação ANTES do POST impede a chamada paga; falha DEPOIS deixa
++// estado recuperável (payload/chave/reserva já em disco ⇒ resubmissão com a MESMA chave).
++
++import crypto from 'node:crypto';
++import {
++    HiggsfieldClient,
++    ProviderUrlError,
++    SubmissionAmbiguousError,
++    SubmissionRejectedError,
++    buildHiggsfieldPayload,
++    computePayloadHash,
++    validateMediaUrl,
++    type HiggsfieldSound,
++    type HiggsfieldStatusOutcome,
++} from '@/lib/higgsfield';
++import { chargeCost, releaseCost, reserveCost } from '@/lib/cost-ledger';
++import { formatUsd } from '@/lib/money';
++
++export type HiggsfieldSceneRequest = {
++    provider: 'higgsfield';
++    model: string;
++    sceneId: string;
++    attempt: number;
++    // Valor do header Idempotency-Key enviado ao provedor (estável por tentativa).
++    idempotencyKey: string;
++    // Chave da reserva no ledger (hf:<job>:<cena>:a<tentativa>).
++    operationKey: string;
++    // Payload EXATO preparado — imutável; retomadas resubmetem ESTE objeto.
++    payload: ReturnType<typeof buildHiggsfieldPayload>;
++    payloadHash: string;
++    estimatedUsdMicros: number;
++    reservedUsdMicros: number;
++    requestId: string | null;
++    statusUrl: string | null;
++    cancelUrl?: string;
++    // POST com resultado desconhecido (rede/timeout/5xx). A retomada resubmete a
++    // MESMA chave independentemente deste flag — ele documenta a causa.
++    submissionUnknown: boolean;
++    preparedAt: string;
++    submittedAt?: string;
++};
++
++export type HiggsfieldSceneErrorCode =
++    | 'INVALID_ANCHOR'
++    | 'IMAGE_UPLOAD_FAILED'
++    | 'PRICE_UNKNOWN'
++    | 'BUDGET_EXCEEDED'
++    | 'RESERVE_CONFLICT'
++    | 'SUBMISSION_REJECTED'
++    | 'SUBMISSION_UNKNOWN'
++    | 'TERMINAL_FAILURE'
++    | 'POLL_TIMEOUT'
++    | 'PROVIDER_UNKNOWN';
++
++export class HiggsfieldSceneError extends Error {
++    constructor(
++        readonly code: HiggsfieldSceneErrorCode,
++        message: string,
++        readonly details: Record<string, unknown> = {},
++    ) {
++        super(message);
++        this.name = 'HiggsfieldSceneError';
++    }
++}
++
++const MAX_ANCHOR_DATA_URI_CHARS = 8_000_000;
++const DEFAULT_POLL_DEADLINE_MS = 10 * 60_000;
++const DEFAULT_POLL_INTERVAL_MS = 5_000;
++const ANCHOR_DATA_URI_PATTERN = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/i;
++
++export function higgsfieldOperationKey(jobId: string, sceneId: string, attempt: number): string {
++    return `hf:${jobId}:${sceneId}:a${attempt}`;
++}
++
++export function higgsfieldIdempotencyKey(operationKey: string, payloadHashValue: string): string {
++    return `hfk-${crypto.createHash('sha256').update(`${operationKey}|${payloadHashValue}`).digest('hex')}`;
++}
++
++// HTTPS público já alcançável é reutilizado sem buscar arquivo privado. Data URI
++// (local, recortado pelo reframe existente) é decodificado e enviado ao storage do
++// provedor; o payload guarda a public_url — nunca a URL temporária de upload.
++export async function prepareHiggsfieldAnchorImage(
++    anchor: string | undefined,
++    client: HiggsfieldClient,
++    log: (message: string) => void,
++): Promise<string> {
++    if (!anchor) {
++        throw new HiggsfieldSceneError('INVALID_ANCHOR', 'cena sem imagem âncora (reframe ausente)');
++    }
++    if (anchor.startsWith('https://')) {
++        return validateMediaUrl(anchor, 'âncora remota');
++    }
++    const match = ANCHOR_DATA_URI_PATTERN.exec(anchor);
++    if (!match) {
++        throw new HiggsfieldSceneError(
++            'INVALID_ANCHOR',
++            `âncora não suportada pela API direta (somente https ou data URI png/jpeg): "${anchor.slice(0, 48)}..."`,
++        );
++    }
++    if (anchor.length > MAX_ANCHOR_DATA_URI_CHARS) {
++        throw new HiggsfieldSceneError('INVALID_ANCHOR', `data URI da âncora grande demais (${anchor.length} caracteres)`);
++    }
++    const contentType = match[1].toLowerCase() === 'png' ? 'image/png' as const : 'image/jpeg' as const;
++    const bytes = Buffer.from(match[2], 'base64');
++    if (!bytes.length) {
++        throw new HiggsfieldSceneError('INVALID_ANCHOR', 'data URI da âncora decodificou vazio');
++    }
++    try {
++        const grant = await client.createImageUpload(contentType);
++        await client.uploadImageBytes(grant, new Uint8Array(bytes));
++        log(`📤 [Higgsfield] Âncora enviada ao storage do provedor (${contentType}, ${bytes.length} bytes).`);
++        return grant.publicUrl;
++    } catch (error) {
++        const message = error instanceof Error ? error.message : String(error);
++        throw new HiggsfieldSceneError('IMAGE_UPLOAD_FAILED', `upload da âncora falhou: ${message}`);
++    }
++}
++
++export type LaunchHiggsfieldSceneParams = {
++    jobId: string;
++    sceneId: string;
++    attempt: number;
++    anchor: string | undefined;
++    prompt: string;
++    duration: number;
++    sound: HiggsfieldSound;
++    client: HiggsfieldClient;
++    model: string;
++    ledgerDir: string;
++    capMicros: number;
++    // Persistência CRÍTICA: deve lançar se a gravação falhar (nunca lançar geração
++    // paga sem checkpoint). O worker grava o registro no estado do job.
++    persistRequest: (record: HiggsfieldSceneRequest) => void;
++    log: (message: string) => void;
++    now?: () => Date;
++};
++
++export async function launchHiggsfieldScene(params: LaunchHiggsfieldSceneParams): Promise<HiggsfieldSceneRequest> {
++    const now = params.now ?? (() => new Date());
++
++    let imageUrl: string;
++    try {
++        imageUrl = await prepareHiggsfieldAnchorImage(params.anchor, params.client, params.log);
++    } catch (error) {
++        if (error instanceof HiggsfieldSceneError) throw error;
++        throw new HiggsfieldSceneError('IMAGE_UPLOAD_FAILED', error instanceof Error ? error.message : String(error));
++    }
++
++    const payload = buildHiggsfieldPayload({
++        imageUrl,
++        prompt: params.prompt,
++        duration: params.duration,
++        sound: params.sound,
++    });
++    const digest = computePayloadHash(payload);
++
++    // 1. Cotação autoritativa com o payload real. Preço desconhecido/ilegível
++    //    NUNCA autoriza geração (não há adivinhação de preço).
++    const estimate = await params.client.estimate(params.model, payload);
++    if (!estimate.ok) {
++        throw new HiggsfieldSceneError(
++            'PRICE_UNKNOWN',
++            `cotação recusada (${estimate.code}${estimate.status ? ` HTTP ${estimate.status}` : ''})${estimate.reason ? `: ${estimate.reason}` : ''} — geração não autorizada`,
++        );
++    }
++    params.log(`💵 [Higgsfield] Estimativa autenticada: ${formatUsd(estimate.usdMicros)} (modelo ${params.model}).`);
++
++    // 2. Reserva durável contra o teto global dos testes iniciais.
++    const operationKey = higgsfieldOperationKey(params.jobId, params.sceneId, params.attempt);
++    const idempotencyKeyValue = higgsfieldIdempotencyKey(operationKey, digest);
++    const reserve = reserveCost({
++        ledgerDir: params.ledgerDir,
++        operationKey,
++        amountMicros: estimate.usdMicros,
++        payloadHash: digest,
++        jobId: params.jobId,
++        sceneId: params.sceneId,
++        capMicros: params.capMicros,
++        now: now().getTime(),
++    });
++    if (reserve.kind === 'budget_exceeded') {
++        throw new HiggsfieldSceneError(
++            'BUDGET_EXCEEDED',
++            `teto de testes atingido: pedido ${formatUsd(reserve.requestedMicros)}, comprometido ${formatUsd(reserve.committedMicros)}, teto ${formatUsd(reserve.capMicros)}`,
++            { requestedMicros: reserve.requestedMicros, committedMicros: reserve.committedMicros, capMicros: reserve.capMicros },
++        );
++    }
++    if (reserve.kind === 'ledger_corrupt') {
++        throw new HiggsfieldSceneError('RESERVE_CONFLICT', `ledger de orçamento ilegível (${reserve.filePath}) — intervenção manual antes de novos gastos`);
++    }
++    if (reserve.kind === 'conflict') {
++        throw new HiggsfieldSceneError('RESERVE_CONFLICT', `reserva conflitante para ${operationKey}: ${reserve.reason}`);
++    }
++    const reservedMicros = reserve.reservation.amountMicros;
++    params.log(`🏦 [Orçamento] Reserva de ${formatUsd(reservedMicros)} registrada (${operationKey}).`);
++
++    const record: HiggsfieldSceneRequest = {
++        provider: 'higgsfield',
++        model: params.model,
++        sceneId: params.sceneId,
++        attempt: params.attempt,
++        idempotencyKey: idempotencyKeyValue,
++        operationKey,
++        payload,
++        payloadHash: digest,
++        estimatedUsdMicros: estimate.usdMicros,
++        reservedUsdMicros: reservedMicros,
++        requestId: null,
++        statusUrl: null,
++        submissionUnknown: false,
++        preparedAt: now().toISOString(),
++    };
++
++    // 3. Persistência CRÍTICA antes da chamada paga: gravação falhou ⇒ sem POST.
++    params.persistRequest(record);
++
++    // 4. Submissão idempotente (chave estável derivada da operação + payload).
++    try {
++        const acceptance = await params.client.submit(params.model, payload, idempotencyKeyValue);
++        record.requestId = acceptance.requestId;
++        record.statusUrl = acceptance.statusUrl;
++        record.cancelUrl = acceptance.cancelUrl;
++        record.submittedAt = now().toISOString();
++    } catch (error) {
++        if (error instanceof SubmissionRejectedError) {
++            // Pedido NÃO aceito: sem geração criada ⇒ sem cobrança (contrato documentado).
++            const release = releaseCost({
++                ledgerDir: params.ledgerDir,
++                operationKey,
++                reason: 'submission_rejected_no_generation',
++                now: now().getTime(),
++            });
++            params.log(
++                release.kind === 'released'
++                    ? `↩️ [Orçamento] Reserva liberada: submissão rejeitada (HTTP ${error.status}), nenhuma geração criada.`
++                    : `⚠️ [Orçamento] Reserva MANTIDA (liberação indisponível: ${release.kind}) após rejeição HTTP ${error.status}.`,
++            );
++            throw new HiggsfieldSceneError('SUBMISSION_REJECTED', `submissão rejeitada pelo provedor (HTTP ${error.status})`, { status: error.status });
++        }
++        const ambiguous = error instanceof SubmissionAmbiguousError
++            ? error
++            : new SubmissionAmbiguousError('network', error instanceof Error ? error.message : String(error));
++        record.submissionUnknown = true;
++        try {
++            params.persistRequest(record);
++        } catch (persistError) {
++            params.log(`⚠️ [Higgsfield] Falha ao persistir estado incerto: ${persistError instanceof Error ? persistError.message : String(persistError)} — a retomada usa a MESMA chave gravada antes do POST.`);
++        }
++        throw new HiggsfieldSceneError(
++            'SUBMISSION_UNKNOWN',
++            `submissão com resultado desconhecido (${ambiguous.stage}): ${ambiguous.message} — retomada resubmete a MESMA chave/payload`,
++        );
++    }
++
++    // 5. Identificadores aceitos persistidos ANTES do polling.
++    params.persistRequest(record);
++    params.log(`🎬 [Higgsfield] Submissão aceita: ${record.requestId}.`);
++    return record;
++}
++
++export type PollHiggsfieldSceneParams = {
++    record: HiggsfieldSceneRequest;
++    client: HiggsfieldClient;
++    ledgerDir: string;
++    deadlineMs?: number;
++    intervalMs?: number;
++    sleep?: (ms: number) => Promise<void>;
++    now?: () => number;
++    log: (message: string) => void;
++};
++
++export type PollHiggsfieldSceneResult = {
++    outputUrl: string;
++    charge: 'charged' | 'already_charged' | 'conflict';
++};
++
++// Polling com prazo e backoff fixo. Términos confirmados atualizam o ledger:
++// completed ⇒ cobrado (fica retido); failed/nsfw/canceled ⇒ liberação documentada.
++// Incerteza prolongada termina em POLL_TIMEOUT com reserva retida (reconciliável).
++export async function pollHiggsfieldScene(params: PollHiggsfieldSceneParams): Promise<PollHiggsfieldSceneResult> {
++    const { record } = params;
++    if (!record.statusUrl) {
++        throw new HiggsfieldSceneError(
++            'PROVIDER_UNKNOWN',
++            `cena ${record.sceneId}: requestId ${record.requestId} sem statusUrl persistido — reconciliar manualmente antes de gastar de novo`,
++        );
++    }
++    const deadlineMs = params.deadlineMs ?? DEFAULT_POLL_DEADLINE_MS;
++    const intervalMs = params.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
++    const sleep = params.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
++    const now = params.now ?? Date.now;
++    const deadline = now() + deadlineMs;
++
++    for (;;) {
++        if (now() >= deadline) {
++            throw new HiggsfieldSceneError(
++                'POLL_TIMEOUT',
++                `polling excedeu ${Math.round(deadlineMs / 1000)}s (requestId ${record.requestId}; reserva retida; retomada reconcilia com o provedor)`,
++            );
++        }
++
++        let outcome: HiggsfieldStatusOutcome;
++        try {
++            outcome = await params.client.getStatus(record.statusUrl);
++        } catch (error) {
++            if (error instanceof ProviderUrlError) {
++                throw new HiggsfieldSceneError(
++                    'PROVIDER_UNKNOWN',
++                    `status_url não confiável: ${error.message} — credencial não enviada; reconciliar manualmente`,
++                );
++            }
++            // Rede instável: continua tentando até o prazo (nunca relança às cegas).
++            outcome = { kind: 'unknown', reason: error instanceof Error ? error.message : String(error) };
++        }
++
++        if (outcome.kind === 'succeeded') {
++            const charge = chargeCost({ ledgerDir: params.ledgerDir, operationKey: record.operationKey, now: now() });
++            if (charge.kind === 'charged') {
++                params.log(`💰 [Orçamento] Geração concluída: ${formatUsd(record.reservedUsdMicros)} confirmados como cobrados.`);
++            } else if (charge.kind === 'conflict') {
++                params.log(`⚠️ [Orçamento] Cobrança de ${record.sceneId} em estado conflitante (${charge.state}) — reserve preservada, revise o ledger.`);
++            }
++            return {
++                outputUrl: outcome.outputUrl,
++                charge: charge.kind === 'charged' ? 'charged' : charge.kind === 'already_charged' ? 'already_charged' : 'conflict',
++            };
++        }
++
++        if (outcome.kind === 'failed_terminal') {
++            const release = releaseCost({
++                ledgerDir: params.ledgerDir,
++                operationKey: record.operationKey,
++                reason: 'provider_terminal_no_charge',
++                now: now(),
++            });
++            params.log(
++                release.kind === 'released'
++                    ? `↩️ [Orçamento] Reserva liberada: término ${outcome.terminalStatus} sem cobrança (contrato do provedor).`
++                    : `⚠️ [Orçamento] Reserva MANTIDA após término ${outcome.terminalStatus} (estado ${release.kind}).`,
++            );
++            throw new HiggsfieldSceneError(
++                'TERMINAL_FAILURE',
++                `geração terminou como ${outcome.terminalStatus}${outcome.error ? `: ${outcome.error}` : ''}`,
++                { terminalStatus: outcome.terminalStatus },
++            );
++        }
++
++        if (outcome.kind === 'processing') {
++            await sleep(intervalMs);
++            continue;
++        }
++        params.log(`⏳ [Higgsfield] status provisoriamente ilegível: ${outcome.reason}`);
++        await sleep(intervalMs);
++    }
++}
++
++export type ResubmitHiggsfieldSceneParams = {
++    record: HiggsfieldSceneRequest;
++    client: HiggsfieldClient;
++    ledgerDir: string;
++    capMicros: number;
++    persistRequest: (record: HiggsfieldSceneRequest) => void;
++    log: (message: string) => void;
++    now?: () => Date;
++};
++
++// Retomada de POST ambíguo: MESMA chave, MESMO payload persistido. Se o provedor
++// já aceitou a primeira tentativa, a idempotência dele devolve o MESMO requestId.
++// Nunca criar chave nova aqui — isso duplicaria geração paga.
++export async function resubmitHiggsfieldScene(params: ResubmitHiggsfieldSceneParams): Promise<HiggsfieldSceneRequest> {
++    const { record } = params;
++    const now = params.now ?? (() => new Date());
++    if (record.requestId) {
++        throw new HiggsfieldSceneError('PROVIDER_UNKNOWN', 'resubmissão exige registro SEM requestId — consulte o status existente em vez disso');
++    }
++
++    // Reserva original continua válida (mesma chave ⇒ nunca reserva duas vezes).
++    const reserve = reserveCost({
++        ledgerDir: params.ledgerDir,
++        operationKey: record.operationKey,
++        amountMicros: record.reservedUsdMicros,
++        payloadHash: record.payloadHash,
++        sceneId: record.sceneId,
++        capMicros: params.capMicros,
++        now: now().getTime(),
++    });
++    if (reserve.kind === 'budget_exceeded') {
++        throw new HiggsfieldSceneError('BUDGET_EXCEEDED', `teto atingido na retomada (reserva anterior pode ter sido podada): ${reserve.requestedMicros} micros`);
++    }
++    if (reserve.kind === 'ledger_corrupt') {
++        throw new HiggsfieldSceneError('RESERVE_CONFLICT', `ledger ilegível na retomada (${reserve.filePath})`);
++    }
++    if (reserve.kind === 'conflict') {
++        throw new HiggsfieldSceneError('RESERVE_CONFLICT', `reserva conflitante na retomada (${record.operationKey}): ${reserve.reason}`);
++    }
++
++    params.log('♻️ [Higgsfield] Retomada: resubmetendo a MESMA chave e o MESMO payload persistidos.');
++    try {
++        const acceptance = await params.client.submit(record.model, record.payload, record.idempotencyKey);
++        const updated: HiggsfieldSceneRequest = {
++            ...record,
++            requestId: acceptance.requestId,
++            statusUrl: acceptance.statusUrl,
++            cancelUrl: acceptance.cancelUrl,
++            submissionUnknown: false,
++            submittedAt: now().toISOString(),
++        };
++        params.persistRequest(updated);
++        params.log(`🎬 [Higgsfield] Resubmissão aceita: ${updated.requestId}.`);
++        return updated;
++    } catch (error) {
++        if (error instanceof SubmissionRejectedError) {
++            const release = releaseCost({
++                ledgerDir: params.ledgerDir,
++                operationKey: record.operationKey,
++                reason: 'submission_rejected_no_generation',
++                now: now().getTime(),
++            });
++            params.log(
++                release.kind === 'released'
++                    ? `↩️ [Orçamento] Reserva liberada: resubmissão rejeitada (HTTP ${error.status}). Próxima retomada usará chave de tentativa nova.`
++                    : `⚠️ [Orçamento] Reserva MANTIDA (liberação indisponível: ${release.kind}).`,
++            );
++            throw new HiggsfieldSceneError('SUBMISSION_REJECTED', `resubmissão rejeitada (HTTP ${error.status})`, { status: error.status });
++        }
++        const ambiguous = error instanceof SubmissionAmbiguousError
++            ? error
++            : new SubmissionAmbiguousError('network', error instanceof Error ? error.message : String(error));
++        try {
++            params.persistRequest({ ...record, submissionUnknown: true });
++        } catch (persistError) {
++            params.log(`⚠️ [Higgsfield] Falha ao persistir estado incerto: ${persistError instanceof Error ? persistError.message : String(persistError)}`);
++        }
++        throw new HiggsfieldSceneError('SUBMISSION_UNKNOWN', `resubmissão incerta (${ambiguous.stage}) — manter a MESMA chave na próxima retomada`);
++    }
++}
++
++// ── Plano de recuperação (puro, testável) ────────────────────────────────────
++
++export type HiggsfieldRecoveryPlan =
++    | { kind: 'fresh_launch' }
++    | { kind: 'resubmit_same_key' }
++    | { kind: 'keep_polling' }
++    | { kind: 'reuse_result'; outputUrl: string }
++    | { kind: 'relaunch_new_attempt' }
++    | { kind: 'stop_unresolved'; reason: string };
++
++export function planHiggsfieldRecovery(
++    record: Pick<HiggsfieldSceneRequest, 'requestId' | 'statusUrl'> | undefined,
++    outcome: HiggsfieldStatusOutcome | null | undefined,
++): HiggsfieldRecoveryPlan {
++    if (!record) return { kind: 'fresh_launch' };
++    if (!record.requestId) return { kind: 'resubmit_same_key' };
++    if (!outcome) {
++        return { kind: 'stop_unresolved', reason: 'consulta ao provedor indisponível — reserva retida; reconcilie antes de relançar' };
++    }
++    if (outcome.kind === 'succeeded') return { kind: 'reuse_result', outputUrl: outcome.outputUrl };
++    if (outcome.kind === 'processing') return { kind: 'keep_polling' };
++    if (outcome.kind === 'failed_terminal') return { kind: 'relaunch_new_attempt' };
++    return { kind: 'stop_unresolved', reason: outcome.reason };
++}
++
++// Consulta tolerante: erro de rede/URL vira null (o plano decide parar com segurança).
++export async function fetchHiggsfieldOutcomeOrNull(
++    client: HiggsfieldClient,
++    record: Pick<HiggsfieldSceneRequest, 'requestId' | 'statusUrl'>,
++): Promise<HiggsfieldStatusOutcome | null> {
++    if (!record.requestId || !record.statusUrl) return null;
++    try {
++        return await client.getStatus(record.statusUrl);
++    } catch {
++        return null;
++    }
++}
++
++// ── Reconciliação em lote (GET de status pós-restart) ────────────────────────
++
++export type HiggsfieldRequestReconciliation = {
++    sceneId: string;
++    requestId: string;
++    action: 'REUSE' | 'KEEP_POLLING' | 'RELAUNCH' | 'RECONCILE_UNAVAILABLE';
++    detail?: string;
++};
++
++export async function reconcileHiggsfieldRequests(
++    client: HiggsfieldClient,
++    requests: Record<string, Pick<HiggsfieldSceneRequest, 'requestId' | 'statusUrl'>>,
++): Promise<Record<string, HiggsfieldRequestReconciliation>> {
++    const results: Record<string, HiggsfieldRequestReconciliation> = {};
++    for (const [sceneId, request] of Object.entries(requests)) {
++        if (!request?.requestId || !request?.statusUrl) continue;
++        const outcome = await fetchHiggsfieldOutcomeOrNull(client, request);
++        const plan = planHiggsfieldRecovery(request, outcome);
++        const action = plan.kind === 'reuse_result'
++            ? 'REUSE'
++            : plan.kind === 'keep_polling'
++                ? 'KEEP_POLLING'
++                : plan.kind === 'relaunch_new_attempt'
++                    ? 'RELAUNCH'
++                    : 'RECONCILE_UNAVAILABLE';
++        results[sceneId] = {
++            sceneId,
++            requestId: request.requestId,
++            action,
++            detail: plan.kind === 'reuse_result'
++                ? plan.outputUrl
++                : plan.kind === 'stop_unresolved'
++                    ? plan.reason
++                    : undefined,
++        };
++    }
++    return results;
++}
++
++export function sumReservedMicros(requests: Iterable<HiggsfieldSceneRequest>): number {
++    let total = 0;
++    for (const record of requests) {
++        total += Number.isFinite(record?.reservedUsdMicros) ? record.reservedUsdMicros : 0;
++    }
++    return total;
++}
+diff --git a/src/lib/higgsfield.ts b/src/lib/higgsfield.ts
+new file mode 100644
+index 0000000..58ae44b
+--- /dev/null
++++ b/src/lib/higgsfield.ts
+@@ -0,0 +1,496 @@
++// Cliente HTTP NATIVO do Higgsfield (sem SDK). Contrato: architecture/higgsfield-api.md.
++//
++// Segurança da credencial:
++// - `Authorization: Key <HF_API_KEY>` vai SOMENTE para a origem oficial HTTPS,
++//   validada antes de qualquer envio.
++// - Redirecionamentos NUNCA são seguidos (redirect: 'manual' + rejeição 3xx):
++//   um redirect para origem alternativa vazaria a credencial.
++// - Downloads de mídia (storage/CDN) NUNCA recebem credenciais da API.
++// - A chave nunca aparece em mensagens de erro (scrub defensivo).
++
++import crypto from 'node:crypto';
++import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetch-retry';
++import { canonicalJson } from '@/lib/canonical-json';
++import { parseUsdToMicros } from '@/lib/money';
++
++export const HIGGSFIELD_API_ORIGIN = 'https://api.higgsfield.ai';
++
++export type HiggsfieldSound = 'on' | 'off';
++
++export type HiggsfieldGenerationPayload = {
++    image_url: string;
++    prompt?: string;
++    duration: number;
++    sound: HiggsfieldSound;
++    cfg_scale: number;
++    multi_shots: false;
++};
++
++// ── Erros tipados ────────────────────────────────────────────────────────────
++
++export class ProviderUrlError extends Error {
++    readonly code = 'URL_UNTRUSTED';
++    constructor(message: string) {
++        super(message);
++        this.name = 'ProviderUrlError';
++    }
++}
++
++export class MalformedProviderResponseError extends Error {
++    constructor(message: string) {
++        super(message);
++        this.name = 'MalformedProviderResponseError';
++    }
++}
++
++export class ProviderHttpError extends Error {
++    constructor(readonly status: number, message: string) {
++        super(message);
++        this.name = 'ProviderHttpError';
++    }
++}
++
++// 4xx (pedido NÃO aceito ⇒ sem geração ⇒ sem cobrança, contrato documentado).
++export class SubmissionRejectedError extends Error {
++    constructor(readonly status: number, message: string) {
++        super(message);
++        this.name = 'SubmissionRejectedError';
++    }
++}
++
++// Resultado DESCONHECIDO (rede/timeout/5xx/corpo ilegível): a submissão pode ter
++// sido aceita — retomar com a MESMA chave e o MESMO payload, nunca chave nova.
++export class SubmissionAmbiguousError extends Error {
++    constructor(readonly stage: 'network' | 'timeout' | 'server' | 'malformed_response', message: string) {
++        super(message);
++        this.name = 'SubmissionAmbiguousError';
++    }
++}
++
++// ── Validação de URLs ────────────────────────────────────────────────────────
++
++function assertSafeUrlShape(url: URL, label: string, rawUrl: string): void {
++    if (url.protocol !== 'https:') {
++        throw new ProviderUrlError(`${label}: somente HTTPS é aceito (origem ${url.origin || url.protocol})`);
++    }
++    if (url.username || url.password) {
++        throw new ProviderUrlError(`${label}: URL com credenciais embutidas rejeitada`);
++    }
++    // O construtor URL normaliza '/a/../b' para '/b' — a travessia precisa ser
++    // detectada na STRING bruta também (segmento '..' no caminho).
++    if (url.pathname.split('/').includes('..') || /(^|\/)\.\.(\/|$|\?|#)/.test(rawUrl)) {
++        throw new ProviderUrlError(`${label}: travessia de caminho rejeitada`);
++    }
++    if (url.href.length > 2048) {
++        throw new ProviderUrlError(`${label}: URL excessivamente longa`);
++    }
++}
++
++// Chamadas autenticadas: origem EXATA da API oficial, sob pena de vazamento.
++export function validateProviderApiUrl(rawUrl: string, label = 'url'): string {
++    let url: URL;
++    try {
++        url = new URL(rawUrl);
++    } catch {
++        throw new ProviderUrlError(`${label}: URL malformada`);
++    }
++    if (url.origin !== HIGGSFIELD_API_ORIGIN) {
++        throw new ProviderUrlError(
++            `${label}: origem não oficial "${url.origin}" — a credencial NÃO é enviada para origens alternativas`,
++        );
++    }
++    assertSafeUrlShape(url, label, rawUrl);
++    return url.toString();
++}
++
++// Mídia/CDN: qualquer host serve download SEM credenciais; https e sem userinfo.
++export function validateMediaUrl(rawUrl: string, label = 'url'): string {
++    let url: URL;
++    try {
++        url = new URL(rawUrl);
++    } catch {
++        throw new ProviderUrlError(`${label}: URL malformada`);
++    }
++    if (!url.hostname) throw new ProviderUrlError(`${label}: URL sem hostname`);
++    assertSafeUrlShape(url, label, rawUrl);
++    return url.toString();
++}
++
++function isRedirect(response: Response): boolean {
++    return (response.status >= 300 && response.status < 400) || response.type === 'opaqueredirect';
++}
++
++function readString(target: unknown, key: string): string | undefined {
++    if (!target || typeof target !== 'object') return undefined;
++    const value = (target as Record<string, unknown>)[key];
++    return typeof value === 'string' && value.trim() ? value : undefined;
++}
++
++// ── Payload (chaves EXATAS do contrato desta fase) ───────────────────────────
++
++const PAYLOAD_MIN_DURATION = 3;
++const PAYLOAD_MAX_DURATION = 15;
++const PAYLOAD_MAX_PROMPT_CHARS = 8_000;
++
++export function buildHiggsfieldPayload(input: {
++    imageUrl: string;
++    prompt?: string;
++    duration: number;
++    sound: HiggsfieldSound;
++}): HiggsfieldGenerationPayload {
++    if (typeof input.imageUrl !== 'string' || !input.imageUrl.startsWith('https://')) {
++        throw new Error('buildHiggsfieldPayload: image_url deve ser HTTPS pública (faça upload de data URI antes)');
++    }
++    if (!Number.isInteger(input.duration)) {
++        throw new Error(`buildHiggsfieldPayload: duration deve ser inteiro (recebido ${input.duration})`);
++    }
++    const duration = input.duration;
++    if (duration < PAYLOAD_MIN_DURATION || duration > PAYLOAD_MAX_DURATION) {
++        throw new Error(
++            `buildHiggsfieldPayload: duration deve ser inteiro ${PAYLOAD_MIN_DURATION}..${PAYLOAD_MAX_DURATION} (recebido ${input.duration})`,
++        );
++    }
++    if (input.sound !== 'on' && input.sound !== 'off') {
++        throw new Error("buildHiggsfieldPayload: sound deve ser 'on' ou 'off'");
++    }
++    const prompt = input.prompt?.trim();
++    if (prompt && prompt.length > PAYLOAD_MAX_PROMPT_CHARS) {
++        throw new Error('buildHiggsfieldPayload: prompt excede o limite de caracteres');
++    }
++    // Sem aspect_ratio/start_image/generate_audio: proporção vem da imagem já
++    // preparada; som é a chave `sound` do contrato REST desta fase.
++    const payload: HiggsfieldGenerationPayload = {
++        image_url: input.imageUrl,
++        duration,
++        sound: input.sound,
++        cfg_scale: 0.5,
++        multi_shots: false,
++    };
++    if (prompt) payload.prompt = prompt;
++    return payload;
++}
++
++export function computePayloadHash(payload: HiggsfieldGenerationPayload): string {
++    return crypto.createHash('sha256').update(canonicalJson(payload)).digest('hex');
++}
++
++// ── Cotação ──────────────────────────────────────────────────────────────────
++
++export type UsdEstimate =
++    | { ok: true; usdMicros: number }
++    | { ok: false; code: 'AUTH' | 'HTTP' | 'UNKNOWN_PRICE'; status?: number; reason?: string };
++
++// Só type=estimate + usd finito/positivo autoriza geração. Respostas com
++// pricing_description sem usd (ex.: Seedance) NUNCA têm preço adivinhado.
++export function parseUsdEstimate(body: unknown): UsdEstimate {
++    const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
++    if (!record || record.type !== 'estimate') {
++        return { ok: false, code: 'UNKNOWN_PRICE', reason: 'resposta sem type=estimate — preço não autoritativo' };
++    }
++    const usd = record.usd;
++    if (usd === undefined || usd === null || usd === '') {
++        return { ok: false, code: 'UNKNOWN_PRICE', reason: 'cotação sem campo usd — nunca adivinhar preço' };
++    }
++    const micros = parseUsdToMicros(usd);
++    if (micros === null || micros <= 0) {
++        const preview = typeof usd === 'string' ? `"${usd.slice(0, 32)}"` : typeof usd;
++        return { ok: false, code: 'UNKNOWN_PRICE', reason: `usd inválido (${preview})` };
++    }
++    return { ok: true, usdMicros: micros };
++}
++
++// ── Status ───────────────────────────────────────────────────────────────────
++
++export type HiggsfieldTerminalStatus = 'failed' | 'nsfw' | 'canceled';
++
++export type HiggsfieldStatusOutcome =
++    | { kind: 'processing'; rawStatus: string }
++    | { kind: 'succeeded'; outputUrl: string }
++    | { kind: 'failed_terminal'; terminalStatus: HiggsfieldTerminalStatus; error?: string }
++    | { kind: 'unknown'; reason: string };
++
++export function parseStatusResponse(body: unknown): HiggsfieldStatusOutcome {
++    const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
++    if (!record) return { kind: 'unknown', reason: 'corpo do status ilegível' };
++
++    const status = record.status;
++    if (status === 'queued' || status === 'in_progress') {
++        return { kind: 'processing', rawStatus: status };
++    }
++    if (status === 'completed') {
++        const video = record.video;
++        const outputUrl = video && typeof video === 'object' ? readString(video, 'url') : undefined;
++        if (!outputUrl) return { kind: 'unknown', reason: 'completed sem video.url utilizável' };
++        try {
++            return { kind: 'succeeded', outputUrl: validateMediaUrl(outputUrl, 'video.url') };
++        } catch (error) {
++            return { kind: 'unknown', reason: error instanceof Error ? error.message : String(error) };
++        }
++    }
++    if (status === 'failed' || status === 'nsfw' || status === 'canceled') {
++        const errorText = readString(record, 'error') ?? readString(record, 'message');
++        return {
++            kind: 'failed_terminal',
++            terminalStatus: status,
++            error: errorText ? errorText.slice(0, 300) : undefined,
++        };
++    }
++    return { kind: 'unknown', reason: `status inesperado: ${String(status)}` };
++}
++
++// ── Upload de imagem ─────────────────────────────────────────────────────────
++
++export type ImageUploadGrant = {
++    uploadUrl: string;
++    uploadHeaders: Record<string, string>;
++    publicUrl: string;
++};
++
++const FORBIDDEN_UPLOAD_HEADER = /^(authorization|cookie|proxy-authorization|x-api-key|api-key)$/i;
++const MAX_UPLOAD_HEADERS = 8;
++
++// Grant malformado OU contendo header de credencial é rejeitado: o PUT de bytes
++// não pode carregar autorização da API nem seguir instruções suspeitas.
++export function parseImageUploadGrant(body: unknown): ImageUploadGrant {
++    const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
++    const uploadUrl = readString(record, 'upload_url');
++    const publicUrl = readString(record, 'public_url');
++    const rawHeaders = record?.upload_headers;
++    if (!uploadUrl || !publicUrl || !rawHeaders || typeof rawHeaders !== 'object') {
++        throw new MalformedProviderResponseError('grant de upload incompleto (upload_url/public_url/upload_headers)');
++    }
++    const headers: Record<string, string> = {};
++    let count = 0;
++    for (const [key, value] of Object.entries(rawHeaders as Record<string, unknown>)) {
++        count += 1;
++        if (count > MAX_UPLOAD_HEADERS) {
++            throw new MalformedProviderResponseError('grant com headers demais');
++        }
++        if (!/^[A-Za-z0-9-]{1,64}$/.test(key)) {
++            throw new MalformedProviderResponseError(`header com nome suspeito: "${key.slice(0, 32)}"`);
++        }
++        if (FORBIDDEN_UPLOAD_HEADER.test(key)) {
++            throw new MalformedProviderResponseError(`header de credencial rejeitado no grant: ${key}`);
++        }
++        if (typeof value !== 'string' || value.length > 2048 || value.length === 0) {
++            throw new MalformedProviderResponseError(`valor de header inválido: ${key}`);
++        }
++        headers[key] = value;
++    }
++    return {
++        uploadUrl: validateMediaUrl(uploadUrl, 'upload_url'),
++        uploadHeaders: headers,
++        publicUrl: validateMediaUrl(publicUrl, 'public_url'),
++    };
++}
++
++// ── Cliente ──────────────────────────────────────────────────────────────────
++
++export type SubmitAcceptance = {
++    requestId: string;
++    statusUrl: string;
++    cancelUrl?: string;
++};
++
++export type HiggsfieldClientOptions = {
++    apiKey: string;
++    fetchImpl?: typeof fetch;
++    timeoutMs?: number;
++    sleep?: (delayMs: number) => Promise<void>;
++};
++
++export class HiggsfieldClient {
++    private readonly apiKey: string;
++    private readonly fetchImpl: typeof fetch;
++    private readonly timeoutMs: number;
++    private readonly sleep: (delayMs: number) => Promise<void>;
++
++    constructor(options: HiggsfieldClientOptions) {
++        this.apiKey = options.apiKey;
++        this.fetchImpl = options.fetchImpl ?? fetch;
++        this.timeoutMs = options.timeoutMs ?? 60_000;
++        this.sleep = options.sleep ?? ((delay) => new Promise((resolve) => setTimeout(resolve, delay)));
++    }
++
++    // Defesa em profundidade: a chave jamais aparece em mensagens de erro/estado.
++    private scrub(text: string): string {
++        return this.apiKey ? text.split(this.apiKey).join('[redacted]') : text;
++    }
++
++    // POST idempotente-friendly com retry apenas no 429 (mesma chave é seguro).
++    private async postJsonWithRetry(
++        rawUrl: string,
++        payload: unknown,
++        extraHeaders: Record<string, string> = {},
++    ): Promise<Response> {
++        const url = validateProviderApiUrl(rawUrl);
++        const { response } = await fetchWithRetry(
++            url,
++            {
++                method: 'POST',
++                redirect: 'manual',
++                headers: {
++                    'Content-Type': 'application/json',
++                    Authorization: `Key ${this.apiKey}`,
++                    ...extraHeaders,
++                },
++                body: JSON.stringify(payload),
++            },
++            3,
++            { fetchImpl: this.fetchImpl, timeoutMs: this.timeoutMs, sleep: this.sleep },
++        );
++        if (isRedirect(response)) {
++            throw new ProviderHttpError(
++                response.status,
++                `redirecionamento proibido (${response.status}) — origem não confirmada, credencial não reenviada`,
++            );
++        }
++        return response;
++    }
++
++    async estimate(model: string, payload: HiggsfieldGenerationPayload): Promise<UsdEstimate> {
++        try {
++            const response = await this.postJsonWithRetry(
++                `${HIGGSFIELD_API_ORIGIN}/estimate/${model}`,
++                payload,
++            );
++            if (response.status === 401 || response.status === 403) {
++                return { ok: false, code: 'AUTH', status: response.status };
++            }
++            if (!response.ok) {
++                return { ok: false, code: 'HTTP', status: response.status };
++            }
++            const body = await response.json().catch(() => undefined);
++            return parseUsdEstimate(body);
++        } catch (error) {
++            const reason = error instanceof Error ? error.message : String(error);
++            return { ok: false, code: 'HTTP', reason: this.scrub(reason) };
++        }
++    }
++
++    async submit(
++        model: string,
++        payload: HiggsfieldGenerationPayload,
++        idempotencyKey: string,
++    ): Promise<SubmitAcceptance> {
++        let response: Response;
++        try {
++            response = await this.postJsonWithRetry(
++                `${HIGGSFIELD_API_ORIGIN}/${model}`,
++                payload,
++                { 'Idempotency-Key': idempotencyKey },
++            );
++        } catch (error) {
++            throw this.asAmbiguous(error);
++        }
++
++        if (response.ok) {
++            const body = await response.json().catch(() => undefined);
++            const requestId = readString(body, 'request_id');
++            const statusUrl = readString(body, 'status_url');
++            const cancelUrl = readString(body, 'cancel_url');
++            if (!requestId || !statusUrl) {
++                throw new SubmissionAmbiguousError(
++                    'malformed_response',
++                    'submissão aceita com corpo ilegível — tratar como incerto (mesma chave na retomada)',
++                );
++            }
++            try {
++                validateProviderApiUrl(statusUrl, 'status_url');
++                if (cancelUrl) validateProviderApiUrl(cancelUrl, 'cancel_url');
++            } catch (error) {
++                const message = error instanceof Error ? error.message : String(error);
++                throw new SubmissionAmbiguousError('malformed_response', `submissão aceita com ${message}`);
++            }
++            return { requestId, statusUrl, cancelUrl };
++        }
++
++        if (response.status >= 500 || response.status === 408) {
++            throw new SubmissionAmbiguousError(
++                'server',
++                `HTTP ${response.status} na submissão — resultado desconhecido; retomar com a MESMA chave`,
++            );
++        }
++        // 4xx definitivos: pedido não aceito ⇒ sem geração ⇒ sem cobrança.
++        const snippet = (await response.text().catch(() => '')).slice(0, 200);
++        throw new SubmissionRejectedError(
++            response.status,
++            this.scrub(`submissão rejeitada com HTTP ${response.status}: ${snippet}`),
++        );
++    }
++
++    private asAmbiguous(error: unknown): SubmissionAmbiguousError {
++        if (error instanceof SubmissionAmbiguousError) return error;
++        if (error instanceof ProviderHttpError && error.status >= 300 && error.status < 400) {
++            return new SubmissionAmbiguousError('server', `redirecionamento proibido (${error.status}) — resultado desconhecido`);
++        }
++        const message = error instanceof Error ? error.message : String(error);
++        const stage = /timeout|abort/i.test(message) ? 'timeout' as const : 'network' as const;
++        return new SubmissionAmbiguousError(stage, this.scrub(message));
++    }
++
++    // Valida a origem ANTES do fetch: URL não confiável lança sem contato algum.
++    async getStatus(statusUrl: string): Promise<HiggsfieldStatusOutcome> {
++        const url = validateProviderApiUrl(statusUrl, 'status_url');
++        let response: Response;
++        try {
++            response = await fetchWithTimeout(
++                url,
++                {
++                    redirect: 'manual',
++                    headers: { Authorization: `Key ${this.apiKey}` },
++                },
++                this.timeoutMs,
++                this.fetchImpl,
++            );
++        } catch (error) {
++            const reason = error instanceof Error ? error.message : String(error);
++            return { kind: 'unknown', reason: this.scrub(reason) };
++        }
++        if (isRedirect(response)) {
++            return { kind: 'unknown', reason: `redirecionamento proibido (${response.status}) no status` };
++        }
++        if (!response.ok) {
++            return { kind: 'unknown', reason: `HTTP ${response.status} na consulta de status` };
++        }
++        const body = await response.json().catch(() => undefined);
++        return parseStatusResponse(body);
++    }
++
++    async createImageUpload(contentType: 'image/png' | 'image/jpeg'): Promise<ImageUploadGrant> {
++        const response = await this.postJsonWithRetry(
++            `${HIGGSFIELD_API_ORIGIN}/files/generate-upload-url`,
++            { content_type: contentType },
++        );
++        if (!response.ok) {
++            if (response.status === 401 || response.status === 403) {
++                throw new ProviderHttpError(response.status, 'autenticação Higgsfield recusada no upload-url');
++            }
++            throw new ProviderHttpError(response.status, `generate-upload-url HTTP ${response.status}`);
++        }
++        const body = await response.json().catch(() => undefined);
++        return parseImageUploadGrant(body);
++    }
++
++    // PUT dos bytes decodificados com os headers do grant — SEM Authorization da API.
++    async uploadImageBytes(grant: ImageUploadGrant, bytes: Uint8Array): Promise<void> {
++        const url = validateMediaUrl(grant.uploadUrl, 'upload_url');
++        const response = await fetchWithTimeout(
++            url,
++            {
++                method: 'PUT',
++                redirect: 'manual',
++                headers: grant.uploadHeaders,
++                body: bytes as unknown as BodyInit,
++            },
++            120_000,
++            this.fetchImpl,
++        );
++        if (isRedirect(response)) {
++            throw new ProviderHttpError(response.status, 'redirecionamento proibido no upload de imagem');
++        }
++        if (!response.ok) {
++            throw new ProviderHttpError(response.status, `upload de imagem HTTP ${response.status}`);
++        }
++    }
++}
+diff --git a/src/lib/money.ts b/src/lib/money.ts
+new file mode 100644
+index 0000000..fbbd673
+--- /dev/null
++++ b/src/lib/money.ts
+@@ -0,0 +1,38 @@
++// Dinheiro em micros USD (inteiro): comparação exata, sem aritmética flutuante.
++// O contrato Higgsfield envia usd como string decimal ("0.714"); reservas e teto
++// comparam inteiros (1 USD = 1.000.000 micros) com arredondamento half-up.
++
++export const MICRO_PER_USD = 1_000_000;
++
++function decimalStringToMicros(text: string): number | null {
++    // Somente dígitos decimais puros — sem expoente, vírgula ou símbolo.
++    const match = /^(\d+)(?:\.(\d*))?$/.exec(text);
++    if (!match) return null;
++    const fracPart = (match[2] ?? '').padEnd(7, '0').slice(0, 7);
++    // BigInt via função (tsconfig target < ES2020 proíbe literais bigint).
++    const scaled = BigInt(match[1]) * BigInt(10_000_000) + BigInt(fracPart || '0');
++    const micros = (scaled + BigInt(5)) / BigInt(10); // half-up na 6ª casa decimal
++    if (micros > BigInt(Number.MAX_SAFE_INTEGER)) return null;
++    const result = Number(micros);
++    return result >= 0 ? result : null;
++}
++
++// Converte usd (string ou número) em micros inteiros. null = formato inválido —
++// chamadores NUNCA adevinham preço a partir de valor não parseável.
++export function parseUsdToMicros(value: unknown): number | null {
++    if (typeof value === 'number') {
++        if (!Number.isFinite(value)) return null;
++        return decimalStringToMicros(value.toFixed(6));
++    }
++    if (typeof value !== 'string') return null;
++    return decimalStringToMicros(value.trim());
++}
++
++// Formatação para logs/estado: $0.714 (3 casas quando exato, 6 quando há resto).
++export function formatUsd(micros: number): string {
++    if (!Number.isFinite(micros)) return '$?';
++    const sign = micros < 0 ? '-' : '';
++    const abs = Math.abs(Math.round(micros));
++    const decimals = abs % 1_000 === 0 ? 3 : 6;
++    return `${sign}$${(abs / MICRO_PER_USD).toFixed(decimals)}`;
++}
+diff --git a/src/lib/pipeline-job-state.ts b/src/lib/pipeline-job-state.ts
+new file mode 100644
+index 0000000..5fe3903
+--- /dev/null
++++ b/src/lib/pipeline-job-state.ts
+@@ -0,0 +1,39 @@
++// Estado do job em disco: gravação atômica + mescla imutável de updates.
++// Extraído do worker p/ tornar a persistência CRÍTICA testável: chamadas antes/
++// depois de submissão paga PRECISAM propagar falha de gravação (nunca fingir
++// checkpoint gravado e lançar geração paga sem ele).
++
++import { existsSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
++import { randomUUID } from 'node:crypto';
++
++export type JobFileData = Record<string, unknown>;
++
++// Temporário único + rename: leitores veem o arquivo completo ou o anterior.
++export function writeJsonAtomic(filePath: string, value: unknown): void {
++    const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
++    try {
++        writeFileSync(temporaryPath, JSON.stringify(value, null, 2), { flag: 'wx' });
++        renameSync(temporaryPath, filePath);
++    } catch (error) {
++        if (existsSync(temporaryPath)) {
++            try { unlinkSync(temporaryPath); } catch { /* best effort */ }
++        }
++        throw error;
++    }
++}
++
++// Mescla updates no estado atual sem mutar nada: campos sobrescritos + logs anexados.
++export function mergeJobUpdate(current: JobFileData, updates: JobFileData): JobFileData {
++    const rest: Record<string, unknown> = {};
++    for (const [key, value] of Object.entries(updates)) {
++        if (key !== 'logs') rest[key] = value;
++    }
++    const currentLogs = Array.isArray(current.logs) ? current.logs : [];
++    const incomingLogs = Array.isArray(updates.logs) ? updates.logs : [];
++    return {
++        ...current,
++        ...rest,
++        updatedAt: new Date().toISOString(),
++        logs: [...currentLogs, ...incomingLogs],
++    };
++}
+diff --git a/src/lib/video-provider.ts b/src/lib/video-provider.ts
+new file mode 100644
+index 0000000..392010c
+--- /dev/null
++++ b/src/lib/video-provider.ts
+@@ -0,0 +1,60 @@
++// Seleção do provedor de vídeo pelo SERVIDOR (VIDEO_PROVIDER). O cliente JSON nunca
++// fornece chave de Higgsfield nem escolhe o modelo confiável — o schema zod descarta
++// campos desconhecidos e este módulo resolve tudo por ambiente.
++// Padrão/ausente = replicate (comportamento legado intacto).
++// Valor explícito inválido é REJEITADO (erro claro), nunca fallback silencioso:
++// cair para o Replicate pagaria geração duplicada quando o operador escolheu HF.
++
++export type VideoProviderName = 'replicate' | 'higgsfield';
++
++export type FrozenVideoProviderConfig = {
++    provider: VideoProviderName;
++    model: string;
++};
++
++export const LEGACY_REPLICATE_MODEL = 'kwaivgi/kling-v2.6';
++export const DEFAULT_HIGGSFIELD_MODEL = 'kling-video/v3.0/pro/image-to-video';
++
++const MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/;
++
++export class VideoProviderConfigError extends Error {
++    code: 'VIDEO_PROVIDER_INVALID' | 'HIGGSFIELD_CREDENTIAL_MISSING' | 'HIGGSFIELD_MODEL_INVALID';
++
++    constructor(code: VideoProviderConfigError['code'], message: string) {
++        super(message);
++        this.name = 'VideoProviderConfigError';
++        this.code = code;
++    }
++}
++
++export function resolveVideoProviderConfig(
++    env: Record<string, string | undefined> = process.env,
++): FrozenVideoProviderConfig {
++    const raw = (env.VIDEO_PROVIDER ?? '').trim().toLowerCase();
++
++    if (raw === '' || raw === 'replicate') {
++        return { provider: 'replicate', model: LEGACY_REPLICATE_MODEL };
++    }
++
++    if (raw === 'higgsfield') {
++        const model = (env.HIGGSFIELD_MODEL ?? '').trim() || DEFAULT_HIGGSFIELD_MODEL;
++        if (!MODEL_PATTERN.test(model)) {
++            throw new VideoProviderConfigError(
++                'HIGGSFIELD_MODEL_INVALID',
++                `HIGGSFIELD_MODEL inválido: "${model.slice(0, 128)}" (caminho de modelo esperado, ex.: ${DEFAULT_HIGGSFIELD_MODEL})`,
++            );
++        }
++        if (!(env.HF_API_KEY ?? '').trim()) {
++            throw new VideoProviderConfigError(
++                'HIGGSFIELD_CREDENTIAL_MISSING',
++                'VIDEO_PROVIDER=higgsfield exige HF_API_KEY no servidor. Sem fallback para Replicate — fallback pagaria geração duplicada.',
++            );
++        }
++        return { provider: 'higgsfield', model };
++    }
++
++    throw new VideoProviderConfigError(
++        'VIDEO_PROVIDER_INVALID',
++        `VIDEO_PROVIDER inválido: "${raw.slice(0, 64)}". Valores aceitos: replicate (padrão) ou higgsfield.`,
++    );
++}
+diff --git a/tests/cost-ledger.test.ts b/tests/cost-ledger.test.ts
+new file mode 100644
+index 0000000..dcbf7f6
+--- /dev/null
++++ b/tests/cost-ledger.test.ts
+@@ -0,0 +1,256 @@
++import assert from 'node:assert/strict';
++import { spawn } from 'node:child_process';
++import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { afterEach, beforeEach, describe, it } from 'node:test';
++import {
++    budgetCapMicrosFromEnv,
++    chargeCost,
++    readBudgetSummary,
++    releaseCost,
++    reserveCost,
++} from '@/lib/cost-ledger';
++import { formatUsd, MICRO_PER_USD } from '@/lib/money';
++
++const PAYLOAD_A = 'a'.repeat(64);
++const PAYLOAD_B = 'b'.repeat(64);
++
++describe('cost-ledger — teto global durável', () => {
++    let ledgerDir = '';
++    const now = Date.parse('2026-11-08T12:00:00.000Z');
++    const CAP = 30 * MICRO_PER_USD;
++
++    beforeEach(async () => {
++        ledgerDir = await mkdtemp(path.join(os.tmpdir(), 'boomer-kev-ledger-'));
++    });
++
++    afterEach(async () => {
++        await rm(ledgerDir, { recursive: true, force: true });
++    });
++
++    it('reserva dentro do teto e o resumo reflete a verba comprometida', () => {
++        const outcome = reserveCost({
++            ledgerDir,
++            operationKey: 'hf:job:scene1:a1',
++            amountMicros: 714_000,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        });
++        assert.equal(outcome.kind, 'reserved');
++        const summary = readBudgetSummary(ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++        assert.equal(summary.remainingMicros, CAP - 714_000);
++    });
++
++    it('mesma chave + mesmo payload NUNCA reserva duas vezes', () => {
++        const input = {
++            ledgerDir,
++            operationKey: 'hf:job:scene1:a1',
++            amountMicros: 714_000,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        };
++        assert.equal(reserveCost(input).kind, 'reserved');
++        const again = reserveCost(input);
++        assert.equal(again.kind, 'existing');
++        const summary = readBudgetSummary(ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000); // uma única verba
++    });
++
++    it('mesma chave com payload diferente é CONFLITO', () => {
++        const base = {
++            ledgerDir,
++            operationKey: 'hf:job:scene2:a1',
++            amountMicros: 500_000,
++            capMicros: CAP,
++            now,
++        };
++        assert.equal(reserveCost({ ...base, payloadHash: PAYLOAD_A }).kind, 'reserved');
++        const conflict = reserveCost({ ...base, payloadHash: PAYLOAD_B });
++        assert.deepEqual(conflict, { kind: 'conflict', reason: 'PAYLOAD_MISMATCH' });
++    });
++
++    it('teto é respeitado e a reserva excedente é desfeita (rollback sem resíduo)', async () => {
++        const first = reserveCost({
++            ledgerDir,
++            operationKey: 'hf:job:s1:a1',
++            amountMicros: 29 * MICRO_PER_USD,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        });
++        assert.equal(first.kind, 'reserved');
++
++        const second = reserveCost({
++            ledgerDir,
++            operationKey: 'hf:job:s2:a1',
++            amountMicros: 2 * MICRO_PER_USD,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        });
++        assert.deepEqual(second, {
++            kind: 'budget_exceeded',
++            requestedMicros: 2 * MICRO_PER_USD,
++            // A soma da verificação inclui a própria reserva recém-criada.
++            committedMicros: 31 * MICRO_PER_USD,
++            capMicros: CAP,
++        });
++
++        // Nenhum resíduo da reserva abortada: só o comprometimento válido resta.
++        const files = (await readdir(ledgerDir)).filter((n) => n.startsWith('budget_') && n.endsWith('.json'));
++        assert.equal(files.length, 1);
++        assert.equal(readBudgetSummary(ledgerDir, CAP).reservedMicros, 29 * MICRO_PER_USD);
++    });
++
++    it('cobrança confirmada permanece no teto e não pode ser liberada', () => {
++        const key = 'hf:job:s3:a1';
++        reserveCost({ ledgerDir, operationKey: key, amountMicros: 714_000, payloadHash: PAYLOAD_A, capMicros: CAP, now });
++        assert.equal(chargeCost({ ledgerDir, operationKey: key, now }).kind, 'charged');
++        // Cobrar de novo é idempotente (não soma duas vezes).
++        assert.equal(chargeCost({ ledgerDir, operationKey: key, now }).kind, 'already_charged');
++        const summary = readBudgetSummary(ledgerDir, CAP);
++        assert.equal(summary.chargedMicros, 714_000);
++        assert.equal(summary.reservedMicros, 0);
++        assert.equal(releaseCost({ ledgerDir, operationKey: key, reason: 'provider_terminal_no_charge', now }).kind, 'charged_cannot_release');
++    });
++
++    it('liberação só com motivo documentado; depois dela a chave NÃO é reutilizável', () => {
++        const key = 'hf:job:s4:a1';
++        reserveCost({ ledgerDir, operationKey: key, amountMicros: 714_000, payloadHash: PAYLOAD_A, capMicros: CAP, now });
++        assert.equal(releaseCost({ ledgerDir, operationKey: key, reason: 'provider_terminal_no_charge', now }).kind, 'released');
++        // Idempotente em liberação repetida…
++        assert.equal(releaseCost({ ledgerDir, operationKey: key, reason: 'provider_terminal_no_charge', now }).kind, 'already_released');
++        // …mas a mesma chave não pode reservar de novo: rerun exige NOVA tentativa.
++        const reused = reserveCost({ ledgerDir, operationKey: key, amountMicros: 714_000, payloadHash: PAYLOAD_A, capMicros: CAP, now });
++        assert.deepEqual(reused, { kind: 'conflict', reason: 'KEY_RELEASED_USE_NEW_ATTEMPT' });
++        // Motivo fora da lista documentada é rejeitado.
++        assert.throws(() => releaseCost({
++            ledgerDir,
++            operationKey: 'hf:job:s5:a1',
++            reason: 'achamos_que_libera' as never,
++            now,
++        }));
++    });
++
++    it('chave desconhecida não infla nem libera nada', () => {
++        assert.equal(chargeCost({ ledgerDir, operationKey: 'inexistente', now }).kind, 'unknown_key');
++        assert.equal(releaseCost({ ledgerDir, operationKey: 'inexistente', reason: 'provider_terminal_no_charge', now }).kind, 'unknown_key');
++    });
++
++    it('sobrevive ao reinício: novo acesso ao mesmo diretório vê a reserva', () => {
++        reserveCost({ ledgerDir, operationKey: 'hf:job:s6:a1', amountMicros: 1_500_000, payloadHash: PAYLOAD_A, capMicros: CAP, now });
++        // "Novo processo": chamadas novas sobre o MESMO diretório em disco.
++        const summary = readBudgetSummary(ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 1_500_000);
++        const outcome = reserveCost({
++            ledgerDir,
++            operationKey: 'hf:job:s6:a1',
++            amountMicros: 1_500_000,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        });
++        assert.equal(outcome.kind, 'existing'); // retomada não reserva duas vezes
++    });
++
++    it('registro ilegível BLOQUEIA novas reservas (conservador, nunca ignora verba)', async () => {
++        await writeFile(path.join(ledgerDir, 'budget_corrompido.json'), '{ quebrado', 'utf8');
++        const outcome = reserveCost({
++            ledgerDir,
++            operationKey: 'hf:job:s7:a1',
++            amountMicros: 714_000,
++            payloadHash: PAYLOAD_A,
++            capMicros: CAP,
++            now,
++        });
++        assert.equal(outcome.kind, 'ledger_corrupt');
++        assert.equal((await readdir(ledgerDir)).filter((n) => n.endsWith('.json')).length, 1);
++    });
++
++    it('liberações antigas (>7d) são podadas ao reservar; reservas nunca', async () => {
++        const releasedOld = {
++            key: 'hf:job:antiga:a1',
++            amountMicros: 714_000,
++            payloadHash: PAYLOAD_A,
++            state: 'RELEASED',
++            releaseReason: 'provider_terminal_no_charge',
++            createdAt: new Date(now - 9 * 24 * 60 * 60_000).toISOString(),
++            updatedAt: new Date(now - 8 * 24 * 60 * 60_000).toISOString(),
++        };
++        const fileName = 'budget_oldreleased.json';
++        await writeFile(path.join(ledgerDir, fileName), JSON.stringify(releasedOld), 'utf8');
++
++        reserveCost({ ledgerDir, operationKey: 'hf:job:nova:a1', amountMicros: 714_000, payloadHash: PAYLOAD_A, capMicros: CAP, now });
++        const names = (await readdir(ledgerDir)).filter((n) => n.startsWith('budget_') && n.endsWith('.json'));
++        assert.equal(names.includes(fileName), false); // podada
++        assert.equal(names.length, 1); // só a reserva nova
++    });
++
++    it('budgetCapMicrosFromEnv: padrão US$30; inválido é erro explícito', () => {
++        assert.equal(budgetCapMicrosFromEnv({}), 30 * MICRO_PER_USD);
++        assert.equal(budgetCapMicrosFromEnv({ HIGGSFIELD_INITIAL_TEST_CAP_USD: ' 30 ' }), 30 * MICRO_PER_USD);
++        assert.equal(budgetCapMicrosFromEnv({ HIGGSFIELD_INITIAL_TEST_CAP_USD: '30.50' }), 30.5 * MICRO_PER_USD);
++        assert.throws(() => budgetCapMicrosFromEnv({ HIGGSFIELD_INITIAL_TEST_CAP_USD: 'abc' }));
++        assert.throws(() => budgetCapMicrosFromEnv({ HIGGSFIELD_INITIAL_TEST_CAP_USD: '-5' }));
++    });
++});
++
++describe('formatUsd', () => {
++    it('formata micros com 3 ou 6 casas conforme o resto', () => {
++        assert.equal(formatUsd(714_000), '$0.714');
++        assert.equal(formatUsd(30 * MICRO_PER_USD), '$30.000');
++        assert.equal(formatUsd(29_286_000), '$29.286');
++        assert.equal(formatUsd(713_999), '$0.713999');
++    });
++});
++
++describe('cost-ledger — corrida entre processos reais (fork)', () => {
++    it('cinco processos reservando US$8 com teto US$30 jamais ultrapassam o teto', async () => {
++        const ledgerDir = await mkdtemp(path.join(os.tmpdir(), 'boomer-kev-ledger-race-'));
++        const fixturePath = fileURLToPath(new URL('./fixtures/ledger-worker.mjs', import.meta.url));
++        const worktreeRoot = fileURLToPath(new URL('..', import.meta.url));
++        const cap = 30 * MICRO_PER_USD;
++        const amount = 8 * MICRO_PER_USD;
++
++        const children = [0, 1, 2, 3, 4].map((index) => new Promise<string[]>((resolve, reject) => {
++            const child = spawn(
++                process.execPath,
++                ['--import', 'tsx', fixturePath, ledgerDir, `hf:race:p${index}:a1`, String(amount), String(cap)],
++                { cwd: worktreeRoot },
++            );
++            let stdout = '';
++            let stderr = '';
++            child.stdout.on('data', (chunk) => (stdout += chunk));
++            child.stderr.on('data', (chunk) => (stderr += chunk));
++            child.on('error', reject);
++            child.on('close', (code) => {
++                if (code !== 0 && !stdout.trim()) {
++                    reject(new Error(`worker ${index} saiu com código ${code}: ${stderr.slice(0, 400)}`));
++                    return;
++                }
++                resolve(stdout.trim().split('\n').filter(Boolean));
++            });
++        }));
++
++        const lines = (await Promise.all(children)).flat();
++        const results = lines.map((line) => JSON.parse(line) as { kind: string; amount: number });
++        const granted = results.filter((r) => r.kind === 'granted');
++
++        // Nunca acima do teto…
++        const totalGranted = granted.reduce((sum, r) => sum + r.amount, 0);
++        assert.ok(totalGranted <= cap, `reservado ${totalGranted} > teto ${cap}`);
++        // …com o teto realmente impedindo pedidos que somariam US$40…
++        assert.ok(granted.length < 5, `esperado teto engatando (granted=${granted.length})`);
++        assert.ok(granted.length >= 1, 'pelo menos uma reserva deve passar');
++        // …e o disco confirma exatamente o concedido.
++        const summary = readBudgetSummary(ledgerDir, cap);
++        assert.equal(summary.reservedMicros, totalGranted);
++
++        await rm(ledgerDir, { recursive: true, force: true });
++    });
++});
+diff --git a/tests/fixtures/ledger-worker.mjs b/tests/fixtures/ledger-worker.mjs
+new file mode 100644
+index 0000000..d17f120
+--- /dev/null
++++ b/tests/fixtures/ledger-worker.mjs
+@@ -0,0 +1,23 @@
++// Worker de reserva usado pelo teste de corrida entre processos do cost-ledger.
++// Roda via `node --import tsx` (loader tsx do projeto) e devolve JSON no stdout.
++import crypto from 'node:crypto';
++import { reserveCost } from '../../src/lib/cost-ledger.ts';
++
++const [ledgerDir, operationKey, amountMicros, capMicros] = process.argv.slice(2);
++const payloadHash = crypto.createHash('sha256').update(`payload-${operationKey}`).digest('hex');
++
++try {
++    const outcome = reserveCost({
++        ledgerDir,
++        operationKey,
++        amountMicros: Number(amountMicros),
++        payloadHash,
++        capMicros: Number(capMicros),
++        jobId: 'race-test',
++        sceneId: operationKey,
++    });
++    const kind = outcome.kind === 'reserved' || outcome.kind === 'existing' ? 'granted' : outcome.kind;
++    console.log(JSON.stringify({ kind, amount: Number(amountMicros) }));
++} catch (error) {
++    console.log(JSON.stringify({ kind: 'thrown', message: String(error?.message ?? error) }));
++}
+diff --git a/tests/higgsfield-client.test.ts b/tests/higgsfield-client.test.ts
+new file mode 100644
+index 0000000..8587bd2
+--- /dev/null
++++ b/tests/higgsfield-client.test.ts
+@@ -0,0 +1,367 @@
++import assert from 'node:assert/strict';
++import { describe, it } from 'node:test';
++import {
++    HiggsfieldClient,
++    ProviderUrlError,
++    SubmissionAmbiguousError,
++    SubmissionRejectedError,
++    buildHiggsfieldPayload,
++    computePayloadHash,
++    parseImageUploadGrant,
++    parseStatusResponse,
++    parseUsdEstimate,
++    validateMediaUrl,
++    validateProviderApiUrl,
++    type ImageUploadGrant,
++} from '@/lib/higgsfield';
++
++const API_KEY = 'hf-test-key-abcdef123456';
++const OFFICIAL = 'https://api.higgsfield.ai';
++
++type CapturedCall = { url: string; init: RequestInit };
++
++function mockFetch(handler: (url: string, init: RequestInit) => Response | Promise<Response>) {
++    const calls: CapturedCall[] = [];
++    const impl = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
++        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
++        const captured: CapturedCall = { url, init: (init ?? {}) as RequestInit };
++        calls.push(captured);
++        return handler(url, captured.init);
++    }) as typeof fetch;
++    return { calls, impl };
++}
++
++const jsonResponse = (body: unknown, status = 200) =>
++    new Response(JSON.stringify(body), {
++        status,
++        headers: { 'content-type': 'application/json' },
++    });
++
++const redirectResponse = () =>
++    new Response(null, { status: 302, headers: { location: 'https://evil.example/steal' } });
++
++const samplePayload = buildHiggsfieldPayload({
++    imageUrl: 'https://cdn.example/anchor.jpg',
++    prompt: 'talking head',
++    duration: 5,
++    sound: 'on',
++});
++
++describe('parseUsdEstimate — cotação autoritativa', () => {
++    it('usd numérico válido autoriza (0.714 => 714000 micros)', () => {
++        const parsed = parseUsdEstimate({ type: 'estimate', usd: '0.714', credits: '11.424' });
++        assert.deepEqual(parsed, { ok: true, usdMicros: 714_000 });
++    });
++
++    it('usd numérico (number) é aceito', () => {
++        const parsed = parseUsdEstimate({ type: 'estimate', usd: 0.75 });
++        assert.deepEqual(parsed, { ok: true, usdMicros: 750_000 });
++    });
++
++    it('resposta sem type=estimate (ex.: pricing_description) NUNCA autoriza', () => {
++        const parsed = parseUsdEstimate({ type: 'pricing', pricing_description: 'about a dollar' });
++        assert.equal(parsed.ok, false);
++        if (!parsed.ok) assert.equal(parsed.code, 'UNKNOWN_PRICE');
++    });
++
++    it('type=estimate sem usd NUNCA autoriza (nunca adivinhar preço)', () => {
++        const parsed = parseUsdEstimate({ type: 'estimate' });
++        assert.equal(parsed.ok, false);
++        if (!parsed.ok) assert.equal(parsed.code, 'UNKNOWN_PRICE');
++    });
++
++    it('usd inválido (não-numérico, negativo, zero) NUNCA autoriza', () => {
++        for (const bad of ['abc', '-1.00', '0', '1e3', '', null, [], {}]) {
++            const parsed = parseUsdEstimate({ type: 'estimate', usd: bad as never });
++            assert.equal(parsed.ok, false, JSON.stringify(bad));
++            if (!parsed.ok) assert.equal(parsed.code, 'UNKNOWN_PRICE');
++        }
++    });
++});
++
++describe('buildHiggsfieldPayload — chaves exatas do contrato', () => {
++    it('payload com apenas as chaves documentadas (sem aspect_ratio/start_image/generate_audio)', () => {
++        const payload = buildHiggsfieldPayload({ imageUrl: 'https://cdn.example/a.jpg', prompt: 'fala', duration: 10, sound: 'off' });
++        const keys = Object.keys(payload).sort();
++        assert.deepEqual(keys, ['cfg_scale', 'duration', 'image_url', 'multi_shots', 'prompt', 'sound']);
++        assert.equal(payload.cfg_scale, 0.5);
++        assert.equal(payload.multi_shots, false);
++    });
++
++    it('duration inteiro 3..15; fora disso ou não-inteiro é rejeitado', () => {
++        for (const good of [3, 5, 10, 15]) {
++            assert.equal(buildHiggsfieldPayload({ imageUrl: 'https://c.example/a.jpg', duration: good, sound: 'on' }).duration, good);
++        }
++        for (const bad of [2, 16, 7.5, NaN]) {
++            assert.throws(() => buildHiggsfieldPayload({ imageUrl: 'https://c.example/a.jpg', duration: bad, sound: 'on' }));
++        }
++    });
++
++    it('image_url precisa ser HTTPS público (data URI é upload primeiro)', () => {
++        assert.throws(() => buildHiggsfieldPayload({ imageUrl: 'http://cdn.example/a.jpg', duration: 5, sound: 'on' }));
++        assert.throws(() => buildHiggsfieldPayload({ imageUrl: 'data:image/jpeg;base64,AAAA', duration: 5, sound: 'on' }));
++    });
++
++    it('hash do payload é estável sob reordenação de chaves (retomada idempotente)', () => {
++        const a = { ...samplePayload } as Record<string, unknown>;
++        const reordered: Record<string, unknown> = {};
++        for (const key of Object.keys(a).reverse()) reordered[key] = a[key];
++        assert.equal(computePayloadHash(samplePayload), computePayloadHash(reordered as never));
++    });
++});
++
++describe('validação de URLs — credencial nunca sai da origem oficial', () => {
++    it('validateProviderApiUrl aceita apenas a origem oficial HTTPS', () => {
++        assert.doesNotThrow(() => validateProviderApiUrl(`${OFFICIAL}/kling-video/v3.0/pro/image-to-video?x=1`));
++        assert.throws(() => validateProviderApiUrl('http://api.higgsfield.ai/x'), ProviderUrlError);
++        assert.throws(() => validateProviderApiUrl('https://evil.example/status'), ProviderUrlError);
++        assert.throws(() => validateProviderApiUrl('https://user:pass@api.higgsfield.ai/x'), ProviderUrlError);
++        assert.throws(() => validateProviderApiUrl(`${OFFICIAL}/a/../b`), ProviderUrlError);
++        assert.throws(() => validateProviderApiUrl('não é url'), ProviderUrlError);
++    });
++
++    it('validateMediaUrl aceita CDN HTTPS sem userinfo; rejeita o resto', () => {
++        assert.doesNotThrow(() => validateMediaUrl('https://cdn.vendor.net/video/abc.mp4'));
++        assert.throws(() => validateMediaUrl('http://cdn.vendor.net/video/abc.mp4'), ProviderUrlError);
++        assert.throws(() => validateMediaUrl('https://user:pass@cdn.vendor.net/v.mp4'), ProviderUrlError);
++        assert.throws(() => validateMediaUrl('javascript:alert(1)'), ProviderUrlError);
++        assert.throws(() => validateMediaUrl('data:text/html,x'), ProviderUrlError);
++    });
++});
++
++describe('HiggsfieldClient.estimate', () => {
++    it('envia Authorization Key na origem oficial com o payload preparado', async () => {
++        const { calls, impl } = mockFetch(() => jsonResponse({ type: 'estimate', usd: '0.714' }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const estimate = await client.estimate('kling-video/v3.0/pro/image-to-video', samplePayload);
++        assert.deepEqual(estimate, { ok: true, usdMicros: 714_000 });
++        assert.equal(calls.length, 1);
++        assert.equal(calls[0].url, `${OFFICIAL}/estimate/kling-video/v3.0/pro/image-to-video`);
++        assert.equal((calls[0].init.headers as Record<string, string>).Authorization, `Key ${API_KEY}`);
++        assert.equal(calls[0].init.redirect, 'manual');
++        assert.deepEqual(JSON.parse(String(calls[0].init.body)), samplePayload);
++    });
++
++    it('401/403 viram AUTH (configuração), não preço desconhecido genérico', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ error: 'nope' }, 401));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const estimate = await client.estimate('m', samplePayload);
++        assert.deepEqual(estimate, { ok: false, code: 'AUTH', status: 401 });
++    });
++
++    it('redirect é recusado sem seguir (credencial não reenviada)', async () => {
++        const { calls, impl } = mockFetch(() => redirectResponse());
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const estimate = await client.estimate('m', samplePayload);
++        assert.equal(estimate.ok, false);
++        assert.equal(calls.length, 1); // NÃO houve segunda chamada ao redirect
++    });
++
++    it('falha de rede vira HTTP/UNKNOWN_PRICE, nunca autorização', async () => {
++        const { impl } = mockFetch(() => { throw new TypeError('fetch failed'); });
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const estimate = await client.estimate('m', samplePayload);
++        assert.equal(estimate.ok, false);
++    });
++});
++
++describe('HiggsfieldClient.submit', () => {
++    const acceptance = {
++        request_id: 'req-123',
++        status_url: `${OFFICIAL}/v1/requests/req-123`,
++        cancel_url: `${OFFICIAL}/v1/requests/req-123/cancel`,
++    };
++
++    it('aceita com request_id/status_url e envia Idempotency-Key', async () => {
++        const { calls, impl } = mockFetch(() => jsonResponse(acceptance));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const result = await client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64));
++        assert.equal(result.requestId, 'req-123');
++        assert.equal(result.statusUrl, acceptance.status_url);
++        assert.equal(result.cancelUrl, acceptance.cancel_url);
++        assert.equal((calls[0].init.headers as Record<string, string>)['Idempotency-Key'], 'hfk-' + 'a'.repeat(64));
++    });
++
++    it('4xx definitivo = SubmissionRejectedError (pedido não aceito ⇒ sem cobrança)', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ error: 'quota' }, 402));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64)),
++            (error: unknown) => error instanceof SubmissionRejectedError && error.status === 402,
++        );
++    });
++
++    it('5xx = SubmissionAmbiguousError (pode ter sido aceito)', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ error: 'oops' }, 502));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64)),
++            (error: unknown) => error instanceof SubmissionAmbiguousError && error.stage === 'server',
++        );
++    });
++
++    it('timeout (AbortError) é ambíguo, não rejeição', async () => {
++        const { impl } = mockFetch(() => { throw new DOMException('This operation was aborted', 'AbortError'); });
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64)),
++            (error: unknown) => error instanceof SubmissionAmbiguousError && error.stage === 'timeout',
++        );
++    });
++
++    it('200 com corpo ilegível é ambíguo (mesma chave na retomada)', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ foo: 'bar' }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64)),
++            (error: unknown) => error instanceof SubmissionAmbiguousError && error.stage === 'malformed_response',
++        );
++    });
++
++    it('status_url fora da origem oficial NUNCA é seguido nem aceito', async () => {
++        const { impl } = mockFetch(() => jsonResponse({
++            request_id: 'req-x',
++            status_url: 'https://evil.example/collect',
++        }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64)),
++            SubmissionAmbiguousError,
++        );
++    });
++
++    it('a chave da API nunca aparece em mensagens de erro', async () => {
++        const { impl } = mockFetch(() => new Response(`leak ${API_KEY}`, { status: 400 }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        try {
++            await client.submit('m', samplePayload, 'hfk-' + 'a'.repeat(64));
++            assert.fail('deveria ter rejeitado');
++        } catch (error) {
++            assert.ok(error instanceof SubmissionRejectedError);
++            assert.ok(!error.message.includes(API_KEY));
++            assert.ok(error.message.includes('[redacted]'));
++        }
++    });
++});
++
++describe('HiggsfieldClient.getStatus', () => {
++    it('mapeia queued/in_progress => processing', async () => {
++        for (const status of ['queued', 'in_progress']) {
++            const { impl } = mockFetch(() => jsonResponse({ status }));
++            const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++            const outcome = await client.getStatus(`${OFFICIAL}/v1/requests/r`);
++            assert.deepEqual(outcome, { kind: 'processing', rawStatus: status });
++        }
++    });
++
++    it('completed com video.url => succeeded com URL validada', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ status: 'completed', video: { url: 'https://cdn.hf.example/v.mp4' } }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const outcome = await client.getStatus(`${OFFICIAL}/v1/requests/r`);
++        assert.deepEqual(outcome, { kind: 'succeeded', outputUrl: 'https://cdn.hf.example/v.mp4' });
++    });
++
++    it('completed sem video.url utilizável => unknown (nunca inventar saída)', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ status: 'completed' }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const outcome = await client.getStatus(`${OFFICIAL}/v1/requests/r`);
++        assert.equal(outcome.kind, 'unknown');
++    });
++
++    it('failed/nsfw/canceled são terminais distintos', async () => {
++        for (const status of ['failed', 'nsfw', 'canceled']) {
++            const { impl } = mockFetch(() => jsonResponse({ status, error: 'boom' }));
++            const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++            const outcome = await client.getStatus(`${OFFICIAL}/v1/requests/r`);
++            assert.deepEqual(outcome, { kind: 'failed_terminal', terminalStatus: status, error: 'boom' });
++        }
++    });
++
++    it('status_url de origem ALTERNATIVA lança ANTES do fetch (zero vazamento)', async () => {
++        const { calls, impl } = mockFetch(() => jsonResponse({ status: 'completed' }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(
++            client.getStatus('https://evil.example/status'),
++            ProviderUrlError,
++        );
++        assert.equal(calls.length, 0); // nenhum contato — nem sem credencial
++    });
++
++    it('redirect no status é unknown (não segue)', async () => {
++        const { impl } = mockFetch(() => redirectResponse());
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const outcome = await client.getStatus(`${OFFICIAL}/v1/requests/r`);
++        assert.equal(outcome.kind, 'unknown');
++    });
++});
++
++describe('upload de imagem — sem encaminhamento de credenciais', () => {
++    const grant: ImageUploadGrant = {
++        uploadUrl: 'https://uploads.higgsfield.ai/put/token-abc',
++        uploadHeaders: { 'x-store-token': 't', 'content-type': 'image/jpeg' },
++        publicUrl: 'https://cdn.higgsfield.ai/pub/token-abc.jpg',
++    };
++
++    it('parse do grant válido preserva campos', () => {
++        const parsed = parseImageUploadGrant({
++            upload_url: grant.uploadUrl,
++            upload_headers: grant.uploadHeaders,
++            public_url: grant.publicUrl,
++        });
++        assert.deepEqual(parsed, grant);
++    });
++
++    it('grant com Authorization/cookie é rejeitado', () => {
++        assert.throws(() => parseImageUploadGrant({
++            upload_url: grant.uploadUrl,
++            upload_headers: { Authorization: 'Key stolen' },
++            public_url: grant.publicUrl,
++        }));
++        assert.throws(() => parseImageUploadGrant({
++            upload_url: grant.uploadUrl,
++            upload_headers: { cookie: 'session=x' },
++            public_url: grant.publicUrl,
++        }));
++    });
++
++    it('grant com upload_url http ou incompleto é rejeitado', () => {
++        assert.throws(() => parseImageUploadGrant({
++            upload_url: 'http://uploads.higgsfield.ai/put/x',
++            upload_headers: {},
++            public_url: grant.publicUrl,
++        }));
++        assert.throws(() => parseImageUploadGrant({ upload_url: grant.uploadUrl }));
++    });
++
++    it('uploadImageBytes faz PUT com os headers do grant e SEM Authorization', async () => {
++        const { calls, impl } = mockFetch(() => new Response(null, { status: 200 }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        const bytes = new Uint8Array([1, 2, 3, 4]);
++        await client.uploadImageBytes(grant, bytes);
++        assert.equal(calls.length, 1);
++        assert.equal(calls[0].init.method, 'PUT');
++        assert.equal(calls[0].init.redirect, 'manual');
++        const headers = calls[0].init.headers as Record<string, string>;
++        assert.equal(headers.Authorization, undefined);
++        assert.equal(headers['x-store-token'], 't');
++        assert.deepEqual(Buffer.from(calls[0].init.body as Uint8Array), Buffer.from(bytes));
++    });
++
++    it('createImageUpload valida grant antes de devolver (malformado rejeita)', async () => {
++        const { impl } = mockFetch(() => jsonResponse({ error: 'broken' }));
++        const client = new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl });
++        await assert.rejects(client.createImageUpload('image/jpeg'));
++    });
++});
++
++describe('parseStatusResponse — direto (sem rede)', () => {
++    it('status inesperado => unknown com motivo', () => {
++        const outcome = parseStatusResponse({ status: 'weird_state' });
++        assert.equal(outcome.kind, 'unknown');
++    });
++
++    it('corpo não-objeto => unknown', () => {
++        assert.equal(parseStatusResponse('não é json objeto').kind, 'unknown');
++        assert.equal(parseStatusResponse(null).kind, 'unknown');
++    });
++});
+diff --git a/tests/higgsfield-scene.test.ts b/tests/higgsfield-scene.test.ts
+new file mode 100644
+index 0000000..13b6b89
+--- /dev/null
++++ b/tests/higgsfield-scene.test.ts
+@@ -0,0 +1,485 @@
++import assert from 'node:assert/strict';
++import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import { afterEach, beforeEach, describe, it } from 'node:test';
++import {
++    planHiggsfieldRecovery,
++    prepareHiggsfieldAnchorImage,
++    launchHiggsfieldScene,
++    pollHiggsfieldScene,
++    resubmitHiggsfieldScene,
++    sumReservedMicros,
++    higgsfieldIdempotencyKey,
++    higgsfieldOperationKey,
++    type HiggsfieldSceneRequest,
++} from '@/lib/higgsfield-scene';
++import { HiggsfieldClient } from '@/lib/higgsfield';
++import { HiggsfieldSceneError } from '@/lib/higgsfield-scene';
++import { readBudgetSummary } from '@/lib/cost-ledger';
++import { MICRO_PER_USD } from '@/lib/money';
++
++const API_KEY = 'hf-scene-test-key-9876543210';
++const OFFICIAL = 'https://api.higgsfield.ai';
++const MODEL = 'kling-video/v3.0/pro/image-to-video';
++const CAP = 30 * MICRO_PER_USD;
++const STATUS_URL = `${OFFICIAL}/v1/requests/req-1`;
++
++type CapturedCall = { url: string; init: RequestInit };
++
++type Harness = {
++    ledgerDir: string;
++    calls: CapturedCall[];
++    persisted: HiggsfieldSceneRequest[];
++    logs: string[];
++    handler: (url: string, init: RequestInit) => Response | Promise<Response>;
++    setHandler: (next: Harness['handler']) => void;
++    client: HiggsfieldClient;
++    capMicros: number;
++};
++
++const jsonResponse = (body: unknown, status = 200) =>
++    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
++
++async function buildHarness(initial: Harness['handler'], capMicros = CAP): Promise<Harness> {
++    const ledgerDir = await mkdtemp(path.join(os.tmpdir(), 'boomer-kev-hf-scene-'));
++    const state: { handler: Harness['handler'] } = { handler: initial };
++    const calls: CapturedCall[] = [];
++    const persisted: HiggsfieldSceneRequest[] = [];
++    const logs: string[] = [];
++    const impl = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
++        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
++        const captured: CapturedCall = { url, init: (init ?? {}) as RequestInit };
++        calls.push(captured);
++        return state.handler(url, captured.init);
++    }) as typeof fetch;
++    return {
++        ledgerDir,
++        calls,
++        persisted,
++        logs,
++        handler: initial,
++        setHandler: (next) => { state.handler = next; },
++        client: new HiggsfieldClient({ apiKey: API_KEY, fetchImpl: impl }),
++        capMicros,
++    };
++}
++
++const estimateOkHandler: Harness['handler'] = (url, init) => {
++    if (url.startsWith(`${OFFICIAL}/estimate/`)) {
++        return jsonResponse({ type: 'estimate', usd: '0.714' });
++    }
++    if (url === `${OFFICIAL}/${MODEL}`) {
++        return jsonResponse({
++            request_id: 'req-1',
++            status_url: STATUS_URL,
++            cancel_url: `${STATUS_URL}/cancel`,
++        });
++    }
++    return jsonResponse({ error: 'unexpected ' + url + ' ' + init.method }, 500);
++};
++
++const launchParams = (harness: Harness, over: Partial<Parameters<typeof launchHiggsfieldScene>[0]> = {}) => ({
++    jobId: '11111111-1111-4111-8111-111111111111',
++    sceneId: 'scene1',
++    attempt: 1,
++    anchor: 'https://cdn.example/anchor.jpg',
++    prompt: 'SPEECH: says hi',
++    duration: 5,
++    sound: 'on' as const,
++    client: harness.client,
++    model: MODEL,
++    ledgerDir: harness.ledgerDir,
++    capMicros: harness.capMicros,
++    persistRequest: (record: HiggsfieldSceneRequest) => { harness.persisted.push(structuredClone(record)); },
++    log: (message: string) => { harness.logs.push(message); },
++    ...over,
++});
++
++async function cleanup(harness?: Harness | Harness[]) {
++    const list = Array.isArray(harness) ? harness : harness ? [harness] : [];
++    for (const h of list) await rm(h.ledgerDir, { recursive: true, force: true });
++}
++
++describe('launchHiggsfieldScene — fluxo completo com transporte simulado', () => {
++    let harness: Harness;
++
++    beforeEach(async () => {
++        harness = await buildHarness(estimateOkHandler);
++    });
++
++    afterEach(async () => {
++        await cleanup(harness);
++    });
++
++    it('cota → reserva → persiste ANTES do POST → submete → persiste requestId', async () => {
++        const record = await launchHiggsfieldScene(launchParams(harness));
++
++        assert.equal(record.requestId, 'req-1');
++        assert.equal(record.statusUrl, STATUS_URL);
++        assert.equal(record.estimatedUsdMicros, 714_000);
++        assert.equal(record.reservedUsdMicros, 714_000);
++        assert.equal(record.provider, 'higgsfield');
++        assert.equal(record.model, MODEL);
++
++        // Ordem: estimativa ANTES da submissão; persistência crítica antes/depois.
++        const estimateAt = harness.calls.findIndex((c) => c.url.includes('/estimate/'));
++        const submitAt = harness.calls.findIndex((c) => c.url === `${OFFICIAL}/${MODEL}`);
++        assert.ok(estimateAt >= 0 && submitAt > estimateAt);
++        assert.equal(harness.persisted.length, 2);
++        assert.equal(harness.persisted[0].requestId, null); // pré-POST
++        assert.equal(harness.persisted[1].requestId, 'req-1'); // pós-aceitação
++
++        // Payload exato: apenas chaves do contrato; âncora https reutilizada.
++        const body = JSON.parse(String(harness.calls[submitAt].init.body));
++        assert.equal(body.image_url, 'https://cdn.example/anchor.jpg');
++        assert.equal(body.duration, 5);
++        assert.equal(body.sound, 'on');
++        assert.equal(body.cfg_scale, 0.5);
++        assert.equal(body.multi_shots, false);
++        assert.equal(body.aspect_ratio, undefined);
++        assert.equal(body.generate_audio, undefined);
++        assert.equal(harness.calls[submitAt].init.headers && (harness.calls[submitAt].init.headers as Record<string, string>)['Idempotency-Key'], record.idempotencyKey);
++
++        // Reserva durável no ledger.
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++    });
++
++    it('data URI da âncora é enviado via upload (PUT sem Authorization) e o payload usa public_url', async () => {
++        harness.setHandler((url, init) => {
++            if (url === `${OFFICIAL}/files/generate-upload-url`) {
++                return jsonResponse({
++                    upload_url: 'https://uploads.higgsfield.ai/put/tok',
++                    upload_headers: { 'x-store-token': 't0k', 'content-type': 'image/jpeg' },
++                    public_url: 'https://cdn.higgsfield.ai/pub/tok.jpg',
++                });
++            }
++            if (url === 'https://uploads.higgsfield.ai/put/tok') {
++                assert.equal(init.method, 'PUT');
++                const headers = init.headers as Record<string, string>;
++                assert.equal(headers.Authorization, undefined); // credencial NUNCA vai ao storage
++                assert.equal(headers['x-store-token'], 't0k');
++                return new Response(null, { status: 200 });
++            }
++            return estimateOkHandler(url, init);
++        });
++
++        const jpegByte = Buffer.from('fakejpeg', 'utf8').toString('base64');
++        const record = await launchHiggsfieldScene(launchParams(harness, {
++            anchor: `data:image/jpeg;base64,${jpegByte}`,
++        }));
++
++        assert.equal(record.payload.image_url, 'https://cdn.higgsfield.ai/pub/tok.jpg');
++        const submitCall = harness.calls.find((c) => c.url === `${OFFICIAL}/${MODEL}`);
++        assert.equal(JSON.parse(String(submitCall?.init.body)).image_url, 'https://cdn.higgsfield.ai/pub/tok.jpg');
++        // Ordem: upload ANTES da estimativa (payload real contém a public_url).
++        const uploadAt = harness.calls.findIndex((c) => c.url.includes('uploads.higgsfield.ai'));
++        const estimateAt = harness.calls.findIndex((c) => c.url.includes('/estimate/'));
++        assert.ok(uploadAt >= 0 && uploadAt < estimateAt);
++    });
++
++    it('preço desconhecido (Seedance-style) falha ANTES de reservar ou submeter', async () => {
++        harness.setHandler(() => jsonResponse({ type: 'pricing', pricing_description: 'varies' }));
++        await assert.rejects(
++            launchHiggsfieldScene(launchParams(harness)),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'PRICE_UNKNOWN',
++        );
++        assert.equal(harness.calls.filter((c) => c.url === `${OFFICIAL}/${MODEL}`).length, 0);
++        const files = await readdir(harness.ledgerDir);
++        assert.equal(files.filter((n) => n.startsWith('budget_')).length, 0);
++    });
++
++    it('teto estourado falha ANTES da submissão, sem resíduo de reserva', async () => {
++        // Teto de US$0.50 < estimativa de US$0.714 ⇒ reserva abortada antes do POST.
++        const tight = await buildHarness(estimateOkHandler, 500_000);
++        try {
++            await assert.rejects(
++                launchHiggsfieldScene(launchParams(tight)),
++                (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'BUDGET_EXCEEDED',
++            );
++            assert.equal(tight.calls.filter((c) => c.url === `${OFFICIAL}/${MODEL}`).length, 0);
++            const files = await readdir(tight.ledgerDir);
++            assert.equal(files.filter((n) => n.startsWith('budget_')).length, 0);
++            const summary = readBudgetSummary(tight.ledgerDir, tight.capMicros);
++            assert.equal(summary.reservedMicros, 0);
++        } finally {
++            await cleanup(tight);
++        }
++    });
++
++    it('FALHA DE PERSISTÊNCIA antes do POST impede a chamada paga e retém a reserva', async () => {
++        let persistedCalls = 0;
++        const failing = launchParams(harness, {
++            persistRequest: () => {
++                persistedCalls += 1;
++                throw new Error('disco cheio');
++            },
++        });
++        await assert.rejects(launchHiggsfieldScene(failing), /disco cheio/);
++        assert.equal(persistedCalls, 1);
++        assert.equal(harness.calls.filter((c) => c.url === `${OFFICIAL}/${MODEL}`).length, 0);
++        // Reserva ficou retida (dinheiro conservado; retomada decide com o provedor).
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++    });
++
++    it('submissão 4xx rejeitada libera a reserva (sem geração ⇒ sem cobrança)', async () => {
++        harness.setHandler((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) return jsonResponse({ error: 'quota exceeded' }, 402);
++            return estimateOkHandler(url, {});
++        });
++        await assert.rejects(
++            launchHiggsfieldScene(launchParams(harness)),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'SUBMISSION_REJECTED',
++        );
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros + summary.chargedMicros, 0);
++        // Registro RELEASED permanece em disco p/ auditoria (e bloqueia reuso da chave).
++        const files = (await readdir(harness.ledgerDir)).filter((n) => n.startsWith('budget_'));
++        assert.equal(files.length, 1);
++        const raw = JSON.parse(await readFile(path.join(harness.ledgerDir, files[0]), 'utf8'));
++        assert.equal(raw.state, 'RELEASED');
++        assert.equal(raw.releaseReason, 'submission_rejected_no_generation');
++    });
++
++    it('submissão ambígua (5xx) RETÉM a reserva e persiste estado incerto', async () => {
++        harness.setHandler((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) return jsonResponse({ error: 'bad gateway' }, 502);
++            return estimateOkHandler(url, {});
++        });
++        await assert.rejects(
++            launchHiggsfieldScene(launchParams(harness)),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'SUBMISSION_UNKNOWN',
++        );
++        assert.equal(harness.persisted.length, 2);
++        assert.equal(harness.persisted[1].submissionUnknown, true);
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000); // incerto ⇒ NUNCA libera
++    });
++
++    it('chave de idempotência é determinística por (job, cena, tentativa, payload)', () => {
++        const opKey = higgsfieldOperationKey('job', 'scene1', 2);
++        const digest = 'a'.repeat(64);
++        assert.equal(higgsfieldIdempotencyKey(opKey, digest), higgsfieldIdempotencyKey(opKey, digest));
++        assert.notEqual(higgsfieldIdempotencyKey(opKey, digest), higgsfieldIdempotencyKey(higgsfieldOperationKey('job', 'scene1', 3), digest));
++        assert.match(higgsfieldIdempotencyKey(opKey, digest), /^hfk-[0-9a-f]{64}$/);
++    });
++});
++
++describe('resubmitHiggsfieldScene — recuperação de POST ambíguo com a MESMA chave', () => {
++    it('resubmete com MESMA chave/payload; ledger não reserva duas vezes', async () => {
++        const harness = await buildHarness(estimateOkHandler);
++
++        // 1ª submissão fica ambígua (5xx): registro persistido sem requestId.
++        harness.setHandler((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) return jsonResponse({}, 503);
++            return estimateOkHandler(url, {});
++        });
++        let stuck: HiggsfieldSceneRequest;
++        try {
++            await launchHiggsfieldScene(launchParams(harness));
++            assert.fail('deveria ter falhado');
++        } catch (error) {
++            assert.ok(error instanceof HiggsfieldSceneError);
++            stuck = harness.persisted[harness.persisted.length - 1];
++            assert.equal(stuck.requestId, null);
++        }
++
++        // 2ª tentativa (retomada): provedor aceita — MESMA chave, MESMO payload.
++        harness.setHandler(estimateOkHandler);
++        const recovered = await resubmitHiggsfieldScene({
++            record: stuck,
++            client: harness.client,
++            ledgerDir: harness.ledgerDir,
++            capMicros: CAP,
++            persistRequest: (record) => { harness.persisted.push(structuredClone(record)); },
++            log: (m) => { harness.logs.push(m); },
++        });
++
++        assert.equal(recovered.requestId, 'req-1');
++        assert.equal(recovered.idempotencyKey, stuck.idempotencyKey); // MESMA chave
++        assert.equal(recovered.operationKey, stuck.operationKey);
++        const submits = harness.calls.filter((c) => c.url === `${OFFICIAL}/${MODEL}`);
++        assert.equal(submits.length, 2);
++        assert.deepEqual(JSON.parse(String(submits[0].init.body)), JSON.parse(String(submits[1].init.body)));
++        // Somente UMA reserva (retomada adota a existente — nunca duplica verba).
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++        await cleanup(harness);
++    });
++});
++
++describe('pollHiggsfieldScene — conclusão, término e prazo', () => {
++    it('completed cobra (fica retida) e devolve a URL', async () => {
++        const harness = await buildHarness((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) {
++                return jsonResponse({ request_id: 'req-1', status_url: STATUS_URL });
++            }
++            if (url.includes('/estimate/')) return jsonResponse({ type: 'estimate', usd: '0.714' });
++            return jsonResponse({ status: 'completed', video: { url: 'https://cdn.higgsfield.ai/v.mp4' } });
++        });
++        const record = await launchHiggsfieldScene(launchParams(harness));
++
++        const result = await pollHiggsfieldScene({
++            record,
++            client: harness.client,
++            ledgerDir: harness.ledgerDir,
++            log: (m) => harness.logs.push(m),
++        });
++        assert.equal(result.outputUrl, 'https://cdn.higgsfield.ai/v.mp4');
++        assert.equal(result.charge, 'charged');
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.chargedMicros, 714_000); // confirmado: fica no teto
++        assert.equal(summary.reservedMicros, 0);
++        await cleanup(harness);
++    });
++
++    it('término terminal (nsfw/failed/canceled) libera a reserva com motivo documentado', async () => {
++        const harness = await buildHarness((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) {
++                return jsonResponse({ request_id: 'req-1', status_url: STATUS_URL });
++            }
++            if (url.includes('/estimate/')) return jsonResponse({ type: 'estimate', usd: '0.714' });
++            return jsonResponse({ status: 'nsfw' });
++        });
++        const record = await launchHiggsfieldScene(launchParams(harness));
++        await assert.rejects(
++            pollHiggsfieldScene({
++                record,
++                client: harness.client,
++                ledgerDir: harness.ledgerDir,
++                log: (m) => harness.logs.push(m),
++            }),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'TERMINAL_FAILURE',
++        );
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros + summary.chargedMicros, 0);
++        await cleanup(harness);
++    });
++
++    it('prazo de polling estoura com reserva RETIDA (nunca relança às cegas)', async () => {
++        const harness = await buildHarness((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) return jsonResponse({ request_id: 'req-1', status_url: STATUS_URL });
++            if (url.includes('/estimate/')) return jsonResponse({ type: 'estimate', usd: '0.714' });
++            return jsonResponse({ status: 'in_progress' });
++        });
++        const record = await launchHiggsfieldScene(launchParams(harness));
++        await assert.rejects(
++            pollHiggsfieldScene({
++                record,
++                client: harness.client,
++                ledgerDir: harness.ledgerDir,
++                deadlineMs: 20,
++                intervalMs: 1,
++                sleep: async () => {},
++                log: () => {},
++            }),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'POLL_TIMEOUT',
++        );
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++        await cleanup(harness);
++    });
++
++    it('status_url não confiável (origem alternativa) para SEM contato e retém reserva', async () => {
++        const harness = await buildHarness((url) => {
++            if (url === `${OFFICIAL}/${MODEL}`) return jsonResponse({ request_id: 'req-1', status_url: STATUS_URL });
++            if (url.includes('/estimate/')) return jsonResponse({ type: 'estimate', usd: '0.714' });
++            return jsonResponse({ status: 'in_progress' });
++        });
++        const record = await launchHiggsfieldScene(launchParams(harness));
++        // Estado persistido adulterado/corrompido com origem alternativa:
++        // a defesa para ANTES de qualquer contato com a origem estranha.
++        record.statusUrl = 'https://evil.example/poll';
++        await assert.rejects(
++            pollHiggsfieldScene({
++                record,
++                client: harness.client,
++                ledgerDir: harness.ledgerDir,
++                log: () => {},
++            }),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'PROVIDER_UNKNOWN',
++        );
++        assert.equal(harness.calls.filter((c) => c.url.includes('evil.example')).length, 0);
++        const summary = readBudgetSummary(harness.ledgerDir, CAP);
++        assert.equal(summary.reservedMicros, 714_000);
++        await cleanup(harness);
++    });
++});
++
++describe('planHiggsfieldRecovery — tabela de decisão', () => {
++    const base = { statusUrl: STATUS_URL, submissionUnknown: false };
++
++    it('sem registro => fresh_launch; sem requestId => resubmit_same_key', () => {
++        assert.deepEqual(planHiggsfieldRecovery(undefined, null), { kind: 'fresh_launch' });
++        assert.deepEqual(
++            planHiggsfieldRecovery({ ...base, requestId: null }, null),
++            { kind: 'resubmit_same_key' },
++        );
++        // Mesmo sem flag de incerteza, registro sem requestId é recuperado pela MESMA chave.
++        assert.deepEqual(
++            planHiggsfieldRecovery({ ...base, requestId: null }, undefined),
++            { kind: 'resubmit_same_key' },
++        );
++    });
++
++    it('requestId + resultados do provedor', () => {
++        assert.deepEqual(
++            planHiggsfieldRecovery({ ...base, requestId: 'r1' }, { kind: 'succeeded', outputUrl: 'https://cdn/x.mp4' }),
++            { kind: 'reuse_result', outputUrl: 'https://cdn/x.mp4' },
++        );
++        assert.deepEqual(
++            planHiggsfieldRecovery({ ...base, requestId: 'r1' }, { kind: 'processing', rawStatus: 'queued' }),
++            { kind: 'keep_polling' },
++        );
++        assert.deepEqual(
++            planHiggsfieldRecovery({ ...base, requestId: 'r1' }, { kind: 'failed_terminal', terminalStatus: 'failed' }),
++            { kind: 'relaunch_new_attempt' },
++        );
++        const stopped = planHiggsfieldRecovery({ ...base, requestId: 'r1' }, { kind: 'unknown', reason: 'offline' });
++        assert.equal(stopped.kind, 'stop_unresolved');
++        // Consulta indisponível => parar (reserva retida), nunca relançar às cegas.
++        assert.equal(planHiggsfieldRecovery({ ...base, requestId: 'r1' }, null).kind, 'stop_unresolved');
++    });
++});
++
++describe('prepareHiggsfieldAnchorImage — âncoras', () => {
++    it('https é reutilizada sem upload; esquemas não suportados falham claro', async () => {
++        const harness = await buildHarness(() => jsonResponse({}, 500));
++        const url = await prepareHiggsfieldAnchorImage('https://cdn.example/a.jpg', harness.client, () => {});
++        assert.equal(url, 'https://cdn.example/a.jpg');
++        assert.equal(harness.calls.length, 0); // sem busca de arquivo privado
++        await assert.rejects(
++            prepareHiggsfieldAnchorImage('http://cdn.example/a.jpg', harness.client, () => {}),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'INVALID_ANCHOR',
++        );
++        await assert.rejects(
++            prepareHiggsfieldAnchorImage(undefined, harness.client, () => {}),
++            HiggsfieldSceneError,
++        );
++        await cleanup(harness);
++    });
++
++    it('data URI enorme é rejeitada antes de qualquer rede', async () => {
++        const harness = await buildHarness(() => jsonResponse({}, 500));
++        const big = `data:image/jpeg;base64,${'A'.repeat(9_000_000)}`;
++        await assert.rejects(
++            prepareHiggsfieldAnchorImage(big, harness.client, () => {}),
++            (error: unknown) => error instanceof HiggsfieldSceneError && error.code === 'INVALID_ANCHOR',
++        );
++        assert.equal(harness.calls.length, 0);
++        await cleanup(harness);
++    });
++});
++
++describe('sumReservedMicros', () => {
++    it('soma apenas valores finitos das reservas', () => {
++        const records = [
++            { reservedUsdMicros: 714_000 },
++            { reservedUsdMicros: Number.NaN },
++            undefined,
++        ] as never as HiggsfieldSceneRequest[];
++        assert.equal(sumReservedMicros(records.filter(Boolean)), 714_000);
++    });
++});
+diff --git a/tests/pipeline-job-state.test.ts b/tests/pipeline-job-state.test.ts
+new file mode 100644
+index 0000000..0e4e3b8
+--- /dev/null
++++ b/tests/pipeline-job-state.test.ts
+@@ -0,0 +1,54 @@
++import assert from 'node:assert/strict';
++import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import { afterEach, beforeEach, describe, it } from 'node:test';
++import { mergeJobUpdate, writeJsonAtomic } from '@/lib/pipeline-job-state';
++
++describe('writeJsonAtomic — persistência crítica do job', () => {
++    let dir = '';
++
++    beforeEach(async () => {
++        dir = await mkdtemp(path.join(os.tmpdir(), 'boomer-kev-jobstate-'));
++    });
++
++    afterEach(async () => {
++        await rm(dir, { recursive: true, force: true });
++    });
++
++    it('grava JSON válido atomicamente e não deixa temporário', async () => {
++        const filePath = path.join(dir, 'job_x.json');
++        writeJsonAtomic(filePath, { status: 'PROCESSING', logs: ['a'] });
++        assert.deepEqual(JSON.parse(await readFile(filePath, 'utf8')), { status: 'PROCESSING', logs: ['a'] });
++        assert.equal((await readdir(dir)).filter((name) => name.includes('.tmp.')).length, 0);
++    });
++
++    it('FALHA PROPAGA quando a gravação é impossível (sem diretório) — sem falso sucesso', async () => {
++        const filePath = path.join(dir, 'nao-existe', 'job_x.json');
++        assert.throws(() => writeJsonAtomic(filePath, { a: 1 }));
++    });
++
++    it('substituição preserva o conteúdo anterior quando a nova gravação falha', async () => {
++        const filePath = path.join(dir, 'job_x.json');
++        writeJsonAtomic(filePath, { v: 1 });
++        assert.throws(() => writeJsonAtomic(path.join(dir, 'sub', 'outro.json'), {}));
++        assert.deepEqual(JSON.parse(await readFile(filePath, 'utf8')), { v: 1 });
++    });
++});
++
++describe('mergeJobUpdate — mescla imutável com logs anexados', () => {
++    it('mantém logs anteriores e anexa os novos, sem mutar entrada', () => {
++        const current = { status: 'PROCESSING', logs: ['um'] };
++        const merged = mergeJobUpdate(current, { progress: 40, logs: ['dois'] });
++        assert.equal(merged.progress, 40);
++        assert.deepEqual(merged.logs, ['um', 'dois']);
++        assert.deepEqual(current.logs, ['um']);
++        assert.equal(typeof merged.updatedAt, 'string');
++    });
++
++    it('update sem logs conserva logs existentes', () => {
++        const merged = mergeJobUpdate({ logs: ['x'] }, { progress: 1 });
++        assert.deepEqual(merged.logs, ['x']);
++        assert.equal(merged.progress, 1);
++    });
++});
+diff --git a/tests/video-provider.test.ts b/tests/video-provider.test.ts
+new file mode 100644
+index 0000000..616fd77
+--- /dev/null
++++ b/tests/video-provider.test.ts
+@@ -0,0 +1,132 @@
++import assert from 'node:assert/strict';
++import { describe, it } from 'node:test';
++import {
++    DEFAULT_HIGGSFIELD_MODEL,
++    LEGACY_REPLICATE_MODEL,
++    VideoProviderConfigError,
++    resolveVideoProviderConfig,
++} from '@/lib/video-provider';
++import { immutablePipelineConfig, pipelineConfigHash, evaluateResume } from '@/lib/resume-policy';
++import type { RunPipelineInput } from '@/lib/validations';
++import crypto from 'node:crypto';
++
++const baseData = {
++    engine: 'kling' as const,
++    aspect: '9:16' as const,
++    voiceMode: 'kling_native' as const,
++    script: [{
++        id: 'scene1',
++        characterId: 'boomer',
++        text: 'Mate!',
++        shotType: 'WIDE' as const,
++        action: 'leans in',
++        emotion: 'excited',
++        durationEst: 5,
++    }],
++};
++
++const minimalInput = baseData as unknown as Omit<RunPipelineInput, 'approval' | 'resumeJobId'>;
++
++describe('resolveVideoProviderConfig — seleção por servidor', () => {
++    it('vazio/ausente/replicate = legado (comportamento inalterado)', () => {
++        assert.deepEqual(resolveVideoProviderConfig({}), { provider: 'replicate', model: LEGACY_REPLICATE_MODEL });
++        assert.deepEqual(resolveVideoProviderConfig({ VIDEO_PROVIDER: '' }), { provider: 'replicate', model: LEGACY_REPLICATE_MODEL });
++        assert.deepEqual(resolveVideoProviderConfig({ VIDEO_PROVIDER: 'replicate' }), { provider: 'replicate', model: LEGACY_REPLICATE_MODEL });
++        assert.deepEqual(resolveVideoProviderConfig({ VIDEO_PROVIDER: '  Replicate ' }), { provider: 'replicate', model: LEGACY_REPLICATE_MODEL });
++    });
++
++    it('higgsfield com chave e modelo padrão do contrato', () => {
++        const config = resolveVideoProviderConfig({ VIDEO_PROVIDER: 'higgsfield', HF_API_KEY: 'hf-demo-key' });
++        assert.deepEqual(config, { provider: 'higgsfield', model: DEFAULT_HIGGSFIELD_MODEL });
++    });
++
++    it('higgsfield aceita modelo configurado no servidor', () => {
++        const config = resolveVideoProviderConfig({
++            VIDEO_PROVIDER: 'higgsfield',
++            HF_API_KEY: 'hf-demo-key',
++            HIGGSFIELD_MODEL: 'kling-video/v3.0/pro/image-to-video',
++        });
++        assert.equal(config.model, 'kling-video/v3.0/pro/image-to-video');
++    });
++
++    it('higgsfield SEM chave é erro explícito — nunca fallback pago ao Replicate', () => {
++        assert.throws(
++            () => resolveVideoProviderConfig({ VIDEO_PROVIDER: 'higgsfield' }),
++            (error: unknown) => error instanceof VideoProviderConfigError
++                && error.code === 'HIGGSFIELD_CREDENTIAL_MISSING',
++        );
++    });
++
++    it('valor explícito inválido é rejeitado, não silenciado', () => {
++        for (const bad of ['bedrock', 'HiggsfieldFake', 'replicate ']) {
++            if (bad === 'replicate ') continue;
++            assert.throws(
++                () => resolveVideoProviderConfig({ VIDEO_PROVIDER: bad }),
++                (error: unknown) => error instanceof VideoProviderConfigError
++                    && error.code === 'VIDEO_PROVIDER_INVALID',
++            );
++        }
++    });
++
++    it('modelo Higgsfield com caracteres fora do padrão é rejeitado', () => {
++        assert.throws(
++            () => resolveVideoProviderConfig({
++                VIDEO_PROVIDER: 'higgsfield',
++                HF_API_KEY: 'k',
++                HIGGSFIELD_MODEL: 'model with spaces',
++            }),
++            (error: unknown) => error instanceof VideoProviderConfigError
++                && error.code === 'HIGGSFIELD_MODEL_INVALID',
++        );
++    });
++});
++
++describe('pipelineConfigHash com provedor — compatibilidade de retomada', () => {
++    const legacyHash = pipelineConfigHash(minimalInput);
++
++    it('hash legado permanece byte-idêntico (immutablePipelineConfig puro)', () => {
++        const expected = crypto
++            .createHash('sha256')
++            .update(JSON.stringify(immutablePipelineConfig(minimalInput)))
++            .digest('hex');
++        assert.equal(legacyHash, expected);
++        // replicate explícito NÃO altera o hash legado (jobs antigos retomáveis).
++        assert.equal(
++            pipelineConfigHash(minimalInput, { provider: 'replicate', model: LEGACY_REPLICATE_MODEL }),
++            legacyHash,
++        );
++    });
++
++    it('higgsfield entra no hash com provedor e modelo congelados', () => {
++        const hfHash = pipelineConfigHash(minimalInput, { provider: 'higgsfield', model: DEFAULT_HIGGSFIELD_MODEL });
++        assert.notEqual(hfHash, legacyHash);
++        assert.equal(
++            pipelineConfigHash(minimalInput, { provider: 'higgsfield', model: DEFAULT_HIGGSFIELD_MODEL }),
++            hfHash,
++        );
++        // Mudança de MODELO no Higgsfield muda o hash ⇒ conflito de retomada.
++        assert.notEqual(
++            pipelineConfigHash(minimalInput, { provider: 'higgsfield', model: 'other/model' }),
++            hfHash,
++        );
++    });
++
++    it('resume através de troca de provedor/modelo conflita', () => {
++        const hfHash = pipelineConfigHash(minimalInput, { provider: 'higgsfield', model: DEFAULT_HIGGSFIELD_MODEL });
++        // job legado (hash antigo) × servidor em higgsfield => conflito
++        assert.deepEqual(
++            evaluateResume({ configHash: legacyHash }, { configHash: hfHash }, { isRunActive: false }),
++            { action: 'conflict', code: 'RESUME_CONFIG_CONFLICT' },
++        );
++        // job higgsfield × servidor de volta em replicate (hash legado) => conflito
++        assert.deepEqual(
++            evaluateResume({ configHash: hfHash }, { configHash: legacyHash }, { isRunActive: false }),
++            { action: 'conflict', code: 'RESUME_CONFIG_CONFLICT' },
++        );
++        // mesmo provedor/modelo => takeover normal
++        assert.deepEqual(
++            evaluateResume({ configHash: hfHash }, { configHash: hfHash }, { isRunActive: false }),
++            { action: 'takeover' },
++        );
++    });
++});

@@ -47,3 +47,7 @@ page_lint.json
 # bancada temporária VLAEG (intermediários efêmeros)
 .tmp/
 .holofote/
+
+# Rig 3D: placas e composições regeneráveis por tools/rig/build_studio.py e composite_sponsor.py
+design/rig-v1/plates/
+design/rig-v1/composite/

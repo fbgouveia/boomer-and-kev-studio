@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DIRECTOR · Trend → Roteiro → Storyboard (proposta v1)</title>
+<style>
+:root{
+  --o:#FF5F1F; --bg:#050505; --panel:#0a0a0b; --panel2:#080808; --ok:#22c55e;
+  --w60:rgba(255,255,255,.62); --w40:rgba(255,255,255,.4); --line:rgba(255,255,255,.08);
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:#fff;font-family:var(--sans);line-height:1.4;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+button:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.label{font-size:12px;font-weight:900;letter-spacing:.2em;text-transform:uppercase}
+.mono{font-family:var(--mono)}
+.h-big{font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.04em;line-height:.95}
+.muted{color:var(--w60)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border:1px solid;font-family:var(--mono);white-space:nowrap}
+.chip{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.chip.o{color:var(--o);border-color:var(--o)} .chip.n{color:var(--w60);border-color:rgba(255,255,255,.22)} .chip.ok{color:var(--ok);border-color:var(--ok)}
+.chip.solid{background:var(--o);color:#000;border-color:var(--o)}
+.btn{min-height:44px;padding:0 18px;border:2px solid;font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s var(--ease),background-color .15s var(--ease),color .15s var(--ease)}
+.btn:active{transform:translateY(1px)}
+.btn.o{color:var(--o);border-color:var(--o)} .btn.o:hover{background:var(--o);color:#000}
+.btn.ok{color:var(--ok);border-color:var(--ok)} .btn.ok:hover{background:var(--ok);color:#000}
+.btn.ghost{color:#fff;border-color:rgba(255,255,255,.3)} .btn.ghost:hover{background:#fff;color:#000}
+.btn.primary{background:var(--o);color:#000;border-color:var(--o);box-shadow:6px 6px 0 rgba(255,95,31,.25);min-height:52px;padding:0 26px}
+.btn.primary:hover{background:#fff;border-color:#fff}
+.btn[aria-disabled=true]{background:transparent;color:var(--w40);border:2px dashed rgba(255,255,255,.25);box-shadow:none;cursor:not-allowed}
+.btn[aria-disabled=true]:hover{background:transparent;color:var(--w40)}
+
+/* faixa + nav (idênticos à proposta engine-dna) */
+.strip{background:var(--o);color:#000;text-align:center;font-size:12px;font-weight:900;letter-spacing:.28em;padding:8px 12px;text-transform:uppercase}
+nav.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 32px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+nav.top h1{font-size:18px;font-weight:900;letter-spacing:-.02em}
+nav.top h1 span{color:var(--o)}
+.tabs{display:flex;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02);padding:4px;font-size:13px;font-weight:900;letter-spacing:.14em;overflow-x:auto;max-width:100%}
+.tabs span{padding:10px 18px;color:var(--w60);white-space:nowrap}
+.tabs .on{background:var(--o);color:#000}
+
+/* controle do mockup */
+.switcher{position:sticky;top:0;z-index:30;background:rgba(5,5,5,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:10px 32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.seg{display:flex;border:2px solid rgba(255,255,255,.2);background:#000;padding:2px;flex-wrap:wrap}
+.seg button{min-height:44px;padding:0 18px;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--w60);transition:background-color .15s var(--ease),color .15s var(--ease)}
+.seg button:hover{background:rgba(255,255,255,.12);color:#fff}
+.seg button[aria-pressed=true]{background:var(--o);color:#000}
+
+main{max-width:1440px;margin:0 auto;padding:40px 32px 64px}
+.new{outline:2px dashed rgba(255,95,31,.55);outline-offset:6px}
+.tag-new{display:inline-block;background:var(--o);color:#000;font-size:10px;font-weight:900;letter-spacing:.2em;padding:2px 8px}
+
+/* DIRECTOR layout */
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+.sec-head h2{font-size:clamp(32px,5vw,52px)}
+.regions{display:flex;flex-wrap:wrap;gap:4px}
+.regions span{padding:8px 12px;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--w60);border:1px solid transparent}
+.regions .on{background:rgba(255,95,31,.15);color:var(--o);border-color:rgba(255,95,31,.35)}
+.director{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:32px;align-items:start}
+.trends{display:flex;flex-direction:column;gap:20px}
+.trend{background:var(--panel2);border:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:14px;position:relative}
+.trend.sel{border:4px solid var(--o);padding:21px;box-shadow:8px 8px 0 rgba(255,95,31,.18)}
+.trend .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--w60)}
+.trend .meta b{color:var(--o)}
+.trend h4{font-size:21px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;line-height:1.05}
+.trend p{font-size:13px;color:var(--w60);line-height:1.5}
+.take{padding:12px 14px;background:rgba(0,0,0,.5);border-left:2px solid rgba(255,95,31,.5);font-family:var(--mono);font-size:13px;color:var(--w60);line-height:1.45}
+.take b{color:var(--o);margin-right:4px}.take.k{border-color:rgba(255,255,255,.25)}.take.k b{color:#fff}
+.trend .btn{width:100%}
+
+.script{border:4px solid var(--o);background:var(--panel);position:relative;min-width:0}
+.script-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:24px 28px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.55);backdrop-filter:blur(12px)}
+.script-head h3{font-size:clamp(24px,3vw,34px)}
+.script-body{padding:0}
+
+/* GERANDO */
+.gen{padding:28px}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:var(--line);margin-bottom:20px}
+.step{background:var(--panel2);padding:14px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.step .i{font-family:var(--mono);font-size:11px;color:var(--w40);letter-spacing:.14em}
+.step .t{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--w40);overflow-wrap:anywhere}
+.step.done .t{color:#fff}.step.done .i{color:var(--ok)}
+.step.cur{outline:2px solid var(--o);outline-offset:-2px;background:rgba(255,95,31,.1)}
+.step.cur .t,.step.cur .i{color:var(--o)}
+.step.cur .dot{animation:pulse 1s ease-out infinite alternate}
+.dot{width:8px;height:8px;background:currentColor;color:var(--w40)}
+.step.cur .dot{color:var(--o)}.step.done .dot{color:var(--ok)}
+@keyframes pulse{from{opacity:1}to{opacity:.25}}
+.timer{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.timer .clock{font-family:var(--mono);font-size:40px;font-weight:900;color:var(--o);letter-spacing:-.04em}
+.bar{height:8px;background:rgba(255,255,255,.1);flex:1;min-width:160px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--o);transform-origin:left;transform:scaleX(.1);transition:transform .25s var(--ease)}
+.sk{display:flex;gap:20px;padding:20px;background:var(--panel2);border-left:4px solid rgba(255,255,255,.12)}
+.sk+.sk{margin-top:2px}
+.sk .b{background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.sk .b::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,95,31,.18),transparent);transform:translateX(-100%);animation:shim 1.4s ease-out infinite}
+@keyframes shim{to{transform:translateX(100%)}}
+.sk .n{width:40px;height:20px}.sk .l{height:14px;margin-bottom:10px}
+
+/* CENAS */
+.scenes{display:flex;flex-direction:column;gap:2px;background:var(--line)}
+.scene{background:var(--panel2);border-left:4px solid rgba(255,255,255,.2);display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:20px;padding:22px 24px 22px 16px}
+.scene.B{border-left-color:var(--o)}
+.scene.W{border-left-color:#fff}
+.scene .no{font-family:var(--mono);font-size:26px;font-weight:900;color:var(--w40);letter-spacing:-.04em;padding-left:4px}
+.row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.av{width:32px;height:32px;object-fit:cover;border:1px solid rgba(255,255,255,.25)}
+.who{font-size:13px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;padding:3px 10px}
+.who.B{background:var(--o);color:#000}.who.K{background:#fff;color:#000}.who.W{background:#000;color:#fff;border:1px solid #fff}
+.sec{margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--w60)}
+.line{font-size:clamp(17px,1.9vw,22px);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.025em;line-height:1.1;margin-bottom:12px}
+.line.k{font-style:normal;text-transform:none;font-weight:800;letter-spacing:-.01em;font-size:clamp(17px,1.9vw,21px)}
+.line small{display:block;font-size:11px;letter-spacing:.2em;font-style:normal;font-family:var(--mono);color:var(--o);margin-top:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.opt{text-align:left;padding:10px 12px;border:1px solid rgba(255,255,255,.18);font-size:12px;line-height:1.35;color:var(--w60);min-height:44px;display:flex;gap:8px;transition:background-color .15s var(--ease),border-color .15s var(--ease)}
+.opt b{font-family:var(--mono);color:var(--o);flex:none}
+.opt span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.opt:hover{background:rgba(255,255,255,.1);color:#fff}
+.opt[aria-pressed=true]{border:2px solid var(--o);padding:9px 11px;color:#fff;background:rgba(255,95,31,.08)}
+details.swap summary{list-style:none;cursor:pointer;display:inline-flex;min-height:44px;align-items:center}
+details.swap summary::-webkit-details-marker{display:none}
+details.swap[open] summary{margin-bottom:6px}
+.pready{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);background:rgba(0,0,0,.4)}
+
+/* STORYBOARD */
+.sbhead{padding:24px 28px;border-bottom:1px solid var(--line);display:grid;gap:18px;background:rgba(0,0,0,.55);backdrop-filter:blur(12px)}
+.sbtop{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.sbtop .count{font-size:clamp(20px,2.4vw,28px)}
+.sbtop .count em{color:var(--o)}
+.pbar{height:10px;background:rgba(255,255,255,.1);overflow:hidden}
+.pbar i{display:block;height:100%;width:100%;background:var(--o);transform-origin:left;transition:transform .25s var(--ease)}
+.sbmeta{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:space-between}
+.sbmeta .l{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.tipwrap{position:relative;display:inline-block}
+.tip{position:absolute;right:0;bottom:calc(100% + 10px);background:#000;border:2px solid var(--o);padding:8px 12px;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity .15s var(--ease),transform .15s var(--ease);z-index:5}
+.tipwrap:hover .tip,.tipwrap:focus-within .tip{opacity:1;transform:none}
+.tipwrap.ready .tip{display:none}
+.note{font-size:12px;color:var(--w60);padding:12px 28px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;font-weight:700}
+.note b{color:var(--o)}
+.kf{width:144px;display:flex;flex-direction:column;gap:8px;flex:none}
+.kfbox{position:relative;aspect-ratio:9/16;background:#000;border:2px solid rgba(255,255,255,.2);overflow:hidden;transition:border-color .15s var(--ease)}
+.kfbox img{width:100%;height:100%;object-fit:cover}
+.fmt16 .kf{width:240px}.fmt16 .kfbox{aspect-ratio:16/9}
+.kf.approved .kfbox{border:4px solid var(--o)}
+.kf.empty .kfbox{border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:8px}
+.kf.generating .kfbox{border-color:var(--o)}
+.kf.generating .kfbox::before{content:"";position:absolute;inset:0;background:rgba(255,95,31,.14);animation:pulse .8s ease-out infinite alternate;z-index:1}
+.kf.generating .gl{position:absolute;inset:auto 8px 8px 8px;z-index:2;background:#000;border:1px solid var(--o);color:var(--o);text-align:center;font-family:var(--mono);font-size:11px;font-weight:900;letter-spacing:.14em;padding:6px 4px;animation:pulse .8s ease-out infinite alternate}
+.kf.generating img{opacity:.35}
+.badge{position:absolute;left:6px;bottom:6px;z-index:2;background:var(--o);color:#000;font-size:10px;font-weight:900;letter-spacing:.12em;padding:4px 8px 4px 6px;display:flex;align-items:center;gap:5px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.badge svg{width:12px;height:12px}
+.kfact{display:flex;gap:6px}.kfact .btn{flex:1;min-height:44px;padding:0 4px;font-size:11px;letter-spacing:.08em}
+.kfcap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--w60);text-transform:uppercase}
+.fmt16 .sbscene{grid-template-columns:56px minmax(0,1fr) 240px}
+
+/* PRODUCTION */
+.prod{margin-top:72px;padding-top:56px;border-top:1px solid var(--line)}
+.pgrid{display:flex;flex-direction:column;gap:32px}
+.pcase .cap{display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.prow{background:var(--panel2);display:grid;grid-template-columns:240px minmax(0,1fr) auto;border-left:4px solid var(--o);min-height:260px}
+.prow.K{border-left-color:rgba(255,255,255,.25)}
+.prow .meta{padding:24px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.prow .meta .sel{background:#111;border:1px solid rgba(255,255,255,.12);padding:8px;font-size:13px;font-weight:900;text-transform:uppercase}
+.prow .body{padding:24px 28px;min-width:0}
+.prow .thumb{padding:24px 28px 24px 0}
+.hole{width:144px;align-self:stretch;border:2px dashed rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--w40);text-transform:uppercase;aspect-ratio:9/16;height:256px}
+.st{display:inline-flex;gap:6px;align-items:center}
+
+footer.bar{border-top:2px solid rgba(255,95,31,.6);background:var(--bg);padding:16px 32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-size:12px}
+.hint{font-size:12px;color:var(--w60);font-weight:700;margin-top:10px}
+
+@media (max-width:1180px){
+  .director{grid-template-columns:1fr}
+  .trends{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+}
+@media (max-width:760px){
+  html,body{overflow-x:hidden}
+  nav.top>*{min-width:0;max-width:100%}
+  .tabs{width:100%;overflow-x:auto}
+  .chips,.row1{min-width:0}
+  nav.top,.switcher,footer.bar{padding-left:16px;padding-right:16px}
+  main{padding:28px 16px 48px}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .script-head,.sbhead{padding:18px 16px}.gen{padding:16px}.note{padding:12px 16px;align-items:flex-start}
+  .scene{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"no no" "main kf";gap:12px 14px;padding:16px 12px}
+  .scene .no{grid-area:no;font-size:20px}
+  .scene .main{grid-area:main}
+  .scene .kf{grid-area:kf;width:104px}
+  .opts{grid-template-columns:1fr}
+  .kfact{flex-direction:column}
+  .sec{margin-left:0}
+  .fmt16 .scene{grid-template-areas:"no" "main" "kf"}
+  .fmt16 .scene .kf{width:100%}
+  .fmt16 .sbscene{grid-template-columns:1fr}
+  .prow{grid-template-columns:1fr}
+  .prow .meta{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;align-items:center}
+  .prow .body{padding:16px}
+  .prow .thumb{padding:0 16px 16px}
+  .tip{right:auto;left:0}
+  .sbmeta{align-items:stretch}.cta{width:100%}.cta .tipwrap,.cta .btn{width:100%}
+  .btn.primary{padding:0 16px}
+  .timer .clock{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="strip" data-od-id="proposal-strip">Proposta de design v1 · não é o Studio · áreas tracejadas = novas · dados de exemplo · aguardando aprovação do Felipe</div>
+
+<nav class="top" data-od-id="studio-nav">
+  <div>
+    <h1>BOOMER &amp; KEV <span>STUDIO</span></h1>
+    <div class="label muted" style="letter-spacing:.4em;font-size:11px">CINEMATIC ENGINE v3.1</div>
+  </div>
+  <div class="tabs"><span class="on">DIRECTOR</span><span>PRODUCTION</span><span>LIBRARY</span><span>ENGINE DNA</span><span>RADAR</span><span>COMMERCIAL</span></div>
+</nav>
+
+<div class="switcher" data-od-id="state-switcher">
+  <span class="label muted">Estado:</span>
+  <div class="seg" role="group" aria-label="Estado do painel de roteiro">
+    <button data-s="gen" aria-pressed="false">Gerando</button>
+    <button data-s="ready" aria-pressed="false">Roteiro pronto</button>
+    <button data-s="board" aria-pressed="true">Storyboard</button>
+  </div>
+  <span class="label muted" style="font-size:11px;letter-spacing:.14em">controle só do mockup · no app o estado avança sozinho</span>
+</div>
+
+<main>
+  <!-- ================= DIRECTOR ================= -->
+  <section data-od-id="director-section">
+    <div class="sec-head">
+      <div>
+        <span class="label" style="color:var(--o);letter-spacing:.3em;font-style:italic">Global Signal Aggregator</span>
+        <h2 class="h-big" style="margin-top:8px">Viral Signals <span style="color:var(--o)">&amp;</span> Hot Topics</h2>
+      </div>
+      <div class="seg" aria-label="Fonte do feed"><button aria-pressed="true">LIVE WIRE</button><button aria-pressed="false">2026 PLANNER</button></div>
+    </div>
+    <div class="regions" style="margin-bottom:28px"><span class="label muted" style="padding:8px 8px 8px 0;font-family:var(--mono)">Select Region:</span><span class="on">Australia</span><span>United States</span><span>South America</span><span>Europe</span><span>Middle East</span><span>Asia</span></div>
+
+    <div class="director">
+      <!-- tendências -->
+      <div class="trends" data-od-id="live-wire-grid">
+        <article class="trend sel" data-od-id="trend-card-selected" aria-current="true">
+          <div class="meta"><span class="chip n">Live Signal</span><b>12 outlets · 7d · measured</b></div>
+          <h4>Sydney house prices rebound</h4>
+          <p>Sydney dwelling values turned upward after a run of declines, with auction clearance rates lifting across several suburbs.</p>
+          <div class="take"><b>BOOMER:</b>"Mate, the whole harbour just got a pay rise and nobody told my wallet..."</div>
+          <div class="take k"><b>KEV:</b>"Rebounded. Like a cheque."</div>
+          <div class="chip o" style="justify-content:center;min-height:44px;width:100%">✓ Selecionada · roteiro ao lado</div>
+        </article>
+        <article class="trend" data-od-id="trend-card-nrl">
+          <div class="meta"><span class="chip n">Live Signal</span><b>8 outlets · 7d · measured</b></div>
+          <h4>NRL finals ticket scramble</h4>
+          <p>Fans queue online as finals ticket allocations sell out within minutes.</p>
+          <div class="take"><b>BOOMER:</b>"I'd wrestle a croc for a seat on the halfway line..."</div>
+          <button class="btn o">Feed Machine</button>
+        </article>
+        <article class="trend" data-od-id="trend-card-ferry">
+          <div class="meta"><span class="chip n">Live Signal</span><b>5 outlets · 7d · measured</b></div>
+          <h4>Harbour ferry timetable shake-up</h4>
+          <p>Commuters brace for changed services on several Sydney ferry routes.</p>
+          <div class="take k"><b>KEV:</b>"I don't swim. I'll wait."</div>
+          <button class="btn o">Feed Machine</button>
+        </article>
+        <p class="hint" style="margin:0">Hoje: “Feed Machine” abre um modal que esconde esta tela e depois pula para a aba PRODUCTION. Proposta: o cartão fica marcado e o roteiro nasce ao lado.</p>
+      </div>
+
+      <!-- painel de roteiro -->
+      <div class="script new" id="script" data-od-id="script-panel">
+        <div class="script-head">
+          <div>
+            <span class="tag-new">NEW</span>
+            <h3 class="h-big" style="margin-top:10px" id="ph-title">Roteiro</h3>
+            <p class="muted mono" style="font-size:12px;margin-top:8px;text-transform:uppercase;letter-spacing:.08em">Tema: Sydney house prices rebound</p>
+          </div>
+          <div id="ph-right"></div>
+        </div>
+        <div id="sbhead"></div>
+        <div id="body" class="script-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRODUCTION ================= -->
+  <section class="prod" data-od-id="production-section">
+    <span class="tag-new">NEW</span>
+    <div class="label" style="color:var(--o);margin-top:12px">Aba PRODUCTION</div>
+    <h2 class="h-big" style="font-size:clamp(32px,5vw,52px);margin:6px 0 10px">Aba PRODUCTION <span class="muted">(depois)</span></h2>
+    <p class="muted" style="font-size:14px;max-width:760px;margin-bottom:32px;font-weight:600">O quadro aprovado aparece ao lado da descrição da cena desde antes do render. Hoje a área à direita fica vazia até a cena entrar em PROCESSING.</p>
+    <div class="pgrid" id="pgrid"></div>
+  </section>
+</main>
+
+<footer class="bar">
+  <div class="label muted" style="display:flex;gap:32px;flex-wrap:wrap"><span>Total duration: <b style="color:#fff" id="ft-dur">34s</b></span><span>Scene count: <b style="color:#fff">8</b></span><span>Production budget: a confirmar</span></div>
+  <span class="btn ghost" style="opacity:.6" aria-label="Barra existente, inalterada">RENDER EPISODE · existente</span>
+</footer>
+
+<script>
+const IMG={B:{src:'assets/master_boomer.png',pos:'35% 50%',alt:'Boomer, canguru, master'},K:{src:'assets/master_kev.png',pos:'72% 50%',alt:'Kev, coala, master'},W:{src:'assets/master_wide.png',pos:'50% 50%',alt:'Boomer e Kev, plano aberto, master'}};
+const SH={B:'BOOMER_MCU',K:'KEV_CU',W:'WIDE'};
+const NAME={B:'Boomer',K:'Kev',W:'Boomer + Kev'};
+const SC=[
+ {w:'B',emo:'Euphoric',act:'Slams desk, arms wide',s:4,o:["SYDNEY HOUSE PRICES ARE BACK, MATE! UP, UP, UP — MY BANK MANAGER JUST CRIED HAPPY TEARS!","BREAKING: SYDNEY PROPERTY HAS A PULSE! SOMEBODY CALL AN AGENT, THE PATIENT IS DANCING!","HOUSE PRICES JUST BOUNCED LIKE A ROO ON A TRAMPOLINE, AND I AM THE ROO!"]},
+ {w:'K',emo:'Deadpan',act:'Slow blink, taps tablet',s:3,o:["They rebounded. To a number you still can't afford.","Prices are up. Your savings are also up. By a coffee.","Good news. For people who already own the news."]},
+ {w:'B',emo:'Hype',act:'Points at camera',s:5,o:["BEST TIME TO BUY! OR SELL! OR STAND ON THE FOOTPATH AND FEEL SOMETHING!","I'M BUYING A HOUSE! I'M BUYING TWO! I'M BUYING THE WHOLE STREET AND THE BIN DAY!","LOCK IT IN BEFORE THE MARKET RUNS OFF LIKE A KANGAROO AT A BARBIE!"]},
+ {w:'K',emo:'Dry',act:'Lowers headphones',s:4,o:["Buying requires a deposit. Enthusiasm is not accepted as one.","Boomer, you rent a couch.","A deposit is money. Not volume."]},
+ {w:'W',emo:'Banter',act:'Two-shot, Boomer leans in, Kev leans away',s:6,o:["BOOMER — ONE OPEN HOME AND I'M A LANDLORD! // KEV — One open home and you're a queue.","BOOMER — WE SHOULD INVEST! // KEV — With what. Vibes.","BOOMER — I FEEL RICH! // KEV — That's the heating."]},
+ {w:'K',emo:'Flat',act:'Looks at sponsor screen',s:4,o:["This segment is brought to you by YOUR SPONSOR HERE. They also can't afford Sydney.","Sponsored by YOUR SPONSOR HERE. Terms and conditions apply to everything.","YOUR SPONSOR HERE would like you to know this is advice. It isn't."]},
+ {w:'B',emo:'Loud',act:'Cups hands around mouth',s:5,o:["COMMENT BELOW: BUY IN SYDNEY, OR LIVE IN A CAVE WITH A POOL? I'M TEAM CAVE!","TELL US YOUR DREAM SUBURB! KEV WILL TELL YOU WHY IT'S NOT YOURS!","WHAT'S THE FIRST THING YOU'D DO WITH A SYDNEY BACKYARD? MINE'S A TRAMPOLINE!"]},
+ {w:'K',emo:'Deadpan',act:'Straight to lens, no blink',s:3,o:["Prices rebounded. Hope did not. Subscribe.","That's the market. Like and subscribe, if you can afford the button.","Back tomorrow. Probably cheaper than this house."]}
+];
+SC.forEach(s=>s.pick=0);
+let kf=['approved','approved','approved','approved','approved','ready','generating','empty'];
+let state=localStorage.getItem('bk-state')||'board', fmt='9:16', t=0, timer=null;
+const $=id=>document.getElementById(id);
+const CHECK='<svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2.5"><path d="M1.5 6.5l3 3 6-7"/></svg>';
+const lineHTML=s=>{const x=s.o[s.pick];if(s.w==='W'){const [b,k]=x.split(' // ');return `<div class="line">${b.replace(' — ','<small>BOOMER</small>')}</div><div class="line k">${k.replace(' — ','<small>KEV</small>')}</div>`}return `<div class="line ${s.w==='K'?'k':''}">${x}</div>`};
+const opts=(s,i)=>`<div class="opts" role="group" aria-label="Alternativas da cena ${i+1}">${s.o.map((x,j)=>`<button class="opt" aria-pressed="${j===s.pick}" onclick="pick(${i},${j})" title="${x.replace(/"/g,'&quot;')}"><b>${'ABC'[j]}</b><span>${x.replace(' // ',' · ')}</span></button>`).join('')}</div>`;
+const avatar=s=>`<img class="av" src="${IMG[s.w].src}" style="object-position:${IMG[s.w].pos}" alt="" width="32" height="32">`;
+function kfHTML(s,i){
+ const st=kf[i],im=IMG[s.w];
+ const img=`<img src="${im.src}" style="object-position:${s.w==='W'&&fmt==='9:16'?'50% 50%':im.pos}" alt="${im.alt}">`;
+ let box,act='';
+ if(st==='empty'){box=`<div class="kfbox"><span class="kfcap" style="text-align:center">Sem quadro</span><button class="btn o" style="min-height:44px;width:100%" onclick="gen(${i})">Gerar</button></div>`}
+ else if(st==='generating'){box=`<div class="kfbox">${img}<div class="gl">GERANDO…</div></div>`}
+ else if(st==='ready'){box=`<div class="kfbox">${img}</div>`;act=`<div class="kfact"><button class="btn ok" onclick="setKf(${i},'approved')">Aprovar</button><button class="btn ghost" onclick="gen(${i})">Refazer</button></div>`}
+ else{box=`<div class="kfbox">${img}<div class="badge">${CHECK}APROVADO</div></div>`;act=`<button class="btn ghost" style="min-height:44px;font-size:11px" onclick="gen(${i})">Refazer</button>`}
+ return `<div class="kf ${st}" data-od-id="keyframe-${i+1}"><div class="kfcap">Quadro ${fmt}</div>${box}${act}</div>`;
+}
+function scenes(mode){
+ return `<div class="scenes">${SC.map((s,i)=>`<article class="scene ${s.w} ${mode==='board'?'sbscene':''}" data-od-id="scene-row-${i+1}">
+  <div class="no">${String(i+1).padStart(2,'0')}</div>
+  <div class="main">
+   <div class="row1">${avatar(s)}<span class="who ${s.w}">${NAME[s.w]}</span><span class="chip ${s.w==='W'?'solid':'o'}">${SH[s.w]}</span><span class="sec">~${s.s}s</span></div>
+   ${lineHTML(s)}
+   <div class="chips"><span class="chip n">Emoção · ${s.emo}</span><span class="chip n">Ação · ${s.act}</span></div>
+   ${mode==='board'?`<details class="swap"><summary class="chip o">Trocar fala · 3 opções</summary>${opts(s,i)}</details>`:opts(s,i)}
+  </div>
+  ${mode==='board'?kfHTML(s,i):''}
+ </article>`).join('')}</div>`;
+}
+const STEPS=['Ganchos','Pontes','Reações','Patrocínio','Interações','Fechamento'];
+function genHTML(){return `<div class="gen" data-od-id="gen-state">
+ <div class="timer"><div class="clock" id="clock">00:00</div><div style="flex:1;min-width:180px"><div class="bar"><i id="gbar"></i></div><div class="label muted" style="font-size:11px;margin-top:8px" id="gmsg"></div></div></div>
+ <div class="steps" id="steps">${STEPS.map((x,i)=>`<div class="step" data-i="${i}"><span class="dot"></span><span class="i">0${i+1}</span><span class="t">${x}</span></div>`).join('')}</div>
+ ${Array.from({length:8},(_,i)=>`<div class="sk"><div class="b n"></div><div style="flex:1"><div class="b l" style="width:${[82,70,90,64,76,86,72,58][i]}%"></div><div class="b l" style="width:${[46,38,52,30,41,48,36,28][i]}%;height:10px"></div></div></div>`).join('')}
+</div>`}
+function tick(){
+ t=(t+1)%24;
+ const si=Math.min(5,Math.floor(t/3.6)),c=$('clock'); if(!c)return;
+ c.textContent='00:'+String(t).padStart(2,'0');
+ $('gbar').style.transform=`scaleX(${Math.max(.04,Math.min(1,t/22))})`;
+ $('gmsg').textContent=`Escrevendo: ${STEPS[si]} · ${si+1}/6 · leva cerca de 20 s`;
+ document.querySelectorAll('#steps .step').forEach(e=>{const i=+e.dataset.i;e.className='step '+(i<si?'done':i===si?'cur':'')});
+}
+function render(){
+ clearInterval(timer);
+ const sh=$('sbhead');sh.innerHTML='';
+ document.querySelectorAll('.seg[aria-label^="Estado"] button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===state));
+ $('script').classList.toggle('fmt16',fmt==='16:9');
+ if(state==='gen'){
+  $('ph-title').innerHTML='Escrevendo o <span style="color:var(--o)">roteiro</span>';
+  $('ph-right').innerHTML='<button class="btn ghost">Cancelar</button>';
+  $('body').innerHTML=genHTML(); t=-1; tick(); timer=setInterval(tick,1000);
+ } else if(state==='ready'){
+  $('ph-title').innerHTML='Roteiro <span style="color:var(--o)">pronto</span>';
+  $('ph-right').innerHTML='<span class="chip ok">8 cenas · ~34s</span>';
+  $('body').innerHTML=scenes('ready')+`<div class="pready"><span class="muted" style="font-size:13px;font-weight:700">Escolha as falas e siga para os quadros. Trocar fala não gasta imagem.</span><button class="btn primary" onclick="go('board')">Gerar storyboard 9:16</button></div>`;
+ } else {
+  const n=kf.filter(x=>x==='approved').length,all=n===8;
+  $('ph-title').innerHTML='Storyboard <span style="color:var(--o)">'+fmt+'</span>';
+  $('ph-right').innerHTML='<span class="chip n">8 cenas · ~34s</span>';
+  sh.innerHTML=`<div class="sbhead" data-od-id="storyboard-header">
+   <div class="sbtop"><div class="count h-big">STORYBOARD ${fmt} · <em>${n}/8</em> APROVADOS</div>
+    <div class="seg" role="group" aria-label="Formato do quadro"><button aria-pressed="${fmt==='9:16'}" onclick="setFmt('9:16')">9:16</button><button aria-pressed="${fmt==='16:9'}" onclick="setFmt('16:9')">16:9</button></div></div>
+   <div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="8" aria-valuenow="${n}"><i style="transform:scaleX(${n/8})"></i></div>
+   <div class="sbmeta"><div class="l"><span class="chip n">custo estimado: a confirmar</span></div>
+    <div class="cta"><div class="tipwrap ${all?'ready':''}"><span class="tip" id="tip" role="tooltip">Aprove todas as cenas</span><button class="btn primary" data-od-id="send-to-production" ${all?'':'aria-disabled="true" aria-describedby="tip"'} onclick="${all?"alert('Mockup: enviaria para PRODUCTION')":'return false'}">Enviar para produção</button></div></div></div>
+  </div>
+  <div class="note"><b>●</b><span>O quadro aprovado vira a imagem inicial do Kling — trava rosto, orelhas e figurino.</span></div>`;
+  $('body').innerHTML=scenes('board');
+ }
+ prod();
+}
+function prod(){
+ const rows=[0,1,4], rowH=(s,i,mode)=>{
+  const th=mode==='today'?`<div class="hole">Vazio até o render começar</div>`:
+   `<div class="kf approved" style="width:144px"><div class="kfcap">Quadro aprovado</div><div class="kfbox"><img src="${IMG[s.w].src}" style="object-position:${IMG[s.w].pos}" alt="${IMG[s.w].alt}"><div class="badge">${CHECK}APROVADO</div></div></div>`;
+  return `<article class="prow ${s.w}" data-od-id="production-row-${mode}-${i+1}">
+   <div class="meta"><div><div class="label muted">Cena ${i+1}</div><div class="label muted" style="font-size:11px;margin:16px 0 6px">Enquadramento / Lente</div><div class="sel">${SH[s.w]}</div></div><span class="mono muted" style="font-size:13px">~${s.s}s</span></div>
+   <div class="body"><div class="row1">${avatar(s)}<span class="who ${s.w}">${NAME[s.w]}</span><span class="chip n st">PENDENTE</span><span class="chip n">${s.emo}</span></div>${lineHTML(s)}<div class="chips"><span class="chip n">Ação · ${s.act}</span></div></div>
+   <div class="thumb">${th}</div></article>`};
+ $('pgrid').innerHTML=`<div class="pcase"><div class="cap"><span class="chip n">HOJE</span><span class="muted" style="font-size:13px;font-weight:700">cena antes do render: sem imagem</span></div>${rowH(SC[0],0,'today')}</div>
+ <div class="pcase new"><div class="cap"><span class="tag-new">NEW</span><span class="chip o">PROPOSTA</span><span class="muted" style="font-size:13px;font-weight:700">mesmo quadro aprovado no storyboard, antes do render</span></div><div style="display:flex;flex-direction:column;gap:2px;background:var(--line)">${rows.map(i=>rowH(SC[i],i,'new')).join('')}</div>
+ <p class="hint">Quando a cena entra em PROCESSING, o vídeo substitui o quadro neste mesmo lugar (como a miniatura de hoje). Cenas sem quadro aprovado mostram o espaço tracejado “Sem quadro”.</p></div>`;
+}
+function pick(i,j){SC[i].pick=j;render()}
+function setKf(i,v){kf[i]=v;render()}
+function gen(i){kf[i]='generating';render();setTimeout(()=>{if(kf[i]==='generating'){kf[i]='ready';render()}},1800)}
+function setFmt(f){fmt=f;render()}
+function go(s){state=s;localStorage.setItem('bk-state',s);render();$('script').scrollTop=0}
+document.querySelectorAll('.seg[aria-label^="Estado"] button').forEach(b=>b.onclick=()=>go(b.dataset.s));
+render();
+</script>
+</body>
+</html>

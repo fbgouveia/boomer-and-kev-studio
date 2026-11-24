@@ -1,0 +1,380 @@
+{
+  "source": "Higgsfield MCP get_presets source=genjutsu",
+  "pages": [
+    {
+      "source": "marketing_studio",
+      "category": "genjutsu",
+      "categories": [
+        {
+          "slug": "genjutsu",
+          "name": "Higgsfield"
+        },
+        {
+          "slug": "genjutsu-trending",
+          "name": "Trending"
+        },
+        {
+          "slug": "genjutsu-new",
+          "name": "New"
+        },
+        {
+          "slug": "genjutsu-styles",
+          "name": "Styles"
+        }
+      ],
+      "items": [
+        {
+          "id": "genjutsu:27182599-2cee-4b27-be1a-d13e9d713d37",
+          "name": "Countryside Duo",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/baed0aeb-20d0-54f8-99c5-b4b0cb3a2f66.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/54b6f52b-08b2-5acf-9557-2e599560acd8.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/90d01517-46a5-467d-a37e-b2e18b401386.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:735fdf1a-e36a-4f2c-be5e-eb3064f53ede",
+          "name": "Orange Jacket",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/000f949b-2131-4fd7-b64e-d6547b9bb722.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/c045b52b-ab93-5d96-8e2b-72115697cb50.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/76933ec2-b002-4446-8713-180f60286ad7.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:f8112d7a-5f01-4752-bba7-dfffd3c5ef09",
+          "name": "Dance Duo",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/fa1bacd5-1229-5dd4-bdc2-181573b7d922.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/9650072f-7ed8-5c91-bc2f-edc3a30ba02e.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/91e73b88-b2e6-48cb-964c-e8e9cd208c3d.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:93e97a97-d364-4682-816d-7e11697bb289",
+          "name": "Umbrella Transformation",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/4380f3a5-c5a9-5876-bd0b-a6415108fc05.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/e1db4f4b-3101-5151-91bf-a06be7a8a316.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/f4031d7d-2d6a-4883-b1c4-1300b6e2611e.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:5fcd3deb-8a52-4a31-b660-14df5408b54a",
+          "name": "Selfie Walk",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/fcffb22c-cbf8-43d0-b9b6-351815063c73.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/1bc47dfd-2af0-509b-bd76-3896ec07bf3d.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/7f762557-d6d2-456d-9041-d4972d7c3928.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:c0709c7a-e057-401f-8a0f-ee9cfec4d8ed",
+          "name": "Anime Times Square",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/e00d85ab-fd35-52a6-80fd-bac7b262b408.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/067a9f92-94b2-5e63-accf-2c57fe1a0cdf.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/cdf35c08-c873-4853-b752-bc2e347db74d.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:ea73209c-6010-41fd-b368-be9b515b47a6",
+          "name": "Couple Recast",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/11a42a29-a28d-53c4-be16-11b10e0115cb.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/f0ad452c-2254-54cb-932e-d85d0b06dca7.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/fd9d42a8-2d1d-494f-8116-787f86aa21e6.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:b4e5ab10-b5fa-469b-a7f9-4c8b17ad58a8",
+          "name": "Magenta Routine",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/bc92d258-1b65-5ff0-9c1c-ab73bde1ba58.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/d34e684b-0ed7-50fa-befb-d550e7a43881.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/f1469b50-adf3-44a5-b9f2-fa974feb269a.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:24d7ae76-1bd8-46ff-b637-e1bb5b31d6b6",
+          "name": "Clone Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/baa09269-dfe6-50eb-a7f6-af306a0130a6.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/24daa737-06d4-530d-b2ff-18f0eeb2c289.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/06964c76-f916-46de-bdeb-b71cbd534404.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:14aeef88-284f-4a50-83b3-979893207ab6",
+          "name": "Desert Duo",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/b865cef0-0fb4-543b-bb53-a7f81b97f24d.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/08edcef0-2205-5490-a4e3-014f32e77587.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/415c0af7-f119-4caa-8a75-f5f18ba930ce.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:0086596a-f988-4aa7-9dcf-b4eb09ff4891",
+          "name": "Handbag Slide",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/138dfbfc-e5fd-5393-be7f-8e337590ce28.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/f32779dd-b4be-5f1d-ac1f-71f59b92d476.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/c7ec54ee-5d28-443b-b739-7ae9eed1c6b0.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:2749d6b3-863a-46cb-8ea2-24cb81357974",
+          "name": "Golden Gown",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/042ca354-7a8e-583c-889e-472b65ea6a39.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/167113f5-32ca-5c5f-ae3f-7f8e7599e964.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/b7b23650-16b2-4f6f-bebc-9fe02d89ade9.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:09331738-7cbf-4231-a64c-c56ee80b16e7",
+          "name": "Patchwork Runway",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/188a7a57-3e17-5313-9c1a-95f12e0ff2a3.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/80918ab3-d0cf-5c86-af99-29d53184edf0.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/717aa444-7588-4e7a-b36c-22811309da25.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:35533f73-a948-416a-8c40-9bcfc047bbe3",
+          "name": "Pink Street Runway",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/53792492-24fe-5e9b-83e8-6a05946b9236.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/33ab59ac-cee3-57eb-95ce-5e754de9f021.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/c72a39c1-324d-443e-af18-5e940520e63a.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:132dfd2f-e05a-4643-9eae-df7bf5530b88",
+          "name": "Toronto Recast",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/dbc43364-fbef-528a-8511-20e3ddc46057.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/06aaeffd-33c0-5add-a61c-eacf299154fa.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/f26996f6-73d4-44b0-a91c-1d0f01b20c14.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:c3bbb1b7-1e34-4210-a7fa-b03600a77543",
+          "name": "Cat Performer",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/01075d0b-ce45-5a53-853c-6bf1feb96635.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/a3177c9f-c068-54bb-96b2-abc85054ef9b.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/0d5ccefc-4f1b-4d09-bc37-84a70dad123a.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:921847b5-ee14-4075-be9a-b3d6de70ba50",
+          "name": "Playroom Recast",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ef6d5426-400d-5dad-94d0-cd5ba44c3061.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/56475b81-bfc4-5cf1-ace4-902c5c0797e3.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/bc744e57-b2a6-45fb-bf26-bd72c3d523bb.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:2dd8d321-74f8-4ae2-8dcf-5ded711d7299",
+          "name": "Streetwear Recast",
+          "description": "Object replacement reference for /genjutsu. Driving video: https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ef223cc5-177f-5b15-ba9c-ed62197b3b1f.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/03252833-d6bb-5a61-95df-a199d9fe2a5d.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/dfdb144c-de5e-47e8-b1d8-c50ca69dedca.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:ffe99d9d-7211-4410-b764-94716a0caaec",
+          "name": "Urban Motion",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/e02b5ce5db04a0f3fed5db19bff82f673e8aabdfc42add388fe70c6a5253d5fd.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/01/edit/c2394654-9775-4512-af95-d60250cfaabf.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/5c33ea0b-81e0-4e9e-9138-87a648d35ad9.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:db44da87-362b-48b9-b71a-28aa1b6a144d",
+          "name": "Multi-Scene Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/higgsfield_multiplier_how_it_works_reference/fe10e23c-1cf1-4f57-9207-e21708bf5a80.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/4a716a67-a71a-4496-9df6-d6d337b996d1.webp",
+          "preview_url": "https://d8j0ntlcm91z4.cloudfront.net/community-presets/1eab1a56-2e44-4bb6-bf9a-af78e243b4eb/generation-genjutsu-h264-600-v1.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:5670a83d-cf1a-4038-9676-853e40279695",
+          "name": "Diner Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/higgsfield_multiplier_how_it_works_reference/66b8da7d-2f79-46d2-a613-442ab88360c7.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/cd4a1d48-8b82-41a5-9df0-532e5e32c170.webp",
+          "preview_url": "https://d8j0ntlcm91z4.cloudfront.net/community-presets/74137e06-a512-4804-a00a-d4df696662a1/generation-genjutsu-h264-600-v1.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:ca9ee0b7-5d88-444c-b562-e373a3be79eb",
+          "name": "Character Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/20ebdeaae71e07408350a2fdb0f501e360b615fc9323a7b90d698a87e3029a16.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/03/edit/27ee6ea4-78ab-445f-b5c0-15083c969a95.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/f47db038-5bb2-4219-9ae5-840f48747e64.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:8082f578-5d63-43c0-ae93-559e8e381880",
+          "name": "Scene Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/48c141ae86f2021ebe1d5db4630cffef5abd6b41a318d825f05b8e8d5a2d462a.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/04/edit/29cd2db0-0173-4e02-a0a0-9f3cf98f6934.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/9c8a1d33-12e1-4fbd-a799-7cfe121f06b9.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:e5f6fcc0-53dd-4c02-a172-57d37b2ca727",
+          "name": "House on Fire",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/61eef86e4e7c7cb35b6d554ba22cf660a78f0c3821fe8ce7d022e4b81b72ac03.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/06/edit/0f28d1e3-fc59-4990-a4c7-d20a8003f207.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/a410e77e-126a-43a7-ac29-79290d169f81.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:55840397-8f78-4df7-b6fc-1dd6da21d538",
+          "name": "Commercial Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/genjutsu/video-explore/07/original/e0dc7162-3acf-42b2-ae7f-850b6551de4c.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/07/edit/79ea82de-3cb9-437c-af71-a59c239873f2.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/0e4b5630-3231-4ba8-898d-567552d22344.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:868e53b0-7093-4fe6-9dce-ec30f07e0009",
+          "name": "Infinite Zoom",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/genjutsu/video-explore/08/original/9602f2a6-dec2-457b-b0c6-561a93eec4d9.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/08/edit/9c76dbd0-6ae5-4566-8c32-9c09c5a57186.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/1a88da35-b73b-4822-9497-9436b331d532.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:f93150c5-4018-43c4-b4fa-4bd83c0c62e0",
+          "name": "Ride Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/genjutsu/video-explore/09/original/37492da1-936c-4cab-b12a-802475f8a151.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/09/edit/08e0eba9-4a81-410b-b65d-a55f55509d0a.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/3f2e20d2-684b-4902-bd97-a7653d43b73a.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:84024aa7-f6df-42cf-b703-76057842aa87",
+          "name": "World Shift",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/be458a9c42ffc27da088938e631ccf95b0277560d7e0f8811535cb654e0f62c0.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/user_3HBBqUL3N7zkGsMu9UdbSI5yqe4/hf_20260829_231228_7f44830d-46b4-409b-b017-29768875ed93_thumbnail.webp",
+          "preview_url": "https://d8j0ntlcm91z4.cloudfront.net/community-presets/4f0494b8-c06d-4c92-b5fb-c90a4474a06d/generation-genjutsu-h264-600-v1.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:aea2047f-e12f-4a30-ab3a-184bca69d777",
+          "name": "Fight Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/95b89ed799e24af00980b51a4159b2dae670d5bf6878f98348ea57bb9f753c74.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/11/edit/58825ba0-5778-4402-80af-b8c1bc71db2b.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/8e919928-0027-4ba1-8ceb-e8b23dd83a44.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:38f851a5-3442-4e9b-924b-27df270cb36d",
+          "name": "Cats in Motion",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/genjutsu/video-explore/12/original/37f00e99-165d-49a5-9182-fb1b688bbd14.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/12/edit/8a402c2d-0963-4434-b6a7-3ea5d14d39b7.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/2f1cfbbc-13c0-42fe-ba99-0a23b68c9177.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:6cf7151e-4fd6-45f4-b7a8-7e5e5d3fb028",
+          "name": "Waiter Recast",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/genjutsu/video-explore/13/original/a3f2009a-ead7-4bd1-94df-42a3a8d4095b.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/13/edit/2de540dc-8285-4a13-a59b-cd07f2820294.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/28090a1f-5717-48b8-84af-01a67428e3d3.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:8f83d23c-23d1-43db-9794-e5ee075ecfb1",
+          "name": "Outfit Swap",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/10327ee489d98b82d2963be18c90adb7d87e4f2e153972d4e6474bda54fc9d36.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/14/edit/dc6576f8-5e6e-4eba-8841-cb51ad6193f0.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/c77be113-e0ce-46be-bd4f-d3b7b886102d.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:69ab11fa-d5cb-4a73-a172-fccf12e50978",
+          "name": "Parkour Flow",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/9dd25b339b8962095a20f338a231ef45da92eb67c62b05a27d7b86395f9877d7.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/15/edit/8a112815-9349-47ee-8035-7ef6352eb4ad.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/1fe2bb91-3821-4d9e-a2c3-02640a8792d6.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:50ec927b-bdb0-46f8-8da1-6b4ffc1d524d",
+          "name": "Fantasy Rider",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://cdn.higgsfield.ai/higgsfield_multiplier_how_it_works_reference/0667c6e6-262a-4d53-84d0-7a84f361fd96.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/higgsfield_multiplier_video_explore_variant/f3188f06-018f-436f-a7b6-c77f449e0b34.webp",
+          "preview_url": "https://d8j0ntlcm91z4.cloudfront.net/community-presets/772b02e5-1f26-4ae7-8957-30c9fd17eb18/generation-genjutsu-h264-600-v1.mp4",
+          "preview_type": "video"
+        },
+        {
+          "id": "genjutsu:70c37652-58ae-41d0-9a72-d2877cd0a2d3",
+          "name": "Street Flow",
+          "description": "Motion transfer reference for /genjutsu. Driving video: https://static-public-media.higgsfield.ai/multiplier-items/cdn-repair/13782512a93f7db42f9fc1e0d4f70b6ffb8c788efc94d4fcab7f428b6397b3d5.mp4. Use the user's reference image, never the catalog example's character. Select this preset, review inputs and price, then Generate in the widget. For a custom chat follow-up using this video, first resolve get_preset_instructions({preset:\"genjutsu\"}), even when the user does not repeat /genjutsu. Choose the operation from the new request, not this example's model: copying actions or camera movement uses hf_mult_motion_control; replacing a subject uses hf_mult_replace_object.",
+          "kind": "genjutsu-motion",
+          "type": "genjutsu",
+          "thumbnail_url": "https://cdn.higgsfield.ai/genjutsu/video-explore/02/edit/9445ce67-4691-477c-ba27-f2dd7d9eafee.webp",
+          "preview_url": "https://cdn.higgsfield.ai/genjutsu/preview/genjutsu-h264-600-v1/dfd17324-1b04-4956-bced-7ec3bacc5c1d.mp4",
+          "preview_type": "video"
+        }
+      ],
+      "next_cursor": null
+    }
+  ]
+}

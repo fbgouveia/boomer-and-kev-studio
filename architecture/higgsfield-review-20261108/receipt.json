@@ -1,0 +1,46 @@
+{
+  "status": "blocked",
+  "candidate": "/private/tmp/bk-higgsfield-integration-20261108",
+  "artifact_sha256": "bafc49b88d6f38afe423a1af27eac75595363fe7594682f13eb4fd055bafc9d7",
+  "files": {
+    ".env.example": "de1b7c3bfc9fb76a45410b67059a9cce762fad3ff24cd3539b715745d4e9fec5",
+    "architecture/higgsfield-api.md": "df3bea532e71005df1f4229bb3afd9eba8e6d3e4e13beb4e43a517cb45319c96",
+    "src/app/api/pipeline/run/route.ts": "798a63a82cfa1e22948a7ddd759c065adce5a84c21f281ee7e424862805ec5a5",
+    "src/lib/canonical-json.ts": "8c49ab8e138733da2eec8f776e6787c06cbb14d5cf5f6426f654611c987ef214",
+    "src/lib/cost-ledger.ts": "16a073c9773de6c0c48ff8fa01595a5dbeaebc6c7aa19fd6bcc9ea5ba71057ab",
+    "src/lib/higgsfield-scene.ts": "880a327ca34fec62486e64b3e04f60bcdfa303ec1dbfb47a1fc99373e4882275",
+    "src/lib/higgsfield.ts": "adea060747ad8418e4aaba643e2765e0235af2310d7a70f9216067e7b2225e1c",
+    "src/lib/money.ts": "5b534214956f2966f17332fd6259ad11d17a62f60ff51d38fc21ae674314db9d",
+    "src/lib/pipeline-job-state.ts": "4741179ee3f3eb9f978f056808c4bedb656732b36699e38d8fe19f898f707b5b",
+    "src/lib/resume-policy.ts": "aad1dbb608a5e9488ecfcf1969ae8248c6f0a93c8bd6985f251b816996d14ffa",
+    "src/lib/video-provider.ts": "5f4ecd2cdd2708bb1095145a728b14dbe024c7a1ccc8d13e93bef2de1f8221ee",
+    "tests/cost-ledger.test.ts": "5f3f6900bc6c588e2a128ce885d48730c3845a6d44bab7edc4b2d5ec8e506df7",
+    "tests/fixtures/ledger-worker.mjs": "70ab7f1dfe9a9956f200713c7002f45cb2e1be1cb8c2daf12bdcc95e6ce59c34",
+    "tests/higgsfield-client.test.ts": "e174428cac980c9ce0220fa7db6d3cb59997cfc935bf8543b70efa84246678dd",
+    "tests/higgsfield-scene.test.ts": "cc2f46df7fb6cdcf83319d63ebcfeb73077fa410867ae9c95fddd0440bf9279d",
+    "tests/pipeline-job-state.test.ts": "69ab012d9a57d660518cea47b04df639afa9a80d43880a084290b48c722abb2a",
+    "tests/validations.test.ts": "745447fe0b32b83dfdbf45bdccf63750df2241f77a96fe75270768fa8c5856c1",
+    "tests/video-provider.test.ts": "67a3016308b80cb2aa216a7057c438054b8ec8219be3253b3f057c2c00c69577"
+  },
+  "builder": "openrouter/z-ai/glm-5.3-flash",
+  "verifier": "openrouter/google/gemini-3.8-flash",
+  "round": 1,
+  "material_findings": 7,
+  "critical_findings": 1,
+  "root_core_applied": false,
+  "video_generation_performed": false,
+  "remaining_findings": [
+    "ambiguous replay 4xx releases reserve and wedges resume",
+    "same-key adoption before budget admission",
+    "charge/release race",
+    "invalid ledger state/amount ignored",
+    "cap above authorized US$30",
+    "unsupported model accepted"
+  ],
+  "validation": [
+    "Builder and verifier report 212/212 mocked unit tests pass; builder TypeScript clean",
+    "Root reproduced adoption existing at US$31 and negative ledger corruption unflagged",
+    "Governance exit 0"
+  ],
+  "architect_assessment": "Candidate rejected; no final refinement acceptance receipt. Critical stop policy applied. No production or paid traffic authorized through this candidate."
+}

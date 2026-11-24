@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { jsPDF } from 'jspdf';
-import { DraftingTable } from '@/components/Director/DraftingTable';
+import { ScriptStoryboardPanel } from '@/components/Director/ScriptStoryboardPanel';
 import { ScriptLine } from '@/types';
 import { LibraryViewer } from '@/components/studio/LibraryViewer';
 import { DirectorTerminal } from '@/components/studio/DirectorTerminal';
@@ -72,7 +72,7 @@ export default function Home() {
   const [directorIdea, setDirectorIdea] = useState("");
   const [directorSnippet, setDirectorSnippet] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isDrafting, setIsDrafting] = useState(false);
+  const [draftSession, setDraftSession] = useState<{ title: string; snippet: string; n: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [wardrobeConfig, setWardrobeConfig] = useState<{ boomer?: string, kev?: string, studio?: string }>({});
   const [previewLineId, setPreviewLineId] = useState<string | null>(null);
@@ -277,7 +277,7 @@ export default function Home() {
 
     console.log("✨ [Neural_Link] Signal Confirmed. Opening Drafting Table for:", finalTitle);
 
-    setIsDrafting(true);
+    setDraftSession({ title: finalTitle, snippet: finalSnippet, n: Date.now() });
     setIsGenerating(false);
     console.log("✨ [Neural_Link] Drafting HUD Active for:", finalTitle);
   };
@@ -353,6 +353,14 @@ export default function Home() {
     setScript(prevScript => prevScript.map(line => {
       if (line.id !== id) return line;
       const updatedLine = { ...line, [field]: value };
+
+      // O quadro aprovado retrata personagem/plano/pose/emoção desta cena: mudou um
+      // deles, o quadro deixa de valer (senão o Kling ancoraria na imagem errada).
+      if (line.keyframes && ['characterId', 'shotType', 'action', 'emotion'].includes(field)) {
+        updatedLine.keyframes = undefined;
+        updatedLine.characterReference = charReferences[updatedLine.characterId]?.main
+          || CAST.find(c => c.id === updatedLine.characterId)?.referenceImage;
+      }
 
       if (field === 'shotType') {
         updatedLine.studioReference = GUIDE_IMAGES[value as string];
@@ -944,7 +952,8 @@ export default function Home() {
           action: line.action,
           emotion: line.emotion,
           durationEst: line.durationEst,
-          characterReference: selectedReference,
+          // quadro aprovado no storyboard vira a start image do Kling (trava rosto, orelhas, figurino)
+          characterReference: (line.keyframes?.[renderAspect]?.approved && line.keyframes[renderAspect]?.url) || selectedReference,
           studioReference: studioReference
         };
       }),
@@ -1204,6 +1213,34 @@ export default function Home() {
                 setCurrentAnswers={setCurrentAnswers}
                 finalizeInterview={finalizeInterview}
                 isRefiningBlueprint={isRefiningBlueprint}
+                activeTrendTitle={draftSession?.title}
+                scriptPanel={draftSession && (
+                  <ScriptStoryboardPanel
+                    key={draftSession.n}
+                    topic={draftSession.title}
+                    snippet={draftSession.snippet}
+                    apiKey={apiKeys.gemini}
+                    renderAspect={renderAspect}
+                    wardrobe={wardrobeConfig}
+                    onClose={() => setDraftSession(null)}
+                    // Figurino original predominante (Felipe 27/10): o figurino inventado pelo brainstorm
+                    // não é aplicado. Quadro aprovado vira characterReference (start image do Kling).
+                    onSend={(draftedLines, aspect) => {
+                      const hydratedScript = draftedLines.map((line, idx) => ({
+                        ...line,
+                        id: `scene-${Date.now()}-${idx}`,
+                        technicalPrompt: getDetailedPrompt(line as ScriptLine, directorIdea, directorSnippet),
+                        characterReference: line.keyframes?.[aspect]?.url || charReferences[line.characterId]?.main || CAST.find(c => c.id === line.characterId)?.referenceImage,
+                        studioReference: GUIDE_IMAGES[line.shotType]
+                      }));
+                      setScript(hydratedScript as ScriptLine[]);
+                      setWardrobeConfig({});
+                      setRenderAspect(aspect);
+                      setDraftSession(null);
+                      setActiveTab('script');
+                    }}
+                  />
+                )}
               />
             )}
 
@@ -1574,6 +1611,14 @@ export default function Home() {
                               <span className="text-xs font-black opacity-30">CAM_{line.shotType}</span>
                             </div>
                           </div>
+                        ) : line.keyframes?.[renderAspect]?.url ? (
+                          <div
+                            data-testid="keyframe-thumb"
+                            className={cn("absolute right-10 top-10 border-2 border-[#FF5F1F] bg-black overflow-hidden", renderAspect === '9:16' ? "w-20 h-36" : "w-48 h-28")}
+                          >
+                            <img src={line.keyframes[renderAspect]!.url} alt={`Quadro aprovado da cena ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+                            <span className="absolute bottom-0 inset-x-0 bg-[#FF5F1F] text-black text-[10px] font-black text-center py-0.5">QUADRO APROVADO</span>
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -1886,31 +1931,6 @@ export default function Home() {
           )
         }
       </main >
-
-      {isDrafting && (
-        <DraftingTable
-          topic={directorIdea}
-          snippet={directorSnippet}
-          apiKey={apiKeys.gemini}
-          onClose={() => setIsDrafting(false)}
-          // Figurino original predominante (Felipe 27/10): o figurino inventado pelo brainstorm
-          // (roupão, boné, luvas nas orelhas no teste) não é aplicado. Ocasiões planejadas
-          // entram pelo seletor do plano (item 3), não pela IA.
-          onAssemble={(draftedLines) => {
-            const hydratedScript = draftedLines.map((line, idx) => ({
-              ...line,
-              id: `scene-${Date.now()}-${idx}`,
-              technicalPrompt: getDetailedPrompt(line as ScriptLine, directorIdea, directorSnippet),
-              characterReference: charReferences[line.characterId]?.main || CAST.find(c => c.id === line.characterId)?.referenceImage,
-              studioReference: GUIDE_IMAGES[line.shotType]
-            }));
-            setScript(hydratedScript as ScriptLine[]);
-            setWardrobeConfig({});
-            setIsDrafting(false);
-            setActiveTab('script');
-          }}
-        />
-      )}
 
       {/* ACTION BAR — controles movidos do topo p/ liberar a nav (pedido Felipe 19/07) */}
       <div className="hidden lg:flex w-full z-[60] px-8 py-2.5 bg-[#0a0a0a] border-t-2 border-[#FF5F1F]/40 justify-between items-center gap-6">

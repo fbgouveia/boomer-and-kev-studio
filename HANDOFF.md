@@ -1,9 +1,449 @@
+## ▶ PRÓXIMA SESSÃO — 50 PASSOS PARA A PERFEIÇÃO (Felipe pediu em 24/11, noite)
+
+Estado ao parar (24/11 ~22h30): piloto pago autorizado **até US$10**, gasto real **US$0**
+(4 chamadas recusadas antes de gerar: Gemini sem crédito pré-pago; API Higgsfield
+`not_enough_credits` — conta da API é separada dos 44,93 créditos do plugin). Felipe ficou de
+recarregar ~US$5 em cada (`ai.studio/projects` e `open.higgsfield.ai`). Retomar no passo 1.
+Script do piloto: `tools/pilot/pilot.ts` (teto US$10 somando `design/rig-v1/pilot/spend.jsonl` +
+ledger `.tmp/pilot-ledger`). Estúdio 3D: `design/rig-v1/` (README). Visão e diagnóstico:
+`docs/programa/REVISAO_COMPLETA_2026-11-24.md` + `docs/programa/pesquisa/`.
+**Preço oficial Higgsfield 24/11 (USD/s):** Kling 3.0 Pro 1080p 0,0962 (60 s ≈ US$5,77);
+Seedance 2.5 480p 0,1177 / 720p 0,2647 / 1080p 0,6518. O `/estimate` agora devolve
+`type=description` (texto), não `usd` — o app bloqueia; o piloto lê o texto de forma estrita.
+
+**Fase A — Fechar e proteger o que existe**
+1. Felipe confirma as recargas (Gemini ~US$5, API Higgsfield ~US$5); conferir saldo antes/depois.
+2. "Salvar": commit do P0/P1 Higgsfield, tela roteiro+storyboard, Identity Lock, rig v1, pesquisas, piloto (sem `.env.local`).
+3. Ensinar o app a ler o preço `type=description` (taxa USD/s por resolução, estrito, arredonda para cima) + testes + revisão independente — código de dinheiro.
+4. Resolução de saída explícita no payload (1080p) para o preço lido bater com o cobrado.
+5. Conferir na fatura Higgsfield/Gemini o custo real do 1º clipe vs reserva.
+
+**Fase B — Piloto pago (até US$10)**
+6. Imagem-chave Boomer (MCU 9:16) via Gemini com placa vazia + master; comparar com o recorte gratuito.
+7. Imagem-chave Kev (MCU 9:16) idem.
+8. Clipe Kling 3.0 1080p 5 s do Boomer com fala (câmera travada).
+9. Clipe Kling do Kev.
+10. Mesma cena do Boomer no Seedance 720p (comparação de identidade/boca/custo).
+11. Medir deriva do fundo e das TVs quadro a quadro (as telas ficam nos cantos do rig.json?).
+12. Encaixar "Your sponsor here" nos clipes com os cantos fixos; se derivar, homografia.
+13. Montar um mini-episódio de 2 planos + reação e mostrar ao Felipe com custo real por segundo.
+
+**Fase C — DNA de câmera e cenário definitivos**
+14. Felipe aprova o look do estúdio 3D (cores, espuma, bancada, luz, TVs, logo).
+15. Refinar o cenário: bancada menor no quadro, espuma em cunha, luz 5600K real, sem estourar.
+16. Rig final pela pesquisa: aberto + médio e close de cada um + reação + inserto de TV; sem sobre-o-ombro; contra-plongée opcional.
+17. 9:16 nativo para todos os planos; plano a dois vertical (empilhado/"dirty single") aprovado.
+18. Gravar no `rig.json`: lado de cada um, direção do olhar, cantos das TVs, focal, regra dos 180°.
+19. Impressão digital (hash) das placas aprovadas; render recusa placa diferente.
+20. Tirar do código os 6 nomes de plano "de mentira" e os movimentos de câmera sem efeito; o plano vem do rig.
+21. Corrigir o encadeamento: troca de plano do mesmo personagem usa a placa nova, não o último quadro.
+
+**Fase D — Identidade dos personagens e voz**
+22. Imagens-base limpas (sem QANTAS/VEGEMITE/GUMTREE/OUTBACK/AUSSIE/Apple, texto da luva) aprovadas por Felipe.
+23. Testar Kling 3.0 Elements tipo "Animal" (2-4 imagens por personagem) para consistência.
+24. Folha de modelo (model sheet) de cada personagem: frente, ¾, perfil, expressões, mãos/luvas.
+25. Identity Lock gravado no projeto (não no navegador) e bloqueando o render.
+26. Felipe escuta os pilotos de voz e escolhe a referência de cada um.
+27. Voz exclusiva (Voice Design ou clone ElevenLabs) para Boomer e Kev; confirmar plano/permissão da chave (`user_read`).
+28. Teste de repetibilidade de voz (mesmas frases várias vezes) e decisão: voz fixa vs nativa do Kling.
+29. Fazer a fala nascer na geração do vídeo (lipsync pós não suporta animais — doc Sync).
+
+**Fase E — Patrocínio e conformidade**
+30. Etapa de composição do patrocinador no render (cantos do rig + máscara), peça padrão "Your sponsor here".
+31. Ficha do patrocinador (nome, logo, frase, alegações permitidas/proibidas, categoria).
+32. Remover do prompt o "HUGE SPONSOR LOGO" e o conflito com o negativo.
+33. Rótulo "Gerado por IA" sempre e "#ad / parceria paga" quando patrocinado (UK/EUA; verificar AU).
+34. Relatório de entrega ao anunciante: segundos de marca na tela, recortes, timestamps.
+35. Filtro de segurança de marca nas pautas (tragédia, eleição, apostas, álcool, saúde, menores).
+36. Conformidade antes do render e bloqueando risco ALTO; laudo salvo com o episódio.
+37. Pedir por escrito a liberação de uso comercial (Kling via Higgsfield, Seedance, ElevenLabs) — Kling proíbe sem permissão.
+
+**Fase F — Episódio diário e publicação**
+38. Roteiro com gramática de corte da pesquisa (reação logo após a piada, aberto no gancho e no fechamento, 2,5-4 s por plano).
+39. Legendas sincronizadas por palavra (hoje são distribuídas linearmente).
+40. Variar a estrutura entre episódios (YouTube pune conteúdo em massa por template).
+41. Título, legenda do post, hashtags e capa por episódio.
+42. Publicar os 10 primeiros episódios (BK-10) como rascunho no Postiz, com rótulo de IA.
+43. Medir visualizações, conclusão e retenção por episódio (BK-22) — sem número inventado.
+44. Custo real por episódio aprovado no painel.
+
+**Fase G — Motor viral**
+45. Pauta por velocidade (últimas horas), agrupando por história, não só nº de veículos em 7 dias.
+46. Ligar sinais de TikTok/YouTube/Instagram (chave do Radar YouTube; fontes do last30days).
+47. Ciclo de aprendizado: desempenho real volta para a escolha da pauta e do gancho.
+
+**Fase H — Comercial e white label**
+48. Pacote comercial: nome do programa, empresa, tabela, categorias proibidas, reel de 30-45 s, contrato.
+49. ShowProfile + CameraRig + tom em dados (sem `boomer|kev`, Austrália e bordões fixos no código).
+50. Multi-cliente (login, orçamento, storage e chaves por cliente/BYOK) e revisão jurídica de revenda e autoria dos personagens.
+
+## ▶ 24/11/2026 (tarde) — sessão Claude Opus 5.5: P0/P1, tela roteiro+storyboard, revisão completa
+
+- **Pesquisa profunda na web (24/11, 4 frentes, com fontes):** `docs/programa/pesquisa/` — conclusões
+  na seção 9 da revisão. Mudanças-chave: rig = aberto + singles (sem sobre-o-ombro), 9:16 nativo,
+  cenário 3D próprio (pacotes NoAI proibidos), Kling 3.0 Elements (tipo Animal) como candidato,
+  voz fixa ElevenLabs, Sync lipsync não suporta animais, **Kling proíbe uso comercial sem permissão
+  escrita** (Higgsfield não restringe), YouTube pune conteúdo em massa por template.
+- **Leia primeiro:** `docs/programa/REVISAO_COMPLETA_2026-11-24.md` (visão do Felipe: estúdio
+  profissional multicâmera, personagens/cenário idênticos para sempre, receita = patrocínio nas TVs,
+  white label depois; diagnóstico de câmera, patrocínio, viral, white label; fases e decisões).
+- **Feito (sem commit — Felipe não pediu "salvar"):** P0 Higgsfield (95/100 após 4 rodadas) e P1
+  aplicado (render segue Replicate); tela DIRECTOR com roteiro + storyboard na mesma tela, aprovada
+  por Felipe com a condição "todas as funções funcionando" — revisão independente 95/100 PASS
+  (E2E mockado 1440/390, todas as funções antigas OK). Quadro aprovado vira `characterReference`
+  (imagem inicial do Kling); editar personagem/plano/ação/emoção ou gerar outro roteiro invalida o
+  quadro. 230/230, tsc, build OK; lint = 13 antigos.
+- **Gasto da sessão:** sentinela rodada 2× (chamadas reais Gemini + ElevenLabs, centavos). Nenhum
+  vídeo/imagem gerado.
+- **Pendências desta sessão (decisão do Felipe):** orçamento diário (US$5 não cobre 1 min em Kling:
+  ~US$8-11 extrapolado de US$0,714/5 s); piloto de preço real Kling 3.0 vs Seedance (Seedance
+  = 35 créditos/5 s vs 10 do Kling, sem preço em USD na API; saldo plugin 44,93 créditos);
+  ângulos do rig v1; voz fixa vs nativa; cenário IA vs 3D; nome comercial/entidade.
+- **Descobertas:** imagens-base com marcas reais e geometria de cenário divergente entre as 3;
+  só 3 placas reais para 6 nomes de plano; movimentos de câmera da UI sem efeito; 9:16 sem
+  plano a dois; encadeamento ignora troca de plano; Escape não fecha o cinema (preexistente);
+  botão de render não aparece abaixo de `lg` (preexistente); `DraftingTable` modal sem uso
+  (lógica no hook `useDrafting`); Gemini 3 Pro Image = US$0,134/imagem (página oficial 24/11).
+- **Ferramentas que funcionaram:** Open Design local (agente Claude Code, Sonnet) para mockup;
+  Playwright com `channel:'chrome'` para conferência; voz `fgss-voice-local` só falando (Felipe
+  dita pelo Wispr Flow).
+
+## ▶ 24/11/2026 — DIRETRIZ DO DONO (vinda da sessão FGSS): 1 episódio por dia, qualidade máxima
+
+- **Ritmo:** 1 episódio **todo dia**, sobre os trends do dia (entrou na pauta das 5:30 do Felipe como meta diária).
+- **Exigência:** maior qualidade possível — produção e **consistência** de personagem (Boomer expansivo, Kev contido).
+- **Teto de crédito Higgsfield:** **US$5 por dia** (decisão do dono, 24/11). Referência de preço publicado (não cotação autenticada): Restyle ≈ US$0,318/s em 480p, US$0,681/s em 720p, US$1,632/s em 1080p; o episódio local atual tem 12,3 s.
+- **Caminho sugerido:** base do episódio no render local (grátis) e IA paga onde dá ganho visível; medir custo real por episódio aprovado; entregar como rascunho no Postiz da FGSS com rótulo de IA.
+
+## ▶ FICHA DE EVOLUÇÃO — Fábrica de Conteúdo Sempre Ligada (24/11/2026)
+
+> Pedido do Felipe (24/11): máquinas de criação sempre ligadas, principalmente UGC; cada projeto indica seus próximos passos de atualização e absorve o conhecimento de SFX/UGC/motion. Documento-mãe: `Felipe Portfolio/docs/social/FABRICA_CONTEUDO_SEMPRE_LIGADA_2026-11-24.md`. Este bloco é a ficha deste projeto; atualizar a cada sessão.
+
+- **Papel na fábrica:** motor de UGC/personagem **contínuo** da FGSS — gera lote semanal de vídeos curtos 9:16 para Instagram/Reels e Shorts.
+- **Estado (24/11):** Studio com render próprio; integração Higgsfield/Genjutsu por API (`HF_API_KEY`, teto inicial US$30) estudada em 08/11; biblioteca Higgsfield baixada (138 modelos, 80 receitas). Candidato anterior reprovado; nada em produção contínua ainda.
+- **Próximas atualizações (em ordem):**
+  1. Definir o **lote semanal** (ex.: 5 vídeos/semana) e o roteiro-modelo por formato (gancho 3 s, mecanismo, CTA), puxando ideias da fila de insights da FGSS.
+  2. Aplicar a ordem já proposta do Genjutsu (Object Swap → Motion Transfer → Restyle) num lote-piloto de 3 vídeos, com custo medido por vídeo.
+  3. Padronizar trilha e SFX com licença registrada e mixagem a -14 LUFS (padrão DarkChannels).
+  4. Entregar o lote toda segunda na fila de aprovação (Postiz como rascunho) com rótulo de IA.
+  5. Registrar cada aprovação/reprovação com motivo (skill Veredito) para melhorar o próximo lote.
+- **Conhecimento a importar:** `APRENDIZADOS.json` do UGC comercial (A004 fala+boca no mesmo job, A006 EN-first, A007 sala travada), regras NLE e SFX do DarkChannels, modelos de motion da FGSS (HyperFrames) para endcards/CTA.
+- **Conhecimento a exportar (para a biblioteca compartilhada no CÉREBRO):** receitas Higgsfield/Genjutsu que funcionaram, custo real por vídeo, padrões de personagem que retêm.
+- **Dependências e travas:** conta Higgsfield compartilhada com DarkChannels (conferir saldo antes de cada lote); aprovação do Felipe em lote; distribuição via Postiz da FGSS.
+- **Regras da fábrica:** estoque aprovado ≥ 10 dias úteis na fila do Postiz; avatar/voz de IA sempre rotulados, nunca como cliente real; música/SFX só com licença registrada; teto de crédito por semana e saldo conferido antes de cada lote; nenhum número ou cliente inventado.
+
 <!-- CONTINUIDADE_ATUAL_INICIO -->
 # Boomer & Kev — continuidade única
 
-Atualizado em **29/10/2026** (sessão 29/10: layout, auditoria, Radar YouTube). Este bloco é a fonte operacional atual.
+Atualizado em **08/11/2026** (fechamento detalhado de continuidade solicitado por Felipe). Este bloco é a fonte operacional atual.
 Detalhes e estados anteriores foram preservados no histórico abaixo do marcador.
 Documentos de direção artística não substituem esta continuidade.
+
+## Continuidade Higgsfield e Genjutsu — fechamento de 08/11/2026
+
+Este registro consolida **atualizações, pendências e descobertas** por pedido de
+Felipe, para a próxima sessão. “Randolph” foi entendido no contexto como handoff.
+Os estados abaixo substituem as anotações intermediárias desta etapa.
+
+### Atualizações e decisões já tomadas
+
+- **Objetivo:** adquirir conhecimento do Higgsfield/Genjutsu e aplicar o que melhorar
+  a qualidade de Boomer & Kev, com integração direta no render existente do Studio.
+  Felipe escolheu **API direta** e **até US$30 no total para os primeiros testes**.
+  Não perguntar novamente plugin versus API nem orçamento. O pedido de registro
+  desta mensagem é documental; não reabre o candidato reprovado nem autoriza deploy.
+- **Chave já configurada e autenticada:** `HF_API_KEY` em `.env.local` do aplicativo,
+  somente no servidor, arquivo ignorado pelo Git e modo 600. A chave completa do
+  clipboard foi gravada por autorização do Felipe e corrigida após detectar um
+  caractere extra na colagem. Consultas de estimativa responderam **HTTP 200**.
+  Não pedir nova chave, imprimir `.env.local`, copiar a credencial para o chat,
+  documentação, logs, patch ou worktree. Saldo disponível da API não foi confirmado.
+- **Biblioteca baixada:** `docs/higgsfield/library/2026-11-08/`, manifesto com hashes;
+  138 modelos (60 de vídeo), 80 receitas completas e 824 entradas de galerias:
+  Marketing 649, Viral 87, Genjutsu 35, Styles 20 e Soul 33. Pacote
+  `docs/higgsfield/higgsfield-library-2026-11-08.zip`, 13 arquivos, integridade
+  conferida. São metadados/instruções; não são pesos de modelos nem vídeos-demo,
+  e não se presume cobertura de todo catálogo privado ou de todas as superfícies.
+- **Estudo aplicado concluído:** `docs/higgsfield/GENJUTSU.md`, com fontes oficiais,
+  contratos REST, limites, custos publicados e proposta de comparação. Evidências
+  do plugin em `docs/higgsfield/research/2026-11-08-genjutsu.json`. Ordem proposta:
+  Object Swap para correção pontual → Motion Transfer para biblioteca própria de
+  atuação → Restyle para especiais com direção artística aprovada.
+- **Integração ainda NÃO entregue:** GLM pago construiu candidato isolado; Gemini
+  3.8 fez revisão independente e encontrou sete achados materiais, incluindo um
+  crítico. Codex confirmou os mecanismos nos arquivos e reproduziu duas falhas.
+  O candidato ficou **BLOQUEADO**, sem incorporação no aplicativo, sem ativar
+  `VIDEO_PROVIDER=higgsfield`, sem geração de vídeo nem consumo do orçamento de
+  render nesta etapa. O orçamento US$30 é para testes Higgsfield; custos das
+  chamadas dos modelos de desenvolvimento não foram medidos aqui.
+- **Provas registradas:** base do app com 131/131 unitários e TypeScript aprovados
+  na revisão desta sessão; candidato com 212/212 unitários simulados reportados
+  por builder/verifier e TypeScript aprovado pelo builder. Esses testes não
+  cobrem as falhas financeiras encontradas e não comprovam render real.
+  Lint global preexistente segue com 9 erros/4 avisos. Nenhum build/E2E completo,
+  prova audiovisual Genjutsu, deploy ou publicação foi concluído nesta etapa.
+- **Estado preservado:** raiz Git/app em `BOOMER AND KEV/boomer-and-kev-studio`,
+  branch `restore-engine`, base observada `c6b7ca8f99b330746b4a52b6505db8c72996fa9e`.
+  O backend de pipeline da raiz foi comparado ao HEAD e estava idêntico.
+  Preservar mudanças preexistentes em `design/LOG.md`, `DNAPanel.tsx`,
+  `IdentityLock.tsx`, áudios de referência, JPGs gerados, vídeo local, grafo e
+  `supabase/.temp/`. O layout permanece congelado.
+
+### P0 — fechamento de 24/11/2026 (Claude Opus 5.5; sem gasto, sem rede paga)
+
+- **Patch final:** `architecture/higgsfield-review-20261108/candidate-P0-fixed-20261124.patch`
+  (199.933 bytes, SHA256 `28b823b28dcc32ece80391f2f2f4f24325d4693b0a7e8244c97d4f5fdffe06bd`),
+  sobre a base `c6b7ca8`; `git apply --check` OK; sem segredo (só `HF_API_KEY=` vazio no
+  `.env.example`). Substitui o `candidate-BLOCKED.patch` (preservado como histórico).
+  **Não aplicado** ao app; `VIDEO_PROVIDER` segue sem higgsfield. Aplicar = P1.
+- **Correções:** ledger com lock de diretório (`mkdir`) em toda mutação; admissão
+  (soma + teto + criação) numa só seção crítica; lock abandonado bloqueia com erro e
+  nunca libera verba; leitura estrita (inteiro seguro positivo, estado enumerado,
+  sha256, motivo de liberação, arquivo = chave) e qualquer corrupção bloqueia e zera
+  o saldo livre; teto do ambiente só reduz (≤ US$30); só o modelo
+  `kling-video/v3.0/pro/image-to-video` (também em retomada); dinheiro arredonda para
+  cima (string e número); RELEASED nunca apagado; 4xx no reenvio após POST incerto
+  **mantém** reserva e chave; chave RELEASED na retomada → nova tentativa (lançamento
+  pula tentativas liberadas, qualquer payload, até 20).
+- **Provas:** 230/230 unitários (várias rodadas) e `tsc` limpo na worktree. Os testes
+  novos falham 17 vezes no candidato antigo (reprodução). 3 testes antigos foram
+  reescritos porque exigiam os comportamentos errados (soma com a própria reserva,
+  poda de 7 dias, teto 30,50).
+- **Revisão independente:** Sonnet (verifier sem raciocínio do builder; desvio do
+  papel Gemini 3.8 Flash do roteiro de 08/11, assumido por ser código de dinheiro feito
+  pelo Opus). Rodadas: 82 FAIL → 86 FAIL → 88 FAIL → **95 PASS**, sem crítico/maior.
+  Todos os achados das rodadas foram de recuperabilidade (cena travada), nenhum de
+  cobrança dupla ou estouro do teto.
+- **Limites conhecidos (conservadores, aceitos):** ledger é por máquina (`cwd/.tmp`);
+  lock abandonado exige remoção manual de `.tmp/budget.lock`; reserva órfã com payload
+  diferente (falha de gravação entre reserva e POST) segura verba até limpeza manual;
+  `LedgerLockError`/`RESERVE_CONFLICT` aparecem na rota como falha genérica de job.
+- **Worktree temporária:** scratchpad da sessão (`bk-hf-p0`); pode sumir. Fonte durável
+  é o patch acima.
+
+### Pendências prioritárias para a retomada
+
+| Ordem | Trabalho pendente | Critério de saída |
+|---|---|---|
+| ~~P0~~ ✅ 24/11 | Corrigido e aprovado em revisão independente (ver "P0 — fechamento de 24/11" abaixo). Patch **não aplicado** ao app | — |
+| ~~P1~~ ✅ 24/11 (sem commit) | `candidate-P0-fixed-20261124.patch` aplicado na árvore do app (`restore-engine`), sem conflito com DNAPanel/IdentityLock/LOG/HANDOFF. 230/230 unitários, `tsc` limpo, lint sem problema novo (mesmos 13 antigos, nenhum nos arquivos do patch), `next build` OK, `test-idempotency-standalone` e `test-security-standalone` OK (provedores desligados). UI intocada. `.env.local` **sem** `VIDEO_PROVIDER`/`HIGGSFIELD_*` ⇒ render segue no Replicate; ledger `.tmp/budget_*` vazio. Ativar Higgsfield = decisão do Felipe + cotação | — |
+| P2 | Preparar comparação Genjutsu curta, preferindo Object Swap da corrente de Boomer | Fonte e master preservadas; cotação real do modo escolhido; comparar correção, rosto, corpo, luvas, cenário, áudio e boca |
+| P3 | Construir biblioteca própria de atuação com Motion Transfer | Primeiro um personagem; Boomer expansivo, Kev contido; medir repetibilidade e custo por resultado aprovado |
+| P4 | Avaliar complementos apenas quando necessários | Cinema Studio/Elements para referências; Intone como hipótese para voz; upscale/deflicker após identidade aprovada; Restyle para especiais |
+
+O teto já autorizado de US$30 continua válido; não comprar saldo nem aumentar o
+limite automaticamente. Pesquisa de presets não equivale a geração aprovada em
+qualquer preset. Confirmar mídia/objetivo e cotação antes de cada envio pago, sem
+transformar o estudo em execução automática de todos os modelos. Aprovação de
+identidade audiovisual, novas telas e publicação continuam separadas.
+
+### Bloqueio técnico: o que precisa ser corrigido
+
+Relatório completo: `architecture/higgsfield-review-20261108/gemini-review.md`.
+Reconciliação e remediação do Codex: `architecture/higgsfield-review-20261108/REMEDIATION.md`.
+Recibo e hashes: `architecture/higgsfield-review-20261108/receipt.json`.
+
+1. **Replay após POST desconhecido:** um 401/409/422 na repetição não prova que
+   o primeiro POST não foi aceito. A implementação libera a reserva indevidamente
+   e pode deixar o job preso em `RESERVE_CONFLICT`. Manter reserva, payload e a
+   MESMA chave até reconciliação. Não seguir a alternativa genérica do resumo do
+   verifier de limpar o registro/incrementar tentativa sem confirmação terminal.
+2. **Admissão da reserva:** a criação antes da soma permite outra chamada adotar
+   reserva ainda não validada. Codex reproduziu US$29 + US$2, retorno `existing`
+   e soma US$31 com teto US$30. Proteger criação/admissão/adoção como uma operação.
+3. **Transições concorrentes:** renomear JSON atomicamente não protege a operação
+   ler/modificar/gravar. `releaseCost` pode sobrescrever `CHARGED`. Proteger as
+   transições entre processos e tratar morte do processo sem liberar verba por
+   suposição. Um lock abandonado não autoriza retomada paga automaticamente.
+4. **Corrupção semântica:** quantia negativa foi ignorada como zero na reprodução.
+   Exigir inteiro seguro positivo, estados enumerados e hash válido. Registro
+   inválido ou falha de leitura deve bloquear novas reservas, não criar saldo.
+5. **Limite efetivo:** configuração aceita mais de US$30 (inclusive teste com
+   `30.50`). Nesta fase o ambiente pode reduzir o teto, nunca aumentá-lo.
+6. **Modelo suportado:** o payload é específico de
+   `kling-video/v3.0/pro/image-to-video`; regex genérica aceita outros modelos.
+   Restringir ao contrato implementado, sem fallback silencioso para outro pago.
+7. **Refinamentos adicionais do Codex:** reservar frações monetárias arredondando
+   para cima; preservar histórico de idempotência, sem apagar registros liberados
+   após sete dias. Não confundir reserva estimada com custo faturado já conferido.
+
+O Gauntlet canônico (`CÉREBRO/FGSS brain/instrucoes_de_funcionamento/GAUNTLET_LOOP.md`)
+exige parar ao surgir achado crítico. Avaliador retornou `action=block`,
+`stop_reason=critical_finding`, rodada 1. Não houve lapidação final de um candidato
+aceito. Contrato `20261108T124030469321-d85b10`: `verify` saiu **1**, veredito `fail`,
+critério faltante `requested_result_verified`. Não declarar integração pronta nem
+reiniciar rodadas silenciosamente para contornar esse resultado. Uma retomada
+expressa de correção deve preservar esse registro e seguir o roteamento vigente.
+
+### Descobertas reutilizáveis
+
+- **API e plugin têm contas/valores distintos.** O plugin mostrou 37,43 créditos
+  no plano Starter na consulta da sessão; isso é observação datada, não saldo
+  atual garantido nem saldo da REST. Créditos do plugin não se convertem aqui
+  em dólares. Consultas MCP: Kling 5 s/720p = 10 créditos; Seedance = 35 créditos;
+  Intone sem áudio retornou 422, sem cotação. Nenhuma dessas consultas gerou vídeo.
+- **REST autenticada:** base `https://api.higgsfield.ai`, header
+  `Authorization: Key <HF_API_KEY completa>`. Kling 3.0 Pro image-to-video cotou
+  `type=estimate`, `usd=0.714` para 5 s, `sound=on`, `cfg_scale=0.5`,
+  `multi_shots=false`, com URL ilustrativa de entrada. Não comprova saldo,
+  mídia pronta nem preço fixo do episódio. Seedance retornou HTTP 200 com
+  descrição de preço, sem `usd`; nesse caso bloquear geração, sem adivinhar valor.
+- **Submissão recuperável:** preparar payload real, cotar, reservar e persistir
+  payload/chave antes do POST; gravar `request_id/status_url` imediatamente.
+  Ambiguidade conserva a reserva. Credencial só vai à origem HTTPS oficial;
+  uploads de bytes e downloads de mídia não recebem a autorização da API.
+- **Genjutsu tem contratos diferentes por modo e superfície:** Motion Transfer
+  reconstrói a cena a partir do movimento; Object Swap mira uma alteração local;
+  Restyle muda o tratamento visual. REST Motion/Object aceitam 1–8 referências,
+  fonte mínima 4 s, acima de 30 s usa os primeiros 30. Não transportar os limites
+  maiores de imagens do site para a API. IDs de modelos MCP não são caminhos REST.
+- **Namespace:** usar `higgsfield/genjutsu/...`; `higgsfiled/...` aparece como
+  legado em exemplo. Restyle precisa de UUID do catálogo atual de presets, aceita
+  0–5 referências, fonte até 200 MiB, preserva áudio, mas FPS/duração podem variar.
+  Light Motion Transfer usa os primeiros 15 s e tem contrato/custo próprios.
+- **Restyle, planejamento aproximado:** US$0,318/0,681/1,632 por segundo de fonte
+  em 480p/720p/1080p; duração arredondada para cima em segundos inteiros. 5 s/720p
+  ≈ US$3,405; fonte local de 12,3 s conta 13 s, ≈ US$8,853 em 720p ou US$21,216
+  em 1080p. Não são cotações autenticadas nem preços de Object Swap/Motion/Lite.
+- **Prova visual local:** `public/latest_episode.mp4` mede 12,3 s, 1080×1920,
+  com vídeo e áudio. Quadros mostram corrente dourada em Boomer; a master
+  `public/assets/master_boomer.png` e a ficha atual não têm corrente. Kev aparece
+  com folha/microfone. Áudio não foi reavaliado. O clipe é candidato a comparação,
+  não master homologada. Nenhuma edição visual foi aplicada ao original.
+- **Ordem proposta de processamento:** roteiro/áudio aprovados → clipe-base →
+  Genjutsu quando indicado → QC de identidade/atuação/áudio → montagem → legendas
+  e gráficos finais. Não esperar que Genjutsu corrija timbre, fala ou legendas.
+  Intone e lipsync de animais continuam sem prova no nosso elenco.
+- **Browser:** MCP listou abas, mas comandos de página falharam nas duas conexões
+  com `Cannot read properties of undefined (reading 'timeoutMs')`. Extensão e
+  host passaram nas verificações; causa interna não determinada. Não repetir
+  reinstalação como correção comprovada. Playwright direto, explicitamente pedido
+  por Felipe, funcionou usando Chrome instalado (`channel: 'chrome'`) e perfil
+  próprio da tarefa; abriu login Higgsfield com HTTP 200. Não comprovou login.
+  A chave local permite seguir pela API sem depender desse login do navegador.
+- **Grafo:** original de 31.165 nós preservado após atualização incremental recusar
+  redução do corpus para 1.576. Mapa focado por AST em `.tmp/higgsfield-code-map/`
+  tem 336 nós/736 arestas em 47 arquivos. Não usar `--force` para apagar o original.
+
+### Retomada detalhada: arquivos, sequência e provas
+
+**Leia primeiro:** este bloco, `docs/higgsfield/README.md`,
+`docs/higgsfield/GENJUTSU.md`, `architecture/higgsfield-api.md` e o diretório de
+revisão indicado acima. O guia de correções não substitui a continuidade atual.
+
+**Candidato preservado:** worktree detached em
+`/private/tmp/bk-higgsfield-integration-20261108`, base `c6b7ca8`.
+Como `/private/tmp` pode ser limpo, foi preservado no projeto o arquivo
+`architecture/higgsfield-review-20261108/candidate-BLOCKED.patch` (178.268 bytes,
+SHA256 `44ee5055577f47a184c7ede8fdf5f6f2d9327cc02aa7f93aee5a62f268086907`).
+O patch cobre 17 arquivos de código/configuração-exemplo/testes, sem `.env.local`
+nem credenciais reais. Não contém a arquitetura, que está no caminho próprio.
+`git apply --check` passou na base local; **o patch não foi aplicado**. Preservação
+não equivale a aprovação. Se a worktree sumir, restaurar esse patch somente em
+outra worktree isolada da base indicada, nunca direto no aplicativo em uso.
+O recibo registra SHA256 dos 18 arquivos revistos, incluindo a arquitetura da
+worktree, e o hash agregado `bafc49b88d6f38afe423a1af27eac75595363fe7594682f13eb4fd055bafc9d7`.
+
+**Sequência para uma retomada de correção autorizada:**
+
+1. Revalidar Git/arquivos preexistentes e disponibilidade da worktree/patch; não
+   copiar `.env.local`. Ler leis/roteador atuais e manter o candidato anterior
+   marcado reprovado. A persistência do orçamento em disco foi pensada para a
+   instância local; não assumir durabilidade/globalidade em múltiplas máquinas.
+2. Usar os papéis canônicos já designados: GLM 5.3 Flash pago como executor,
+   Gemini 3.8 Flash como verifier independente e Codex como arquiteto/lapidação.
+   Modelo executor `openrouter/z-ai/glm-5.3-flash`, sem `:free` ou fallback.
+   Contextos provedor/runtime foram verificados em 1.048.576 na sessão; revalidar
+   o mínimo exigido antes de novo despacho. O verifier recebe tarefa/diff/critérios,
+   sem raciocínio do builder. Não presumir gate artístico do Gestor já aprovado.
+3. Reproduzir e corrigir os pontos P0 com transporte simulado: admissão/adoção
+   concorrente; morte entre persistência e validação; charge versus release;
+   registro negativo/fracionário/estado desconhecido; replay incerto seguido de
+   401/409/422 e posterior sucesso mantendo a mesma chave. Preço ilegível deve
+   impedir POST e falha de gravação crítica também. Não executar rede paga em teste.
+4. Validar regressão do fluxo Replicate/hash legado e todos os caminhos HF:
+   launch comum, última imagem de cena encadeada, polling, falha/retomada e GET
+   após reinício. Verificar limite cumulativo US$30 entre jobs/processos/reinícios,
+   modelo permitido, URLs e ausência de segredos. Após nova revisão independente,
+   a LLM principal precisa lapidar de fato e validar/hashar a versão final.
+5. Só incorporar e ativar configuração após passar os gates. Rodar unitários,
+   TypeScript e checks proporcionais; `node --import tsx --test tests/*.test.ts`
+   evita a falha de IPC do CLI tsx no sandbox. Não atribuir os erros antigos do
+   lint ao patch. Se mudar código após revisão, devolver a versão final ao verifier.
+6. Depois, preparar um trecho curto para o teste Object Swap proposto; cotar
+   especificamente esse modo e essas mídias, conferir saldo e saldo do teto,
+   preservar original e registrar custo por tentativa/resultado aprovado. A prova
+   de remoção da corrente ainda NÃO existe. Não aumentar gastos só para usar toda
+   a verba. Sem deploy/publicação ou mudança de layout por inferência.
+
+Logs temporários: `/tmp/bk-higgsfield-builder.jsonl`,
+`/tmp/bk-higgsfield-verifier.jsonl`, `/tmp/bk-hf-baseline-unit.log`.
+Playwright: `/private/tmp/bk-playwright-diagnostic.cjs`, perfil
+`/private/tmp/bk-api-playwright-profile-20261108`; handles de processos/abas desta
+conversa são temporários, não prometer sua disponibilidade na próxima sessão.
+Relatórios duráveis ficam no projeto; não depender desses logs para reconstruir
+os achados. Nenhum segredo do clipboard deve ser recuperado ou exibido.
+
+**Fechamento documental:** continuidade salva localmente, link `HANDOFF.md` da raiz
+preservado e histórico abaixo do marcador intacto. Sem commit/push neste pedido:
+Felipe pediu registro de continuidade; a política do Orquestrador reserva esses
+comandos ao CEO ou a uma ordem explícita. Nenhum novo teste de core foi executado
+para esta edição documental. Integridade do patch, dez caminhos locais, link da
+raiz, histórico e alterações preexistentes foram conferidos sem divergência.
+A governança canônica é validada no encerramento; falha impede declarar conclusão.
+
+### Sincronização cross-projeto FGSS — 22/11/2026 (memória apenas; sem código, layout ou gasto)
+
+> **Origem:** ponte de inteligência entre subprojetos (`Felipe Portfolio/docs/social/CROSS_PROJECT_MEDIA_INTELLIGENCE_2026-11-22.md`). **Preservados intactos:** layout congelado do Studio, bloqueio do candidato Higgsfield/Genjutsu (`P0`–`P4`), teto US$30 e todos os arquivos locais.
+
+- **Novos ativos do hub `Felipe Portfolio` reaproveitáveis após destravar P0–P4:**
+  - **Catálogo `16 Bibliotecas de Motion` (`Felipe Portfolio/tools/video-studio/bibliotecas-de-motion/`) + `hyperframes@0.8.206` (validado no M5 em `PROJETO DARKCHANNELS` a 0 crédito):** ideal para compor telas das TVs de sponsor, lower-thirds, carrosséis e peças `9:16` com tipografia controlada por código (zero dependência de texto gerado por IA).
+  - **Skill `Veredito (ar-board)` (`Felipe Portfolio/.agent/skills/veredito/`):** painel local 1 por 1 (`A/R/M/S/C`) para revisar roteiros, legendas e variações de cena sem perder o motivo de cada rejeição.
+  - **`React Viral` (`Felipe Portfolio/tools/video-studio/react-viral/`):** referência local de busca YouTube + composição vertical `9:16` útil para o Radar YouTube assim que a `YOUTUBE_API_KEY` for criada.
+  - **Postiz Agent (`@postiz/mcp-agent`) + `postiz.fgss.io`:** distribuição multi-rede (YouTube Shorts, IG Reels, Stories/Carrosséis) quando `BK-10` for autorizado pelo Felipe.
+- **Inteligência exportada deste projeto para o ecossistema FGSS:**
+  - Catálogo Higgsfield/Genjutsu (`docs/higgsfield/library/2026-11-08/` + `GENJUTSU.md`: 138 modelos, 80 receitas, 824 galerias, REST `https://api.higgsfield.ai`) e padrão de orçamento/idempotência documentados no hub central.
+  - **Trava jurídica aplicada na vitrine FGSS:** clipes locais antigos (`latest_episode.mp4`, `final_c05a674c...`) ficaram **BLOQUEADOS para publicação pública no Instagram da FGSS** até eliminação das marcas reais nos masters (`Gumtree`, `Outback`, `Aussie`, `Qantas`, `Vegemite`) e remoção da corrente dourada em Boomer (Object Swap `P2`).
+
+## Revisão local — 08/11/2026 (Codex)
+
+Esta seção atualiza os estados de 27–29/10 abaixo. Não houve alteração de código,
+layout ou mídias, geração paga, publicação, commit ou push nesta revisão.
+
+- **Prova atual:** 131/131 testes unitários passaram; TypeScript passou com
+  `tsc --noEmit --incremental false`. `npm run lint` continua falhando: **9 erros e
+  4 avisos**, em `.agent/skills/`, `tests/trends-region.test.ts` e
+  `tools/free-episode.mjs`. Governança canônica: exit 0. A primeira tentativa dos
+  unitários recebeu `listen EPERM` no sandbox; repetição autorizada fora dele passou.
+  Build, navegador, E2E, APIs externas, produção, banco e n8n não foram revalidados.
+- **Identity Lock já existe no Studio:** o `design/LOG.md` local registra aprovação
+  de Felipe em 29/10 e implementação na ENGINE DNA. `DNAPanel.tsx` e o log estão
+  modificados; `IdentityLock.tsx` e `public/assets/voice-ref/` não estão rastreados.
+  A aprovação do desenho não comprova aprovação dos eixos de identidade; decisões
+  do navegador não foram consultadas nesta revisão.
+- **Pendência funcional confirmada:** o Identity Lock só grava decisões em
+  `BK_IDENTITY_LOCK` no navegador. Nem `renderProject` nem a API de pipeline
+  consultam essas decisões. A promessa da tela de impedir render final sem todos
+  os eixos aprovados ainda não é implementada. Aprovação de ocasião também não
+  configura o figurino enviado ao pipeline.
+- **Radar YouTube:** `YOUTUBE_API_KEY` ausente ou vazia em `.env.local`; nenhum
+  valor de credencial foi exibido. Configuração fora desse arquivo não foi verificada.
+- **Engine parcialmente entregue:** commit `ebcb3cd` já contém as correções de
+  corte seco, câmera travada, ficha original e figurino ignorado do brainstorm;
+  portanto o rótulo antigo “não commitado” não descreve mais essas correções.
+  Ainda falta validar o resultado audiovisual num novo render autorizado.
+- **Continuam confirmados no código:** sponsor obrigatório nos geradores e por
+  índice no pipeline; TVs recebem texto de geração; custo calculado pela duração
+  do roteiro (`totalDuration * 0.14`); progresso fixo em 10/25/40/85/100; seis campos
+  sem efeito ainda na Production; regiões fora de AU/US/BR/GB caem em AU;
+  legendas dividem o tempo do clipe sem alinhamento com a fala real; roteiro em
+  memória, sem persistência para F5. A mesa de criação usa `/api/ai/brainstorm`.
+- **Próxima sequência:** homologar identidade e masters sem marcas reais, incluindo
+  referências nativas 9:16; concluir as correções de qualidade/custo/roteiro;
+  definir custo e autorizar o piloto; confirmar contas e autorizar publicação.
+  Radar segue em paralelo após a chave. BK-31 permanece sem revalidação externa;
+  BK-17 continua adiado. Preservar todos os arquivos preexistentes e revisar o
+  conjunto de código/mídias fora de commit antes de incorporá-lo.
 
 ## Comece aqui
 
@@ -23,7 +463,8 @@ da bíblia e do painel de revisão ("O que a gente está esperando?").
       (`! open -e ".../boomer-and-kev-studio/.env.local"`). Nunca colar a chave no chat.
    Depois dizer "chave pronta": a IA testa sem exibir a chave e pesquisa 20–30 canais
    candidatos nos 4 nichos para Felipe aprovar.
-1. Abrir o painel de revisão; conferir elenco, ouvir referências e registrar escolhas.
+1. Na ENGINE DNA do Studio, usar o Identity Lock existente para conferir elenco,
+   ouvir referências e registrar escolhas; o painel avulso é só rascunho de conteúdo.
 2. Aprovar/corrigir figurino original candidato, vozes, pacotes de ocasião e storyboard.
 3. Com o briefing artístico fechado, definir custo e autorizar o piloto pago (BK-07).
 4. Confirmar contas e autorizar a primeira publicação (BK-10); medir audiência.
@@ -119,12 +560,13 @@ do brainstorm) foi reaplicada. tsc OK, 131/131 unitários, home 200. Sobra sem u
 
 | ID | Trabalho/decisão | Dependência |
 |---|---|---|
+| Higgsfield/Genjutsu (08/11) | Estudo e biblioteca entregues; integração reprovada em isolamento, sem ativação/gasto. Seguir P0–P4 e a retomada detalhada no início deste bloco | Correção de orçamento/recuperação, nova revisão independente e prova visual; manter US$30 acumulados |
 | Teste de estresse 27/10 | Autorizado até US$15. Ep. 9:16 (4 cenas, 39,4 s) COMPLETED: job `c05a674c`, Supabase público. Ep. 16:9 COMPLETED: job `89de9a8b` (39,4 s). Gasto estimado ~US$11,20 (8 clipes de 10 s com áudio; conferir fatura). No 16:9, TVs do Kev mostram QANTAS e VEGEMITE (marcas reais, vindas de `master_kev.png`); gravata-borboleta do Kev repetiu nos 2 formatos; recarregar a página perde o roteiro montado. Achados: Kev ganha gravata-borboleta e corte com texto embaralhado na cena 2; legenda fora de sincronia; barra presa em 40%; radar com regiões fora de AU/US/BR/GB cai em AU; botão Start usa Gemini sem travas; estimativa de custo abaixo do real. Voz: Felipe precisa ouvir | Ver item 8 do plano |
-| Engine 27/10 (tarde), não commitado | FEITO e testado (131/131, tsc, lint): storyboard integrado (`src/lib/storyboard.ts`; render bloqueado sem os quadros aprovados; o quadro vira start_image do Kling); corte seco (`editing-policy`); câmera travada e personagens sentados no prompt do Kling; lista do que evitar sem "naked/shirtless" (causa provável da gravata do Kev); ficha do Boomer = master; figurino da IA ignorado; dupla alterna e trava de equilíbrio no Commit; plano segue quem fala; falas de até 12 palavras e duração estimada pela fala; `tools/qc_speech.py` (QC de fala local, com autoteste). Ep. `93b56ca1` (com storyboard): Kev sem gravata nas 2 cenas; cena 3 perfeita; cena 1 com corte, porque a ação era "andando" (corrigido depois). Ainda não renderizado com falas curtas e regra de sentado | Próximo render precisa de autorização (~US$2,80) |
-| Design Identity Lock v1 (29/10) | Proposta dentro da aba ENGINE DNA (sem aba nova): placar 0/7 eixos, Aprovar/Corrigir em rosto e voz com players, conflito figurino, marcas reais, Occasion DNA, Framing DNA 16:9/9:16. Arquivos `design/rascunhos/engine-dna-identidade-v1.html/.jpeg`; registrada em `design/LOG.md` | **Aprovação visual do Felipe** antes de qualquer código |
+| Engine 27/10–29/10 | Correções de corte seco, câmera travada e figurino original já commitadas em `ebcb3cd`; storyboard visual foi revertido em 29/10 (ver seção de layout). Não tratar helpers/testes de storyboard como integração ativa. Falas curtas e regra de sentado ainda sem nova prova audiovisual | Próximo render precisa de autorização; reconferir estimativa antes do gasto |
+| Identity Lock v1 (29/10; conferido 08/11) | Implementado localmente na ENGINE DNA; aprovação do desenho registrada no `design/LOG.md`. Código, log e áudios ainda fora de commit. Decisões ficam no navegador; não há bloqueio de render ligado aos eixos | Homologação de identidade por Felipe; concluir ligação funcional e revisar arquivos antes de incorporar |
 | Radar YouTube (aprovado 29/10) | Relatório semanal "receita de formato": 4 nichos (animação/mascotes, duplas de comédia, notícias com humor, animais em shorts); Claude propõe canais, Felipe aprova; Gemini analisa só top 5/semana via link (sem download; preço conferido antes); manual primeiro; não copiar, não baixar, não mexer no Studio, todo número com fonte+data. Nunca existiu antes (Radar = 4 refs estáticas). Etapa 1: Felipe cria `YOUTUBE_API_KEY` em projeto Google novo | Chave do Felipe |
-| Correções engine | 7 itens em `docs/programa/PLANO_CORRECOES_20261027.md` (revisão completa 27/10). Decisões: Boomer sem camisa; remover 6 campos mortos; sponsor opcional; pauta EUA+mundo+AU com fatos da fonte | Nada executado; sem custo pago |
-| Identidade | Aprovar referência original, voz e continuidade multiformato no painel | Felipe; repetibilidade exige prova adicional |
+| Correções engine | Plano em `docs/programa/PLANO_CORRECOES_20261027.md` parcialmente atendido: ficha original e travas de câmera/corte no código; faltam sponsor opcional, campos mortos, custo, progresso, persistência, sincronia e pauta conforme revisão de 08/11 acima | Mudanças visuais continuam sob layout congelado; sem novo render nesta revisão |
+| Identidade | Aprovar referência original, voz, ocasiões e continuidade multiformato na ENGINE DNA; masters sem marcas reais e nativas 9:16 ainda pendentes | Felipe; repetibilidade exige prova adicional |
 | BK-07 | Escolher roteiro e autorizar primeiro piloto/render pago | Briefing artístico, custo definido |
 | BK-10 | Confirmar contas e autorizar publicação | Entrega aprovada |
 | BK-31 | Corrigir Telegram n8n: HTML + escape nos 2 nós | Workflow compartilhado; não alterado nesta sessão |
@@ -158,8 +600,10 @@ de 10 perguntas não foi revalidada após as novas definições.
 - **29/10 — Rastreador de canais YouTube nunca existiu** em nenhum log (Claude/Codex/Gemini/
   claude-mem); Studio Labs/trend-hunter arquivados em 12/10 eram simulados.
 
-- Master de Boomer sem camiseta conflita com cadastro que exige camiseta e
-  corrente; teste nativo muda figurino dentro do clipe. Decidir a base antes de corrigir.
+- **Estado atualizado em 08/11:** a ficha atual de Boomer já exige torso sem camisa
+  e sem corrente, coerente com a master conferida. O conflito antigo de cadastro
+  não continua aberto nesse formato; a corrente apareceu no clipe local e a
+  fidelidade da geração à referência ainda precisa de prova.
 - Há gesto de dois dedos descrito para luvas sem dedos; ajustar direção após aprovação.
 - Fala nativa usa descrição australiana genérica, sem vincular voiceStyle/voiceId
   por personagem. Fallback TTS pode mudar timbre; som audível não prova identidade.
@@ -185,8 +629,21 @@ Detalhes de antigas descobertas e comandos de rollback ficam no histórico.
 
 ## Prompt para a próxima sessão
 
-Use o [prompt detalhado de retomada](#prompt-proxima-sessao-20261027), abaixo
-do marcador, e o relato da sessão imediatamente antes dele. É consulta pontual.
+> Retome pelo bloco atual deste HANDOFF e pela seção “Retomada detalhada:
+> arquivos, sequência e provas”. A prioridade é concluir com segurança a API
+> Higgsfield e aplicar o estudo Genjutsu ao Boomer & Kev. API direta e US$30
+> acumulados já foram escolhidos; a chave já autenticou. A integração ainda está
+> bloqueada por revisão crítica e não foi ativada. Preserve layout, mídias e
+> alterações preexistentes. Use os relatórios e o patch BLOQUEADO para retomar
+> uma correção autorizada em isolamento; não reaplique o candidato reprovado ao
+> aplicativo. Primeiro valide orçamento/recuperação e obtenha revisão final;
+> depois prepare teste curto de Object Swap com cotação própria. Não repita a
+> configuração de chave, a entrevista de orçamento nem o diagnóstico de browser
+> sem novo indício. Registre resultados reais e não declare geração/qualidade
+> audiovisual comprovada sem assistir e comparar a saída.
+
+O prompt de 27/10 abaixo do marcador é histórico; consultá-lo somente para uma
+questão pontual que a continuidade atual não resolva.
 <!-- CONTINUIDADE_ATUAL_FIM -->
 
 <a id="sessao-20261027-retomada"></a>

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { assertBalanced } from '@/lib/script-gates';
 import { estimateSpeechSeconds } from '@/lib/editing-policy';
 
-type BrainstormOption = {
+export type BrainstormOption = {
     characterId: string;
     text: string;
     action: string;
@@ -31,7 +31,7 @@ type BrainstormOption = {
     reasoning: string;
 };
 
-type BrainstormData = {
+export type BrainstormData = {
     hooks: BrainstormOption[];
     bridges: BrainstormOption[];
     reactions: BrainstormOption[];
@@ -47,24 +47,28 @@ type BrainstormData = {
     };
 };
 
+export type DraftLine = {
+    id: string,
+    characterId: string,
+    text: string,
+    shotType: string,
+    durationEst: number,
+    emotion: string,
+    action: string,
+    status: 'IDLE'
+};
+export type Wardrobe = { boomer: string, kev: string, studio: string };
+
 interface DraftingTableProps {
     topic: string;
     snippet: string;
     apiKey?: string;
-    onAssemble: (assembledScript: {
-        id: string,
-        characterId: string,
-        text: string,
-        shotType: string,
-        durationEst: number,
-        emotion: string,
-        action: string,
-        status: 'IDLE'
-    }[], wardrobe?: { boomer: string, kev: string, studio: string }) => void;
+    onAssemble: (assembledScript: DraftLine[], wardrobe?: Wardrobe) => void;
     onClose: () => void;
 }
 
-export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: DraftingTableProps) {
+/** Fonte única do brainstorm: busca, escolhas automáticas e montagem das 8 cenas (modal e painel inline). */
+export function useDrafting({ topic, snippet, apiKey }: { topic: string; snippet: string; apiKey?: string }) {
     const [brainstorm, setBrainstorm] = useState<BrainstormData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -159,8 +163,8 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         if (topic) fetchBrainstorm();
     }, [topic, fetchBrainstorm]);
 
-    const handleAssemble = () => {
-        if (!brainstorm) return;
+    const draftLines = (): DraftLine[] | null => {
+        if (!brainstorm) return null;
 
         const hook = selectedHook !== null ? brainstorm.hooks?.[selectedHook] : null;
         const bridge = selectedBridge !== null ? brainstorm.bridges?.[selectedBridge] : null;
@@ -171,11 +175,12 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
         const i2 = selectedInteraction2 !== null ? brainstorm.interaction2?.[selectedInteraction2] : null;
         const closing = selectedClosing !== null ? brainstorm.closings?.[selectedClosing] : null;
 
-        if (!hook || !bridge || !reaction || !sPitch || !sReb || !i1 || !i2 || !closing) return;
+        let nextId = 0; // ids determinísticos: o page.tsx reatribui ids de cena ao montar o roteiro
+        if (!hook || !bridge || !reaction || !sPitch || !sReb || !i1 || !i2 || !closing) return null;
 
         const lines = [
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: hook.characterId || 'boomer',
                 text: hook.text,
                 shotType: (hook.characterId === 'kev') ? 'KEV_CU' : 'BOOMER_MCU',
@@ -185,7 +190,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: bridge.characterId || 'boomer',
                 text: bridge.text,
                 shotType: (bridge.characterId === 'kev') ? 'KEV_CU' : 'BOOMER_MCU',
@@ -195,7 +200,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: reaction.characterId || 'kev',
                 text: reaction.text,
                 shotType: (reaction.characterId === 'boomer') ? 'BOOMER_MCU' : 'KEV_CU',
@@ -205,7 +210,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: sPitch.characterId || 'boomer',
                 text: sPitch.text,
                 shotType: 'WIDE',
@@ -215,7 +220,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: sReb.characterId || 'kev',
                 text: sReb.text,
                 shotType: 'KEV_CU',
@@ -225,7 +230,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: i1.characterId || 'boomer',
                 text: i1.text,
                 shotType: i1.characterId === 'kev' ? 'KEV_CU' : 'BOOMER_MCU',
@@ -235,7 +240,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: i2.characterId || 'kev',
                 text: i2.text,
                 shotType: 'WIDE',
@@ -245,7 +250,7 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 status: 'IDLE'
             },
             {
-                id: Math.random().toString(36).substr(2, 9),
+                id: `draft-${nextId++}`,
                 characterId: closing.characterId || 'boomer',
                 text: closing.text,
                 shotType: closing.characterId === 'kev' ? 'KEV_CU' : 'BOOMER_MCU',
@@ -254,15 +259,57 @@ export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: D
                 action: closing.action || 'BICEP_FLEX_AND_POINT',
                 status: 'IDLE'
             },
-        ] as Parameters<typeof onAssemble>[0];
+        ] as DraftLine[];
+        return lines;
+    };
+
+    const buildLines = (): DraftLine[] | null => {
+        const lines = draftLines();
+        if (!lines) return null;
         // Mesma trava da rota de roteiro (script-gates): duo virou monólogo = não monta.
         try {
             assertBalanced(lines);
         } catch (e) {
             setError(e instanceof Error ? e.message : String(e));
-            return;
+            return null;
         }
-        onAssemble(lines, brainstorm.wardrobe);
+        return lines;
+    };
+
+    const picks: { id: keyof BrainstormData; options?: BrainstormOption[]; index: number | null; set: (i: number) => void }[] = [
+        { id: 'hooks', options: brainstorm?.hooks, index: selectedHook, set: setSelectedHook },
+        { id: 'bridges', options: brainstorm?.bridges, index: selectedBridge, set: setSelectedBridge },
+        { id: 'reactions', options: brainstorm?.reactions, index: selectedReaction, set: setSelectedReaction },
+        { id: 'sponsorPitch', options: brainstorm?.sponsorPitch, index: selectedSponsorPitch, set: setSelectedSponsorPitch },
+        { id: 'sponsorRebuttal', options: brainstorm?.sponsorRebuttal, index: selectedSponsorRebuttal, set: setSelectedSponsorRebuttal },
+        { id: 'interaction1', options: brainstorm?.interaction1, index: selectedInteraction1, set: setSelectedInteraction1 },
+        { id: 'interaction2', options: brainstorm?.interaction2, index: selectedInteraction2, set: setSelectedInteraction2 },
+        { id: 'closings', options: brainstorm?.closings, index: selectedClosing, set: setSelectedClosing },
+    ];
+
+    return {
+        brainstorm, isLoading, error, retryCountdown, fetchBrainstorm, buildLines, picks, draft: draftLines(), wardrobe: brainstorm?.wardrobe,
+        selectedHook, selectedBridge, selectedReaction, selectedSponsorPitch, selectedSponsorRebuttal,
+        selectedInteraction1, selectedInteraction2, selectedClosing,
+        setSelectedHook, setSelectedBridge, setSelectedReaction, setSelectedSponsorPitch, setSelectedSponsorRebuttal,
+        setSelectedInteraction1, setSelectedInteraction2, setSelectedClosing,
+        activeSection, setActiveSection, advanceToNextIncompleteSection,
+    };
+}
+
+export function DraftingTable({ topic, snippet, apiKey, onAssemble, onClose }: DraftingTableProps) {
+    const {
+        brainstorm, isLoading, error, retryCountdown, fetchBrainstorm, buildLines,
+        selectedHook, selectedBridge, selectedReaction, selectedSponsorPitch, selectedSponsorRebuttal,
+        selectedInteraction1, selectedInteraction2, selectedClosing,
+        setSelectedHook, setSelectedBridge, setSelectedReaction, setSelectedSponsorPitch, setSelectedSponsorRebuttal,
+        setSelectedInteraction1, setSelectedInteraction2, setSelectedClosing,
+        activeSection, setActiveSection, advanceToNextIncompleteSection,
+    } = useDrafting({ topic, snippet, apiKey });
+
+    const handleAssemble = () => {
+        const lines = buildLines();
+        if (lines) onAssemble(lines, brainstorm?.wardrobe);
     };
 
     const renderOption = (option: BrainstormOption, index: number, isSelected: boolean, onSelect: () => void) => (

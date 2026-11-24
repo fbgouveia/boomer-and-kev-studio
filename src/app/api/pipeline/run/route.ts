@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, renameSync, statSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, copyFileSync, unlinkSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -20,6 +20,32 @@ import {
 import { fetchPredictionOutcome, reconciliationAction, reconcileProviderRequests } from '@/lib/reconciliation';
 import { buildEditingPlan, klingDurationForAudio, type EditingPlan } from '@/lib/editing-policy';
 import { buildAssSubtitles, type CaptionCue } from '@/lib/captions';
+import { writeJsonAtomic, mergeJobUpdate } from '@/lib/pipeline-job-state';
+import {
+  resolveVideoProviderConfig,
+  VideoProviderConfigError,
+  DEFAULT_HIGGSFIELD_MODEL,
+  LEGACY_REPLICATE_MODEL,
+  type FrozenVideoProviderConfig,
+  type VideoProviderName,
+} from '@/lib/video-provider';
+import {
+  HiggsfieldClient,
+  validateMediaUrl,
+  type HiggsfieldSound,
+} from '@/lib/higgsfield';
+import { budgetCapMicrosFromEnv, chargeCost, readBudgetSummary, releaseCost } from '@/lib/cost-ledger';
+import { formatUsd } from '@/lib/money';
+import {
+  HiggsfieldSceneError,
+  fetchHiggsfieldOutcomeOrNull,
+  launchHiggsfieldScene,
+  planHiggsfieldRecovery,
+  pollHiggsfieldScene,
+  reconcileHiggsfieldRequests,
+  resubmitHiggsfieldScene,
+  type HiggsfieldSceneRequest,
+} from '@/lib/higgsfield-scene';
 
 import { runPipelineSchema, type RunPipelineInput } from '@/lib/validations';
 import type { Prediction } from 'replicate';
@@ -39,6 +65,44 @@ type SceneProviderRequest = {
   model: string;
   predictionId: string;
   launchedAt: string;
+};
+
+// Item de trabalho do loop de vídeo: predição Replicate (legado) OU geração
+// Higgsfield (API direta), com submissão encadeada adiada quando preciso.
+type SceneWorkItem = {
+  sceneId: string;
+  index: number;
+  audioDataUri?: string;
+  status: 'PROCESSING' | 'CHAINED';
+  predictionId?: string | null;
+  chainFrom?: string | null;
+  launch?: { prompt: string; duration: 5 | 10 };
+  hf?: HiggsfieldSceneRequest;
+  hfLaunch?: { prompt: string; duration: number; attempt: number; sound: HiggsfieldSound };
+  reconciledUrl?: string;
+};
+
+type AnySceneRequest = SceneProviderRequest | HiggsfieldSceneRequest;
+
+const isHiggsfieldRequest = (request: AnySceneRequest | undefined | null): request is HiggsfieldSceneRequest =>
+  !!request && request.provider === 'higgsfield';
+
+const isReplicateRequest = (request: AnySceneRequest | undefined | null): request is SceneProviderRequest =>
+  !!request && request.provider !== 'higgsfield';
+
+// Soma das reservas ativas das cenas Higgsfield (para o topo do job JSON).
+const sumHiggsfieldReserves = (requests: Record<string, AnySceneRequest>) =>
+  Object.values(requests).reduce(
+    (sum, request) => (isHiggsfieldRequest(request) ? sum + request.reservedUsdMicros : sum),
+    0,
+  );
+
+const describeHiggsfieldError = (error: unknown): string => {
+  if (error instanceof HiggsfieldSceneError) {
+    const details = Object.entries(error.details).map(([key, value]) => `${key}=${String(value)}`).join(' ');
+    return `${error.code}: ${error.message}${details ? ` (${details})` : ''}`;
+  }
+  return errorMessage(error);
 };
 
 type IdempotencyRecord = {
@@ -72,17 +136,6 @@ function replayIdempotentJob(idempotencyPath: string, payloadHash: string, tmpDi
     statusUrl: `/api/pipeline/run?id=${existing.jobId}`,
     replayed: true
   });
-}
-
-function writeJsonAtomic(filePath: string, value: unknown) {
-  const temporaryPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
-  try {
-    writeFileSync(temporaryPath, JSON.stringify(value, null, 2), { flag: 'wx' });
-    renameSync(temporaryPath, filePath);
-  } catch (error) {
-    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
-    throw error;
-  }
 }
 
 // FFmpeg Video Assembly function
@@ -378,6 +431,48 @@ async function reframeAnchorToAspect(assetUrl: string | undefined, aspect: '9:16
   return `data:image/jpeg;base64,${readFileSync(out).toString('base64')}`;
 }
 
+// Entradas visuais de launch COMPARTILHADAS pelos dois provedores: prompt canônico,
+// âncora recortada pro aspect (data URI local ou URL remota) e duração pela regra
+// de fala 5/10s. Comportamento idêntico ao fluxo Replicate original.
+async function resolveSceneLaunchVisuals(args: {
+  line: RunPipelineInput['script'][number];
+  sceneIndex: number;
+  aspect: '9:16' | '16:9';
+  directorIdea: string;
+  directorSnippet: string;
+  wardrobe?: { boomer?: string, kev?: string, studio?: string };
+  voiceMode: 'kling_native' | 'elevenlabs';
+  audioDuration: number | undefined;
+  fallbackDuration: 5 | 10;
+  tmpDir: string;
+  jobId: string;
+  sceneId: string;
+}): Promise<{ prompt: string; startImage?: string; duration: 5 | 10; interfaceReferenceUsed: boolean }> {
+  const prompt = getDetailedPrompt(args.line, args.directorIdea, args.directorSnippet, args.sceneIndex, args.wardrobe, args.aspect, args.voiceMode);
+  const character = resolveCharacter(args.line.characterId);
+
+  // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
+  // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
+  // BK-16: referência escolhida na interface (Engine DNA) é efetiva — vence a canônica.
+  const anchorImage = args.line.characterReference
+    || (args.aspect === '16:9' && (args.line.shotType === 'WIDE' || args.line.shotType === 'OTS_BOOMER')
+      ? '/assets/master_wide.png'
+      : character?.referenceImage);
+
+  // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
+  const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
+  const startImage = await reframeAnchorToAspect(anchorImage, args.aspect, args.tmpDir, `${args.jobId}_${args.sceneId}`, anchorFocusX);
+
+  // BK-16 (fala inteira): clipe Kling dimensionado pelo áudio REAL medido.
+  const duration = klingDurationForAudio(args.audioDuration, args.fallbackDuration);
+  return {
+    prompt,
+    startImage,
+    duration,
+    interfaceReferenceUsed: Boolean(args.line.characterReference && args.line.characterReference !== character?.referenceImage),
+  };
+}
+
 // WP 1.6/1.7 helpers ─────────────────────────────────────────────────────────
 
 // Duração real de um clipe (ffprobe) — necessária p/ calcular offsets do xfade.
@@ -476,45 +571,86 @@ async function processPipeline(
   // BK-17 (parcial local): predições pagas persistidas ANTES do polling —
   // se o processo cair depois da cobrança, o resultado incerto fica conservado
   // no estado do job em vez de sumir com a memória do worker.
-  let providerRequests: Record<string, SceneProviderRequest> = {};
+  let providerRequests: Record<string, AnySceneRequest> = {};
   // BK-17 (incremento 1): ledger de estado por cena — o estado do job diz quais
   // cenas têm áudio/vídeo prontos mesmo após falha ou reinício.
   let sceneStates: Record<string, string> = {};
+  // Provedor congelado na criação do job: retomadas NUNCA trocam de provedor
+  // (jobs legados sem o campo continuam no replicate).
+  let jobProvider: VideoProviderName = 'replicate';
+  let jobModel: string = LEGACY_REPLICATE_MODEL;
   try {
     const existingState = JSON.parse(readFileSync(jobFilePath, 'utf8'));
     providerRequests = existingState.providerRequests || {};
     sceneStates = existingState.sceneStates || {};
+    if (existingState.provider === 'higgsfield') jobProvider = 'higgsfield';
+    jobModel = typeof existingState.providerModel === 'string' && existingState.providerModel
+      ? existingState.providerModel
+      : (jobProvider === 'higgsfield' ? DEFAULT_HIGGSFIELD_MODEL : LEGACY_REPLICATE_MODEL);
   } catch { /* job novo sem estado prévio */ }
 
   const markScene = (sceneId: string, state: 'AUDIO_READY' | 'VIDEO_READY') => {
     sceneStates = { ...sceneStates, [sceneId]: state };
-    updateJob({ sceneStates });
+    const completed = Object.values(sceneStates).filter((s) => s === 'VIDEO_READY').length;
+    // Progresso por cena como dados para o controle existente (sem tocar UI).
+    updateJob({ sceneStates, sceneProgress: { completed, total: script.length } });
+  };
+
+  // Persistência CRÍTICA: falha de gravação PROPAGA — chamadas antes/depois de
+  // submissão paga não podem fingir checkpoint e lançar geração sem ele.
+  const updateJobCritical = (updates: JobUpdate) => {
+    const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
+    const newData = mergeJobUpdate(currentData, updates);
+    writeJsonAtomic(jobFilePath, newData);
+    // Heartbeat do lease: o dono vivo atualiza o prazo; silence longo não expira
+    // o lease desde que abaixo do TTL.
+    refreshResumeLease(tmpDir, jobId, workerInstanceId);
   };
 
   const updateJob = (updates: JobUpdate) => {
     try {
-      const currentData = JSON.parse(readFileSync(jobFilePath, 'utf8'));
-      const newData = {
-        ...currentData,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-        logs: [...currentData.logs, ...(updates.logs || [])]
-      };
-      writeJsonAtomic(jobFilePath, newData);
-      // Heartbeat do lease: o dono vivo atualiza o prazo; silence longo não expira
-      // o lease desde que abaixo do TTL.
-      refreshResumeLease(tmpDir, jobId, workerInstanceId);
+      updateJobCritical(updates);
     } catch (e) {
       console.error("Failed to write job status file:", e);
     }
   };
 
+  // Persistidor crítico do registro de cena Higgsfield (payload/chave/reserva).
+  const makeHiggsfieldPersister = (sceneId: string) => (record: HiggsfieldSceneRequest) => {
+    providerRequests[sceneId] = record;
+    updateJobCritical({
+      providerRequests,
+      costReserveUsdMicros: sumHiggsfieldReserves(providerRequests),
+    });
+  };
+
   const replicateToken = process.env.REPLICATE_API_TOKEN;
   const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
-  const replicate = replicateToken ? new Replicate({ auth: replicateToken }) : null;
+  // Cada job usa SOMENTE o provedor congelado: replicate instanciado apenas
+  // quando o job é replicate; cliente HF apenas quando o job é higgsfield.
+  const replicate = jobProvider === 'replicate' && replicateToken ? new Replicate({ auth: replicateToken }) : null;
+  let hfClient: HiggsfieldClient | null = null;
+  let hfCapMicros = 0;
   let episodeRegistered = false;
 
   try {
+    // Configuração do provedor Higgsfield precisa estar íntegra ANTES de qualquer
+    // gasto (voz incluída no modo elevenlabs). Sem chave não há fallback pago.
+    if (jobProvider === 'higgsfield') {
+      const hfApiKey = process.env.HF_API_KEY;
+      if (!hfApiKey) {
+        throw new Error('PROVIDER_CONFIG: HF_API_KEY ausente para job congelado em higgsfield — sem fallback para Replicate (evita gasto duplicado).');
+      }
+      hfClient = new HiggsfieldClient({ apiKey: hfApiKey });
+      hfCapMicros = budgetCapMicrosFromEnv(process.env);
+      const budget = readBudgetSummary(tmpDir, hfCapMicros);
+      if (budget.corruptEntries.length) {
+        updateJob({ logs: [`⚠️ [Orçamento] ${budget.corruptEntries.length} entrada(s) ilegível(is) no ledger — novas reservas ficam bloqueadas até revisão manual.`] });
+      }
+      updateJob({ logs: [`🏦 [Orçamento] Testes iniciais Higgsfield: comprometido ${formatUsd(budget.reservedMicros + budget.chargedMicros)} de teto ${formatUsd(budget.capMicros)} (restante ${formatUsd(budget.remainingMicros)}).`] });
+      updateJob({ logs: [`🎞️ PROVIDER: higgsfield (modelo ${jobModel}) — congelado neste job.`] });
+    }
+
     // VOICE_GATE (modo elevenlabs) começa pelas precondições locais: não cria
     // episódio fantasma quando a configuração já prova que nenhuma cena poderá ser
     // sintetizada. No modo kling_native (régua BK-18) o Kling fala — não há TTS.
@@ -621,7 +757,7 @@ async function processPipeline(
 
     // Step 1b: Kling Launch — só executa com o gate de voz 100% verde
     currentStage = 'video_generation';
-    const scenesToProcess = [];
+    const scenesToProcess: SceneWorkItem[] = [];
 
     for (let i = 0; i < script.length; i++) {
       const line = script[i];
@@ -643,15 +779,15 @@ async function processPipeline(
         updateJob({ logs: [`⚠️ [Scene ${index}] Checkpoint vídeo inválido (corrompido/parcial) — re-renderizando.`] });
       }
 
-      // 1b. Video Generation (Kling)
-      const isSandbox = !replicate;
+      // 1b. Video Generation. Sandbox de piloto existe SOMENTE no caminho replicate.
+      const isReplicateSandbox = jobProvider === 'replicate' && !replicate;
 
       // BK-17: reconciliação de predições incertas ANTES de repetir cobrança.
       // Sucesso => reutiliza o resultado pago; processando => retoma polling;
       // falha confirmada => nova predição; incerto/indisponível => run para
       // (PROVIDER_UNKNOWN), nunca predição nova às cegas.
       const pendingRequest = providerRequests[sceneId];
-      if (replicate && pendingRequest?.predictionId) {
+      if (replicate && isReplicateRequest(pendingRequest) && pendingRequest.predictionId) {
         const outcome = await fetchPredictionOutcome(replicate, pendingRequest.predictionId);
         const action = reconciliationAction(outcome);
         if (action === 'REUSE') {
@@ -696,39 +832,25 @@ async function processPipeline(
       if (replicate) {
         try {
           updateJob({ logs: [`🎬 [Scene ${index}] Launching Kling v2.6 prediction on Replicate...`] });
-          const prompt = getDetailedPrompt(line, directorIdea, directorSnippet, i, wardrobe, aspect, voiceMode);
-          const character = resolveCharacter(line.characterId);
-          
-          // WP 1.5: em 16:9, cenas que mostram os DOIS (WIDE/OTS) ancoram no two-shot master.
-          // Em 9:16 o two-shot lado-a-lado NÃO cabe → usa a âncora solo do personagem.
-          // ponytail: two-shot vertical de verdade (OTS/empilhado) exige arte nova — P0a item 4.
-          // Mesma regra do prompt (SOLO_SHOTS_IN_VERTICAL): two-shot so em 16:9. Se estas duas
-          // condicoes divergirem, o prompt volta a pedir dois personagens com ancora de um.
-          // BK-16: referência escolhida na interface (Engine DNA) é efetiva — vence a canônica.
-          const anchorImage = line.characterReference
-            || (aspect === '16:9' && (line.shotType === 'WIDE' || line.shotType === 'OTS_BOOMER')
-              ? '/assets/master_wide.png'
-              : character?.referenceImage);
-
-          // O two-shot (16:9) nao tem dono: usa o centro. Ancora solo herda o foco do personagem.
-          const anchorFocusX = anchorImage === character?.referenceImage ? character?.anchorFocusX : undefined;
-          const startImage = await reframeAnchorToAspect(anchorImage, aspect, tmpDir, `${jobId}_${sceneId}`, anchorFocusX);
-          if (line.characterReference && line.characterReference !== character?.referenceImage) {
+          const visuals = await resolveSceneLaunchVisuals({
+            line, sceneIndex: i, aspect, directorIdea, directorSnippet, wardrobe, voiceMode,
+            audioDuration: audioDurations.get(sceneId), fallbackDuration: line.durationEst <= 5 ? 5 : 10,
+            tmpDir, jobId, sceneId,
+          });
+          if (visuals.interfaceReferenceUsed) {
             updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
           }
 
-          // BK-16 (fala inteira): clipe Kling dimensionado pelo áudio REAL medido —
-          // áudio > 5s pede clipe de 10s; -shortest no mux não corta mais a fala.
-          const klingDuration = klingDurationForAudio(audioDurations.get(sceneId), line.durationEst <= 5 ? 5 : 10);
+          const klingDuration = visuals.duration;
           if (klingDuration === 10 && (line.durationEst <= 5)) {
             updateJob({ logs: [`⏱️ [Scene ${index}] Áudio real excede 5s — clipe Kling de 10s para fala inteira.`] });
           }
 
           const prediction = await createKlingPrediction(replicate, {
-            prompt: prompt,
+            prompt: visuals.prompt,
             duration: klingDuration,
             aspect_ratio: aspect,
-            start_image: startImage,
+            start_image: visuals.startImage,
             negative_prompt: KLING_NEGATIVE_PROMPT,
             generate_audio: voiceMode === 'kling_native'
           });
@@ -758,7 +880,124 @@ async function processPipeline(
         }
       }
 
-      if (isSandbox) {
+      if (jobProvider === 'higgsfield') {
+        // ── Caminho Higgsfield (API direta) ──────────────────────────────────
+        // Mesmos contratos do caminho replicate: reconciliar antes de repetir
+        // cobrança, encadeamento adiado, persistência crítica de payload/chave.
+        const pending = isHiggsfieldRequest(pendingRequest) ? pendingRequest : undefined;
+        if (pending) {
+          const outcome = await fetchHiggsfieldOutcomeOrNull(hfClient!, pending);
+          const plan = planHiggsfieldRecovery(pending, outcome);
+
+          if (plan.kind === 'reuse_result') {
+            // Concluída no provedor: cobrança confirmada (fica retida no ledger).
+            const charge = chargeCost({ ledgerDir: tmpDir, operationKey: pending.operationKey });
+            if (charge.kind !== 'charged' && charge.kind !== 'already_charged') {
+              updateJob({ logs: [`⚠️ [Orçamento] Sucesso pago de ${sceneId} sem registro cobrável no ledger (${charge.kind}) — revise o ledger manualmente.`] });
+            }
+            updateJob({ logs: [`🛟 [Scene ${index}] Geração Higgsfield reconciliada: SUCESSO no provedor — resultado reutilizado (nada novo lançado). Cobrança confirmada: ${formatUsd(pending.reservedUsdMicros)}.`] });
+            scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: pending, reconciledUrl: plan.outputUrl });
+            continue;
+          }
+          if (plan.kind === 'keep_polling') {
+            updateJob({ logs: [`⏳ [Scene ${index}] Geração Higgsfield ainda processando no provedor — polling retomado sem nova cobrança.`] });
+            scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: pending });
+            continue;
+          }
+          if (plan.kind === 'resubmit_same_key') {
+            // POST anterior de resultado desconhecido: MESMA chave + MESMO payload
+            // persistidos. Nunca chave nova (evitaria cobrança duplicada).
+            updateJob({ logs: [`🛟 [Scene ${index}] Submissão Higgsfield incerta (sem requestId) — resubmissão com a MESMA chave/payload persistidos.`] });
+            let resubmitted: HiggsfieldSceneRequest | undefined;
+            try {
+              resubmitted = await resubmitHiggsfieldScene({
+                record: pending,
+                client: hfClient!,
+                ledgerDir: tmpDir,
+                capMicros: hfCapMicros,
+                persistRequest: makeHiggsfieldPersister(sceneId),
+                log: (m) => updateJob({ logs: [m] }),
+              });
+            } catch (error) {
+              if (!(error instanceof HiggsfieldSceneError && error.code === 'KEY_RELEASED')) {
+                throw new Error(`[Scene ${index}] Higgsfield resubmit falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
+              }
+              // 1º POST recusado (4xx) já liberou a verba: descarta o registro e
+              // cai no launch fresco abaixo com attempt = pending.attempt + 1.
+              updateJob({ logs: [`↩️ [Scene ${index}] Tentativa ${pending.attempt} foi recusada sem cobrança — nova tentativa com chave nova.`] });
+              delete providerRequests[sceneId];
+              updateJobCritical({
+                providerRequests,
+                costReserveUsdMicros: sumHiggsfieldReserves(providerRequests),
+              });
+            }
+            if (resubmitted) {
+              scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: resubmitted });
+              continue;
+            }
+          }
+          if (plan.kind === 'relaunch_new_attempt') {
+            const terminalStatus = outcome?.kind === 'failed_terminal' ? outcome.terminalStatus : 'desconhecido';
+            updateJob({ logs: [`⚠️ [Scene ${index}] Geração Higgsfield confirmada como ${terminalStatus} pelo provedor — reserva liberada (sem cobrança) e nova tentativa com chave nova.`] });
+            releaseCost({ ledgerDir: tmpDir, operationKey: pending.operationKey, reason: 'provider_terminal_no_charge' });
+            delete providerRequests[sceneId];
+            updateJobCritical({
+              providerRequests,
+              costReserveUsdMicros: sumHiggsfieldReserves(providerRequests),
+            });
+            // cai para o launch fresco abaixo (attempt = pending.attempt + 1)
+          }
+          if (plan.kind === 'stop_unresolved') {
+            throw new Error(`PROVIDER_UNKNOWN: não foi possível reconciliar a geração paga ${pending.requestId} (${plan.reason}). Run interrompido para evitar cobrança duplicada — reconcilie e retome.`);
+          }
+        }
+
+        const attempt = (pending?.attempt ?? 0) + 1;
+        const hfSound: HiggsfieldSound = voiceMode === 'kling_native' ? 'on' : 'off';
+
+        const visuals = await resolveSceneLaunchVisuals({
+          line, sceneIndex: i, aspect, directorIdea, directorSnippet, wardrobe, voiceMode,
+          audioDuration: audioDurations.get(sceneId), fallbackDuration: line.durationEst <= 5 ? 5 : 10,
+          tmpDir, jobId, sceneId,
+        });
+        if (visuals.interfaceReferenceUsed) {
+          updateJob({ logs: [`🎨 [Scene ${index}] Referência de personagem da interface em uso (não canônica).`] });
+        }
+
+        if (chainFrom) {
+          updateJob({ logs: [`🔗 [Scene ${index}] Encadeada à anterior (mesmo personagem) — submissão Higgsfield adiada p/ herdar o último frame.`] });
+          scenesToProcess.push({
+            sceneId, index, audioDataUri, status: "CHAINED", chainFrom,
+            hfLaunch: { prompt: visuals.prompt, duration: visuals.duration, attempt, sound: hfSound },
+          });
+          continue;
+        }
+
+        updateJob({ logs: [`🎬 [Scene ${index}] Submetendo ${jobModel} via Higgsfield (duração ${visuals.duration}s, sound ${hfSound})...`] });
+        try {
+          const record = await launchHiggsfieldScene({
+            jobId,
+            sceneId,
+            attempt,
+            anchor: visuals.startImage,
+            prompt: visuals.prompt,
+            duration: visuals.duration,
+            sound: hfSound,
+            client: hfClient!,
+            model: jobModel,
+            ledgerDir: tmpDir,
+            capMicros: hfCapMicros,
+            persistRequest: makeHiggsfieldPersister(sceneId),
+            log: (m) => updateJob({ logs: [m] }),
+          });
+          scenesToProcess.push({ sceneId, index, audioDataUri, status: "PROCESSING", hf: record });
+        } catch (error) {
+          throw new Error(`[Scene ${index}] Higgsfield launch falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
+        }
+        continue;
+      }
+
+      if (isReplicateSandbox) {
         // Sem Replicate não há render real. Vídeo piloto só com opt-in explícito
         // de desenvolvimento — nunca entregar clipe de outro episódio como se fosse este.
         if (process.env.STUDIO_SANDBOX !== '1') {
@@ -786,8 +1025,37 @@ async function processPipeline(
     for (const scene of scenesToProcess) {
       try {
         // WP 1.6: cena encadeada — o clipe anterior já foi processado neste loop
-        // sequencial; extrai o último frame dele e SÓ AGORA lança o Kling.
-        if (!scene.predictionId && scene.chainFrom && scene.launch) {
+        // sequencial; extrai o último frame dele e SÓ AGORA lança a geração.
+        if (!scene.hf && scene.hfLaunch && scene.chainFrom) {
+          // Higgsfield encadeado: o frame vira data URI ⇒ upload ⇒ payload com a
+          // public_url (mesmos passos do launch comum, MESMA chave por tentativa).
+          const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
+          updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
+          const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
+          try {
+            const record = await launchHiggsfieldScene({
+              jobId,
+              sceneId: scene.sceneId,
+              attempt: scene.hfLaunch.attempt,
+              anchor: frameUri,
+              prompt: scene.hfLaunch.prompt,
+              duration: scene.hfLaunch.duration,
+              sound: scene.hfLaunch.sound,
+              client: hfClient!,
+              model: jobModel,
+              ledgerDir: tmpDir,
+              capMicros: hfCapMicros,
+              persistRequest: makeHiggsfieldPersister(scene.sceneId),
+              log: (m) => updateJob({ logs: [m] }),
+            });
+            scene.hf = record;
+          } catch (error) {
+            throw new Error(`[Scene ${scene.index}] Higgsfield launch encadeado falhou (${currentStage}): ${describeHiggsfieldError(error)}`);
+          }
+        }
+
+        if (!scene.hf && !scene.predictionId && scene.chainFrom && scene.launch) {
+          // WP 1.6 (replicate): encadeada — extrai o último frame e lança o Kling.
           const prevClip = path.resolve(tmpDir, `sync_${jobId}_${scene.chainFrom}.mp4`);
           updateJob({ logs: [`🔗 [Scene ${scene.index}] Extraindo último frame da cena anterior p/ continuidade...`] });
           const frameUri = await extractLastFrameDataUri(prevClip, tmpDir, `${jobId}_${scene.sceneId}`);
@@ -809,15 +1077,41 @@ async function processPipeline(
           updateJob({ providerRequests });
         }
 
-        if (!scene.predictionId) throw new Error(`cena ${scene.index}: sem predictionId (launch encadeado falhou?)`);
+        if (!scene.hf && !scene.predictionId) throw new Error(`cena ${scene.index}: sem referência de geração (launch encadeado falhou?)`);
         let klingVideoUrl: string;
-        if ('reconciledUrl' in scene && scene.reconciledUrl) {
-          klingVideoUrl = scene.reconciledUrl;
-          updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do provedor em uso (polling pulado).`] });
+        if (scene.hf) {
+          if ('reconciledUrl' in scene && scene.reconciledUrl) {
+            klingVideoUrl = scene.reconciledUrl;
+            updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do Higgsfield em uso (polling pulado).`] });
+          } else {
+            updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Higgsfield (requestId ${scene.hf.requestId})...`] });
+            try {
+              const result = await pollHiggsfieldScene({
+                record: scene.hf,
+                client: hfClient!,
+                ledgerDir: tmpDir,
+                log: (m) => updateJob({ logs: [m] }),
+              });
+              klingVideoUrl = result.outputUrl;
+            } catch (error) {
+              // Reserva/estado permanecem em disco: retomada reconcilia ou relança
+              // com chave de tentativa nova — nunca gasto às cegas.
+              updateJob({ costReserveUsdMicros: sumHiggsfieldReserves(providerRequests) });
+              throw new Error(`Higgsfield polling falhou (${describeHiggsfieldError(error)})`);
+            }
+          }
+          // URL de mídia: HTTPS válido, sem credenciais — o download não leva
+          // Authorization alguma (storage/CDN do provedor).
+          klingVideoUrl = validateMediaUrl(klingVideoUrl, 'video.url');
         } else {
-          updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
-          const output = await pollPrediction(replicate!, scene.predictionId);
-          klingVideoUrl = Array.isArray(output) ? output[0] : output;
+          if ('reconciledUrl' in scene && scene.reconciledUrl) {
+            klingVideoUrl = scene.reconciledUrl;
+            updateJob({ logs: [`🛟 [Scene ${scene.index}] Resultado reconciliado do provedor em uso (polling pulado).`] });
+          } else {
+            updateJob({ logs: [`⏳ [Scene ${scene.index}] Polling Kling video generation...`] });
+            const output = await pollPrediction(replicate!, scene.predictionId!);
+            klingVideoUrl = Array.isArray(output) ? output[0] : output;
+          }
         }
         updateJob({ logs: [`✅ [Scene ${scene.index}] Kling video generated: ${klingVideoUrl}`] });
 
@@ -1043,16 +1337,29 @@ async function processPipeline(
       }
     }
 
-    const uncertainPredictions = Object.entries(providerRequests)
-      .map(([sceneId, request]) => `${sceneId}:${request.predictionId}`);
+    const uncertainReplicate = Object.entries(providerRequests)
+      .filter(([, request]) => isReplicateRequest(request))
+      .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
+    const uncertainHiggsfield = Object.entries(providerRequests)
+      .filter(([, request]) => isHiggsfieldRequest(request) && request.requestId)
+      .map(([sceneId, request]) => `${sceneId}:${(request as HiggsfieldSceneRequest).requestId}`);
+    const higgsfieldUnresolved = Object.entries(providerRequests)
+      .filter(([, request]) => isHiggsfieldRequest(request) && !request.requestId)
+      .map(([sceneId]) => sceneId);
     updateJob({
       status: "FAILED",
       progress: 0,
       failureStage: currentStage,
       logs: [
         `🔴 CRITICAL_PIPELINE_ERROR em ${currentStage}: ${errorMessage(error)}`,
-        ...(uncertainPredictions.length
-          ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
+        ...(uncertainReplicate.length
+          ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainReplicate.join(', ')}`]
+          : []),
+        ...(uncertainHiggsfield.length
+          ? [`⚠️ HIGGSFIELD SUBMISSIONS UNCERTAIN (reservas retidas — reconciliar pelo requestId antes de relançar): ${uncertainHiggsfield.join(', ')}`]
+          : []),
+        ...(higgsfieldUnresolved.length
+          ? [`⚠️ HIGGSFIELD SUBMISSÕES INCERTAS SEM requestId (retomada resubmete a MESMA chave/payload — nunca chave nova): ${higgsfieldUnresolved.join(', ')}`]
           : [])
       ]
     });
@@ -1105,6 +1412,17 @@ export async function POST(req: Request) {
 
     const { script, directorIdea = "", directorSnippet = "", engine = "kling", aspect = "9:16", wardrobe, resumeJobId } = validation.data;
 
+    // Provedor resolvido no SERVIDOR e congelado por job. O schema zod já descarta
+    // campos desconhecidos — o cliente nunca envia chave HF nem escolhe o modelo.
+    // Configuração inválida é erro explícito, sem fallback silencioso p/ Replicate.
+    let providerConfig: FrozenVideoProviderConfig;
+    try {
+      providerConfig = resolveVideoProviderConfig(process.env);
+    } catch (error) {
+      const code = error instanceof VideoProviderConfigError ? error.code : 'VIDEO_PROVIDER_INVALID';
+      return NextResponse.json({ error: code, details: errorMessage(error) }, { status: 500 });
+    }
+
     // Create .tmp directory
     const tmpDir = path.resolve(process.cwd(), '.tmp');
     if (!existsSync(tmpDir)) {
@@ -1144,10 +1462,29 @@ export async function POST(req: Request) {
         });
       }
 
+      // Troca de provedor/modelo entre criação e retomada é conflito explícito:
+      // clipe gerado por outro provedor/modelo não é reutilizado silenciosamente.
+      if (existingData.provider && existingData.provider !== providerConfig.provider) {
+        return NextResponse.json({
+          error: "RESUME_CONFIG_CONFLICT",
+          details: `Job congelado no provedor ${existingData.provider}; o servidor agora resolve ${providerConfig.provider}. Provedor não troca no meio do job.`
+        }, { status: 409 });
+      }
+      if (providerConfig.provider === 'higgsfield' && existingData.providerModel && existingData.providerModel !== providerConfig.model) {
+        return NextResponse.json({
+          error: "RESUME_CONFIG_CONFLICT",
+          details: `Modelo Higgsfield mudou (${existingData.providerModel} → ${providerConfig.model}). Crie um job novo em vez de retomar.`
+        }, { status: 409 });
+      }
+
       // BK-16: retomada usa a versão aprovada. Roteiro/voz/aspecto/referências/
       // figurino diferentes = conflito explícito (nova versão ou job novo), nunca
-      // mistura de cache antigo com payload novo.
-      const configHash = pipelineConfigHash(validation.data);
+      // mistura de cache antigo com payload novo. Em higgsfield, provedor/modelo
+      // congelados também entram no hash (legado replicate mantém hash anterior).
+      const providerForHash = providerConfig.provider === 'higgsfield'
+        ? { provider: providerConfig.provider, model: providerConfig.model }
+        : undefined;
+      const configHash = pipelineConfigHash(validation.data, providerForHash);
       const decision = evaluateResume(
         existingData,
         { configHash },
@@ -1157,7 +1494,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
           error: decision.code,
           details: decision.code === 'RESUME_CONFIG_CONFLICT'
-            ? "O roteiro/voz/aspecto/referências mudaram desde o job original. Crie um novo job (nova versão) em vez de retomar com conteúdo alterado."
+            ? "O roteiro/voz/aspecto/referências (ou provedor/modelo) mudaram desde o job original. Crie um novo job (nova versão) em vez de retomar com conteúdo alterado."
             : "Este job já tem um executor ativo. Aguarde a conclusão ou a reconciliação do worker atual."
         }, { status: 409 });
       }
@@ -1176,6 +1513,8 @@ export async function POST(req: Request) {
         ...existingData,
         status: "PROCESSING",
         configHash,
+        provider: providerConfig.provider,
+        providerModel: providerConfig.model,
         workerInstanceId,
         updatedAt: new Date().toISOString(),
         logs: [
@@ -1209,7 +1548,15 @@ export async function POST(req: Request) {
         engine,
         // BK-16: identidade da versão aprovada — retomadas com conteúdo diferente
         // são rejeitadas por comparação de hash, não por confiança do cliente.
-        configHash: pipelineConfigHash(validation.data),
+        configHash: pipelineConfigHash(
+          validation.data,
+          providerConfig.provider === 'higgsfield'
+            ? { provider: providerConfig.provider, model: providerConfig.model }
+            : undefined,
+        ),
+        // Provedor/modelo congelados na criação — o worker usa EXCLUSIVAMENTE estes.
+        provider: providerConfig.provider,
+        providerModel: providerConfig.model,
         providerRequests: {},
         workerInstanceId,
         createdAt: now,
@@ -1264,8 +1611,18 @@ export async function GET(req: Request) {
       // BK-16: reconciliação de estado — o worker original morreu com o restart do
       // processo. O job é marcado FAILED (sem retry automático), mas os artefatos
       // e checkpoints são PRESERVADOS: retomada valida e reutiliza o que já foi pago.
-      const uncertainPredictions = Object.entries(jobData.providerRequests || {})
+      const statusTmpDir = path.resolve(process.cwd(), '.tmp');
+      const allRequests: Record<string, AnySceneRequest> = jobData.providerRequests || {};
+      const replicateEntries = Object.entries(allRequests).filter(([, request]) => isReplicateRequest(request));
+      const higgsfieldEntries = Object.entries(allRequests).filter(([, request]) => isHiggsfieldRequest(request));
+      const uncertainPredictions = replicateEntries
         .map(([sceneId, request]) => `${sceneId}:${(request as SceneProviderRequest).predictionId}`);
+      const higgsfieldWithId = higgsfieldEntries
+        .filter(([, request]) => isHiggsfieldRequest(request) && request.requestId)
+        .map(([sceneId, request]) => `${sceneId}:${(request as HiggsfieldSceneRequest).requestId}`);
+      const higgsfieldWithoutId = higgsfieldEntries
+        .filter(([, request]) => isHiggsfieldRequest(request) && !request.requestId)
+        .map(([sceneId]) => sceneId);
       // BK-17 (incremento 2): se há credencial do provedor, reconcilia AGORA —
       // o operador vê o destino de cada predição paga no próprio status.
       let reconciliationLogs: string[] = [];
@@ -1283,12 +1640,67 @@ export async function GET(req: Request) {
           reconciliationLogs = [`⚠️ RECONCILE_UNAVAILABLE: não foi possível consultar as predições pagas agora.`];
         }
       }
+      if (higgsfieldEntries.length) {
+        if (process.env.HF_API_KEY) {
+          try {
+            const hfRequests: Record<string, HiggsfieldSceneRequest> = {};
+            for (const [sceneId, request] of higgsfieldEntries) {
+              hfRequests[sceneId] = request as HiggsfieldSceneRequest;
+            }
+            const reconciled = await reconcileHiggsfieldRequests(
+              new HiggsfieldClient({ apiKey: process.env.HF_API_KEY }),
+              hfRequests,
+            );
+            reconciliationLogs.push(
+              ...Object.values(reconciled).map((r) =>
+                `🔎 RECONCILED [higgsfield] ${r.sceneId}:${r.requestId} => ${r.action}${r.detail ? ` (${r.detail})` : ''}`
+              ),
+            );
+            // Efeitos no ledger comprovados pelo provedor: conclusão cobra (fica
+            // retida); término terminal failed/nsfw/canceled libera (contrato de
+            // não-cobrança). Incertezas NUNCA mexem no ledger.
+            for (const entry of Object.values(reconciled)) {
+              const record = hfRequests[entry.sceneId];
+              if (!record) continue;
+              if (entry.action === 'REUSE') {
+                const charge = chargeCost({ ledgerDir: statusTmpDir, operationKey: record.operationKey });
+                reconciliationLogs.push(
+                  charge.kind === 'conflict'
+                    ? `⚠️ [Orçamento] Cobrança de ${entry.sceneId} conflitante (estado ${charge.state}) — reserve preservada.`
+                    : `💰 [Orçamento] ${entry.sceneId} confirmado cobrado (${formatUsd(record.reservedUsdMicros)}).`
+                );
+              }
+              if (entry.action === 'RELAUNCH') {
+                const release = releaseCost({
+                  ledgerDir: statusTmpDir,
+                  operationKey: record.operationKey,
+                  reason: 'provider_terminal_no_charge',
+                });
+                reconciliationLogs.push(
+                  release.kind === 'released'
+                    ? `↩️ [Orçamento] Reserva de ${entry.sceneId} liberada (término terminal sem cobrança).`
+                    : `⚠️ [Orçamento] Reserva de ${entry.sceneId} mantida (estado ${release.kind}).`
+                );
+              }
+            }
+          } catch (reconcileError) {
+            console.warn(`[Pipeline Status] Reconciliação Higgsfield falhou para ${idValidation.data}:`, reconcileError);
+            reconciliationLogs.push(`⚠️ RECONCILE_UNAVAILABLE [higgsfield]: não foi possível consultar as gerações pagas agora — reservas preservadas.`);
+          }
+        } else {
+          reconciliationLogs.push(`⚠️ RECONCILE_UNAVAILABLE [higgsfield]: HF_API_KEY ausente — reservas preservadas; reconcilie após restaurar a credencial.`);
+        }
+        if (higgsfieldWithoutId.length) {
+          reconciliationLogs.push(`♻️ [higgsfield] ${higgsfieldWithoutId.length} submissão(ões) incerta(s) sem requestId — a retomada resubmete a MESMA chave/payload (nunca chave nova).`);
+        }
+      }
       jobData = {
         ...jobData,
         status: 'FAILED',
         progress: 0,
         failureCode: 'WORKER_RESTARTED',
         failureStage: 'reconciliation',
+        costReserveUsdMicros: sumHiggsfieldReserves(allRequests),
         updatedAt: new Date().toISOString(),
         logs: [
           ...(Array.isArray(jobData.logs) ? jobData.logs : []),
@@ -1297,12 +1709,15 @@ export async function GET(req: Request) {
           ...reconciliationLogs,
           ...(uncertainPredictions.length && !reconciliationLogs.length
             ? [`⚠️ PREDICTIONS UNCERTAIN (pagas, resultado não reconciliado — consultar antes de re-renderizar): ${uncertainPredictions.join(', ')}`]
+            : []),
+          ...(higgsfieldWithId.length && !reconciliationLogs.length
+            ? [`⚠️ HIGGSFIELD SUBMISSIONS UNCERTAIN (reservas retidas — reconciliar antes de relançar): ${higgsfieldWithId.join(', ')}`]
             : [])
         ]
       };
       writeJsonAtomic(jobFilePath, jobData);
       // O dono anterior do lease está morto (provado acima): libera para a retomada.
-      releaseResumeLease(path.resolve(process.cwd(), '.tmp'), idValidation.data);
+      releaseResumeLease(statusTmpDir, idValidation.data);
     }
     return NextResponse.json(jobData);
 

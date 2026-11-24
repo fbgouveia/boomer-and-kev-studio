@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { STUDIO_SETTING, GUIDE_IMAGES, ANGLE_SPECS } from '@/data/characters';
 import { castList } from '@/lib/cast-registry';
+import { useIdentityLock, IdentityLockStrip, VerdictButtons, OccasionDNA, FramingDNA, VOICE_REFS } from './IdentityLock';
 
 // BK-19 inc.2: painel lê do CAST REGISTRY — pack novo aparece no Engine DNA
 // sem editar o componente (ordem de registro: boomer/kev primeiro).
@@ -53,6 +54,7 @@ export function DNAPanel({
   downloadPromptPDF
 }: DNAPanelProps) {
   const [generating, setGenerating] = React.useState<string | null>(null);
+  const { verdicts, decide } = useIdentityLock();
   const paidImageRequests = React.useRef<Record<string, {
     idempotencyKey: string;
     approval: { confirmed: true; source: 'studio_ui'; approvedAt: string };
@@ -184,6 +186,8 @@ export function DNAPanel({
         </div>
       </div>
 
+      <IdentityLockStrip verdicts={verdicts} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[2px] bg-white/5 border-b border-white/5 mb-16 px-2 pb-16 stagger-item">
         {CAST.map((char, idx) => (
           <div
@@ -258,11 +262,14 @@ export function DNAPanel({
                     </div>
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 p-4 bg-black/60 backdrop-blur-sm flex items-center gap-2">
-                    <div className="w-2 h-2 bg-[#FF5F1F] rounded-full animate-pulse" />
-                    <span className="text-xs font-black text-white uppercase tracking-widest">
-                      {charReferences[char.id].main ? "MASTER_DNA_SOURCE" : "ORPHAN_DNA_BLOCK"}
-                    </span>
+                  <div className="absolute inset-x-0 bottom-0 p-4 bg-black/60 backdrop-blur-sm flex items-center justify-between gap-2 z-30">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-[#FF5F1F] rounded-full animate-pulse" />
+                      <span className="text-xs font-black text-white uppercase tracking-widest">
+                        {charReferences[char.id].main ? "MASTER_DNA_SOURCE" : "ORPHAN_DNA_BLOCK"} · Face &amp; anatomy
+                      </span>
+                    </div>
+                    <VerdictButtons id={`${char.id}_face`} verdicts={verdicts} decide={decide} />
                   </div>
                 </div>
                 <div className="bg-[#0A0A0A] border border-white/10 mt-2 group hover:border-[#FF5F1F]/50 transition-colors">
@@ -316,6 +323,21 @@ export function DNAPanel({
                     </div>
                   </div>
                 </div>
+
+                {char.id === 'boomer' && (
+                  <div className="p-6 border-2 border-[#FF5F1F]/60 space-y-4">
+                    <span className="text-xs font-black text-[#FF5F1F] uppercase tracking-widest block">Open conflict · original outfit</span>
+                    <p className="text-sm font-bold text-white/80">Master shows Boomer shirtless with red gloves. DNA text already matches (decision 27/10). Approve to lock it.</p>
+                    <VerdictButtons id="outfit" verdicts={verdicts} decide={decide} approveLabel="Lock as master" />
+                  </div>
+                )}
+                {char.id === 'kev' && (
+                  <div className="p-6 border-2 border-[#FF5F1F]/60 space-y-4">
+                    <span className="text-xs font-black text-[#FF5F1F] uppercase tracking-widest block">Open risk · real brands on screens</span>
+                    <p className="text-sm font-bold text-white/80">Real brands appear in the masters (QANTAS and VEGEMITE behind Kev; GUMTREE, OUTBACK and AUSSIE behind Boomer). Sponsor screens must read &quot;YOUR SPONSOR HERE&quot; until a partner is approved.</p>
+                    <VerdictButtons id="studio_set" verdicts={verdicts} decide={decide} approveLabel="Approve set" fixLabel="Request clean master" />
+                  </div>
+                )}
               </div>
 
               {/* Sonic Behavioral Module */}
@@ -352,6 +374,18 @@ export function DNAPanel({
                     }
                   </p>
                 </div>
+                {VOICE_REFS[char.id] && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-black text-white/60 uppercase tracking-widest block">Listen here</span>
+                    {VOICE_REFS[char.id].map(ref => (
+                      <div key={ref.src} className="space-y-1">
+                        <span className="text-xs font-bold text-white/50 uppercase tracking-widest">{ref.label}</span>
+                        <audio controls preload="none" src={ref.src} className="w-full h-9" />
+                      </div>
+                    ))}
+                    <VerdictButtons id={`${char.id}_voice`} verdicts={verdicts} decide={decide} approveLabel="Approve voice" />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-6">
@@ -621,6 +655,9 @@ export function DNAPanel({
             </div>
           </div>
         </div>
+
+        <OccasionDNA studioImage={GUIDE_IMAGES.wide || '/assets/master_wide.png'} verdicts={verdicts} decide={decide} />
+        <FramingDNA wide="/assets/master_wide.png" boomer="/assets/master_boomer.png" kev="/assets/master_kev.png" verdicts={verdicts} decide={decide} />
       </div>
     </div>
   );

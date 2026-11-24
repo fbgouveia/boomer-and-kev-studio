@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { RunPipelineInput } from '@/lib/validations';
+import type { VideoProviderName } from '@/lib/video-provider';
 
 // BK-05/BK-16 — contrato de retomada:
 // 1. Resume com roteiro/voz/aspecto/referências alterados => conflito explícito,
@@ -37,7 +38,24 @@ export function immutablePipelineConfig(data: Omit<RunPipelineInput, 'approval' 
     };
 }
 
-export function pipelineConfigHash(data: Omit<RunPipelineInput, 'approval' | 'resumeJobId'>): string {
+export function pipelineConfigHash(
+    data: Omit<RunPipelineInput, 'approval' | 'resumeJobId'>,
+    provider?: { provider: VideoProviderName; model: string },
+): string {
+    // Higgsfield: provedor/modelo congelados entram no hash — retomada com
+    // provedor ou modelo diferente é conflito explícito (nunca reutiliza clipe
+    // gerado por outro provedor/modelo).
+    if (provider && provider.provider === 'higgsfield') {
+        return crypto
+            .createHash('sha256')
+            .update(JSON.stringify({
+                ...immutablePipelineConfig(data),
+                videoProvider: { provider: provider.provider, model: provider.model },
+            }))
+            .digest('hex');
+    }
+    // Replicate/legado: hash byte-idêntico ao anterior — jobs antigos continuam
+    // retomáveis sem migração (fallback de provedor deles já é implícito).
     return crypto
         .createHash('sha256')
         .update(JSON.stringify(immutablePipelineConfig(data)))

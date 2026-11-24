@@ -47,6 +47,8 @@ interface DirectorTerminalProps {
   setCurrentAnswers: (val: string[]) => void;
   finalizeInterview: () => void;
   isRefiningBlueprint: boolean;
+  scriptPanel?: React.ReactNode;
+  activeTrendTitle?: string;
 }
 
 const REGIONS = [
@@ -73,7 +75,9 @@ export function DirectorTerminal({
   currentAnswers,
   setCurrentAnswers,
   finalizeInterview,
-  isRefiningBlueprint
+  isRefiningBlueprint,
+  scriptPanel,
+  activeTrendTitle
 }: DirectorTerminalProps) {
   const [trends, setTrends] = useState<Trend[]>([]);
   const [geo, setGeo] = useState('AU');
@@ -142,6 +146,8 @@ export function DirectorTerminal({
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const gridCls = cn('grid grid-cols-1 gap-8', !scriptPanel && 'md:grid-cols-2 xl:grid-cols-3');
 
   return (
     <div 
@@ -417,9 +423,12 @@ export function DirectorTerminal({
             </div>
           )}
 
+          <div className={cn(scriptPanel && "flex flex-col lg:flex-row lg:items-start gap-6")}>
+          {scriptPanel && <div className="order-first lg:order-last flex-1 min-w-0">{scriptPanel}</div>}
+          <div className={cn("min-w-0", scriptPanel && "lg:w-[340px] lg:shrink-0")}>
           {/* Loading Shimmer State */}
           {isLoading && feedMode === 'LIVE' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className={gridCls}>
               {Array(6).fill(0).map((_, i) => (
                 <div key={i} className="h-64 bg-[#080808] border border-white/5 animate-pulse" />
               ))}
@@ -428,11 +437,12 @@ export function DirectorTerminal({
 
           {/* Live Wire Trends Grid */}
           {feedMode === 'LIVE' && !isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className={gridCls}>
               {trends.map((trend, index) => (
                 <div 
                   key={index}
-                  className="bg-[#080808]/90 border border-white/5 hover:border-[#FF5F1F]/30 transition-all flex flex-col justify-between p-8 relative group"
+                  className={cn("bg-[#080808]/90 border hover:border-[#FF5F1F]/30 transition-all flex flex-col justify-between p-8 relative group",
+                    activeTrendTitle === trend.title ? "border-4 border-[#FF5F1F]" : "border-white/5")}
                 >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#FF5F1F]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   
@@ -492,7 +502,7 @@ export function DirectorTerminal({
 
           {/* 2026 Planner Events Grid */}
           {feedMode === 'CALENDAR' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className={gridCls}>
               {AUSSIE_CALENDAR.map((event) => (
                 <div 
                   key={event.id}
@@ -548,6 +558,8 @@ export function DirectorTerminal({
               ))}
             </div>
           )}
+          </div>
+          </div>
 
         </div>
 

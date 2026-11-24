@@ -1,0 +1,23 @@
+{
+  "provider": "higgsfield",
+  "model": "kling-video/v3.0/pro/image-to-video",
+  "sceneId": "boomer_mcu_a",
+  "attempt": 2,
+  "idempotencyKey": "hfk-035ab00ea4559ad8f3aa8628ecb6449b290c964e7e8d4671d2173a65bb230788",
+  "operationKey": "hf:pilot-20261124:boomer_mcu_a:a2",
+  "payload": {
+    "image_url": "https://d3snorpfx4xhv8.cloudfront.net/e511e762-d788-4ba7-bece-4204f727f967/e82025ba-8284-4783-ad4a-ff66ac23af05.jpeg",
+    "duration": 5,
+    "sound": "on",
+    "cfg_scale": 0.5,
+    "multi_shots": false,
+    "prompt": "Locked-off static camera on a tripod, no zoom, no pan, no cut. The muscular kangaroo podcast host stays seated at the desk and speaks energetically into the microphone with a strong Australian accent: \"Sydney house prices are BACK, mate! Up, up, UP!\" He punches one red boxing glove upward on the last word. Same character, same studio, the wall screens stay plain grey. Natural lip movement matching the speech."
+  },
+  "payloadHash": "e5c4c572757371663bfc668f9a88a25ba588dd75c8c320927801ea25b5ebbac2",
+  "estimatedUsdMicros": 481000,
+  "reservedUsdMicros": 481000,
+  "requestId": null,
+  "statusUrl": null,
+  "submissionUnknown": false,
+  "preparedAt": "2026-11-24T12:18:35.270Z"
+}
